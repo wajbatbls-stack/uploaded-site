@@ -154,14 +154,23 @@ function vitePluginManusDebugCollector(): Plugin {
 function copyAdminAssets(): Plugin {
   return {
     name: "copy-wajbat-admin-assets",
+    configureServer(server: ViteDevServer) {
+      server.middlewares.use("/assets/js/admin-login-fix-v2.js", (_req, res) => {
+        res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+        fs.createReadStream(path.resolve(import.meta.dirname, "client", "public", "assets", "js", "admin.js")).pipe(res);
+      });
+    },
     closeBundle() {
       const source = path.resolve(import.meta.dirname, "client", "public", "assets");
       const destination = path.resolve(import.meta.dirname, "dist", "public", "assets");
-      const files = ["js/admin.js", "css/admin.css"];
-      for (const relativeFile of files) {
-        const target = path.join(destination, relativeFile);
+      const files = [
+        { source: "js/admin.js", destination: "js/admin-login-fix-v2.js" },
+        { source: "css/admin.css", destination: "css/admin.css" },
+      ];
+      for (const file of files) {
+        const target = path.join(destination, file.destination);
         fs.mkdirSync(path.dirname(target), { recursive: true });
-        fs.copyFileSync(path.join(source, relativeFile), target);
+        fs.copyFileSync(path.join(source, file.source), target);
       }
     },
   };

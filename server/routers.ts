@@ -31,7 +31,7 @@ export const appRouter = router({
   adminAuth: router({
     configured: publicProcedure.query(() => ({ configured: hasConfiguredAdminCredentials() })),
     login: publicProcedure
-      .input(z.object({ email: z.string().email(), password: z.string().min(1) }))
+      .input(z.object({ email: z.string().min(1).max(320), password: z.string().min(1) }))
       .mutation(async ({ ctx, input }) => {
         if (!validateAdminCredentials(input.email, input.password)) {
           throw new TRPCError({ code: "UNAUTHORIZED", message: "بيانات الدخول غير صحيحة" });

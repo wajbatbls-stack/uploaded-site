@@ -1,15 +1,26 @@
 import { SITE_CONFIG } from "./config.js";
 import { saveRecord, recordCloudVisit } from "./supabase.js";
 import {
-  ARTICLES, FAQS, INSTITUTES, OTHERS, PLANS, REVIEWS, SERVICE_TYPES,
-  SERVICES, SERVICE_SUBS, UNIVERSITIES,
+  ARTICLES as INITIAL_ARTICLES, FAQS as INITIAL_FAQS, INSTITUTES as INITIAL_INSTITUTES,
+  OTHERS as INITIAL_OTHERS, PLANS as INITIAL_PLANS, REVIEWS as INITIAL_REVIEWS,
+  SERVICE_TYPES as INITIAL_SERVICE_TYPES, SERVICES as INITIAL_SERVICES,
+  SERVICE_SUBS as INITIAL_SERVICE_SUBS, UNIVERSITIES as INITIAL_UNIVERSITIES,
 } from "../../pages/content.js";
 
-const logoUrl = "https://d2xsxph8kpxj0f.cloudfront.net/310519663266205125/c9haZQXaJt4uRTkEadgd4A/photo_AQAD7w1rG_fAmFJ-_4841a962.jpg";
+let ARTICLES = INITIAL_ARTICLES;
+let FAQS = INITIAL_FAQS;
+let INSTITUTES = INITIAL_INSTITUTES;
+let OTHERS = INITIAL_OTHERS;
+let PLANS = INITIAL_PLANS;
+let REVIEWS = INITIAL_REVIEWS;
+let SERVICE_TYPES = INITIAL_SERVICE_TYPES;
+let SERVICES = INITIAL_SERVICES;
+let SERVICE_SUBS = INITIAL_SERVICE_SUBS;
+let UNIVERSITIES = INITIAL_UNIVERSITIES;
+let logoUrl = "https://d2xsxph8kpxj0f.cloudfront.net/310519663266205125/c9haZQXaJt4uRTkEadgd4A/photo_AQAD7w1rG_fAmFJ-_4841a962.jpg";
+let siteSettings = {};
 const statsKey = "wajbat_stats_v1";
-const ownerCode = "773128012737414442";
-const ownerPass = "abd";
-const state = { sidebar: false, servicesOpen: false, selectedService: null, article: null, statsLoggedIn: false };
+const state = { sidebar: false, servicesOpen: false, selectedService: null, article: null };
 
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 const wa = (message = "") => `https://wa.me/${SITE_CONFIG.whatsapp}?text=${encodeURIComponent(message)}`;
@@ -43,12 +54,14 @@ function recordVisit() {
   data.weeklyVisits = Object.fromEntries(keys.map((key) => [key, data.weeklyVisits[key]]));
   saveStats(data);
   recordCloudVisit(currentPath()).catch(() => {});
+  void rpcMutation("site.trackVisit", { path: currentPath() });
 }
 function recordOrder(service, student) {
   const data = loadStats();
   data.totalOrders += 1; data.totalServices += 1;
   data.orderLog = [{ date: arabicDate(), time: arabicTime(), service, student: student || "غير محدد" }, ...data.orderLog].slice(0, 200);
   saveStats(data);
+  void rpcMutation("site.trackOrder", { studentName: student || "غير محدد", service });
 }
 function toast(title, description = "") {
   const region = document.querySelector("#toast-region");
@@ -69,12 +82,98 @@ function queryParams() {
 }
 function go(path) { location.hash = path; }
 
+async function rpcQuery(procedure, input = null) {
+  const query = encodeURIComponent(JSON.stringify({ json: input }));
+  const response = await fetch(`/api/trpc/${procedure}?input=${query}`, { credentials: "same-origin" });
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload?.error?.json?.message || "تعذر الاتصال بالخادم");
+  return payload?.result?.data?.json ?? payload?.result?.data;
+}
+
+async function rpcMutation(procedure, input) {
+  try {
+    await fetch(`/api/trpc/${procedure}`, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ json: input }),
+    });
+  } catch { /* يظل الموقع قابلاً للاستخدام عند تعذر تسجيل القياس. */ }
+}
+
+function applyManagedContent(content) {
+  if (!content || typeof content !== "object") return;
+  const visible = (items) => Array.isArray(items) ? items.filter((item) => item?.isVisible !== false) : [];
+  if (Array.isArray(content.services)) {
+    const services = visible(content.services).sort((a, b) => a.sortOrder - b.sortOrder);
+    SERVICES = services.map((service, id) => ({ id, emoji: service.emoji, title: service.title, items: service.items || [] }));
+    SERVICE_SUBS = services.map((service) => service.title);
+    SERVICE_TYPES = services.flatMap((service) => service.items || []);
+  }
+  if (Array.isArray(content.plans)) PLANS = visible(content.plans).sort((a, b) => a.sortOrder - b.sortOrder).map((plan) => ({ ...plan, features: plan.features || [], popular: Boolean(plan.popular) }));
+  if (Array.isArray(content.reviews)) REVIEWS = visible(content.reviews).sort((a, b) => a.sortOrder - b.sortOrder).map((review) => ({ name: review.name, uni: review.university, text: review.body, rating: review.rating || 5 }));
+  if (Array.isArray(content.articles)) ARTICLES = visible(content.articles).sort((a, b) => a.sortOrder - b.sortOrder).map((article, id) => ({ id: id + 1, title: article.title, category: article.category, date: article.publishedText, summary: article.summary, content: article.body }));
+  if (Array.isArray(content.faqs)) FAQS = visible(content.faqs).sort((a, b) => a.sortOrder - b.sortOrder).map((faq) => ({ q: faq.question, a: faq.answer }));
+  if (Array.isArray(content.partners)) {
+    const partners = visible(content.partners).sort((a, b) => a.sortOrder - b.sortOrder);
+    UNIVERSITIES = partners.filter((item) => item.kind === "جامعة").map((item) => item.name);
+    INSTITUTES = partners.filter((item) => item.kind === "معهد").map((item) => item.name);
+    OTHERS = partners.filter((item) => item.kind === "جهة تعليمية").map((item) => item.name);
+  }
+  if (Array.isArray(content.downloads)) files = visible(content.downloads).sort((a, b) => a.categoryOrder - b.categoryOrder).map((category) => [
+    category.emoji, category.title,
+    visible(category.items).sort((a, b) => a.sortOrder - b.sortOrder).map((item) => [item.name, item.remoteFile]),
+  ]);
+  siteSettings = content.siteSettings || {};
+  logoUrl = siteSettings.logoUrl || logoUrl;
+  fileBase = siteSettings.fileBaseUrl || fileBase;
+  if (siteSettings.whatsapp) SITE_CONFIG.whatsapp = siteSettings.whatsapp;
+  contactItems = [
+    ["◉", "واتساب", siteSettings.phone || "+966 56 768 0470", wa()],
+    ["☎", "جوال", siteSettings.phone || "+966 56 768 0470", `tel:${(siteSettings.phone || "+966567680470").replace(/\s/g, "")}`],
+    ["✉", "البريد الإلكتروني", siteSettings.email || "wajbatbls@gmail.com", `mailto:${siteSettings.email || "wajbatbls@gmail.com"}`],
+    ["◷", "ساعات العمل", siteSettings.businessHours || "متواجدون 24/7", ""],
+    ["⌖", "العنوان", siteSettings.address || "الرياض، المملكة العربية السعودية", ""],
+  ];
+}
+
+let greetingPlayed = false;
+function speakGuide(text) {
+  if (!text || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = "ar-SA";
+  utterance.rate = 0.92;
+  utterance.pitch = 1.14;
+  const voices = window.speechSynthesis.getVoices();
+  const preferredVoice = voices.find((voice) => /^ar/i.test(voice.lang) && /female|woman|أنثى|ليلى|مريم|zariyah|salma|hoda|naayf/i.test(voice.name))
+    || voices.find((voice) => /^ar/i.test(voice.lang));
+  if (preferredVoice) utterance.voice = preferredVoice;
+  window.speechSynthesis.speak(utterance);
+}
+
+function greetVisitor() {
+  if (greetingPlayed) return;
+  greetingPlayed = true;
+  const greeting = siteSettings.heroVoiceText || "مرحباً بك في واجبات بلس، منصتك الذكية للتعلم والخدمات الأكاديمية.";
+  setTimeout(() => speakGuide(greeting), 900);
+}
+
+function narrateOpenedService() {
+  if (currentPath() !== "/services") return;
+  const category = Number(queryParams().get("category"));
+  const service = SERVICES[Number.isInteger(category) && category >= 0 ? category : 0];
+  if (!service) return;
+  const template = siteSettings.serviceVoiceTemplate || "أهلاً بك في خدمة {service}. نوفر لك دعماً أكاديمياً متخصصاً مع جودة وخصوصية تامة.";
+  speakGuide(template.replace("{service}", service.title));
+}
+
 function logoMarkup(className = "brand-mark") {
   return `<span class="${className}"><img src="${logoUrl}" alt="واجبات بلس" onerror="this.remove();this.parentElement.textContent='و';" /></span>`;
 }
 
 function header() {
-  return `<div class="ticker"><span>مرحباً بكم في واجبات بلس ⭐ نقدم أفضل الخدمات الأكاديمية ⭐ تواصل معنا على واتساب +966567680470</span></div>
+  return `<div class="ticker"><span>${esc(siteSettings.tickerText || "مرحباً بكم في واجبات بلس ⭐ نقدم أفضل الخدمات الأكاديمية ⭐ تواصل معنا على واتساب +966567680470")}</span></div>
     <header class="site-header">
       <div class="header-actions">
         <button class="btn-icon" data-action="toggle-sidebar" aria-label="فتح القائمة">☰</button>
@@ -149,7 +248,7 @@ function subscriptionsPage() {
   return `<div class="container section"><div class="text-center"><h1 class="page-title">باقات الاشتراك</h1><p class="page-intro">اختر الباقة المناسبة لاحتياجاتك الأكاديمية واستفد من خدماتنا المستمرة. تواصل معنا عبر واتساب للحصول على السعر المناسب.</p></div><div class="grid grid-5">${PLANS.map((plan) => `<article class="card plan-card ${plan.popular ? "popular" : ""}"><div class="plan-head">${plan.popular ? '<span class="hero-badge" style="display:inline-block;background:var(--primary);color:#fff;border:0">الأكثر طلباً</span>' : ""}<div class="plan-emoji">${plan.emoji}</div><h3>${plan.title}</h3><span class="plan-duration">${plan.duration}</span></div><div class="plan-body"><ul class="check-list">${plan.features.map((f) => `<li>${f}</li>`).join("")}</ul><a class="btn ${plan.popular ? "btn-primary" : "btn-muted"}" href="${wa(`أريد الاشتراك في باقة: ${plan.title} ${plan.emoji}`)}" target="_blank" rel="noopener">◉ اطلب الاشتراك</a></div></article>`).join("")}</div><div class="card card-pad text-center" style="max-width:700px;margin:3rem auto 0;background:linear-gradient(to right,var(--primary-soft),color-mix(in srgb,var(--accent) 8%,transparent))"><h2 class="text-primary">هل تحتاج سعراً مخصصاً؟</h2><p class="text-muted">تواصل معنا مباشرة عبر واتساب وسنقدم لك أفضل عرض يناسب احتياجاتك وميزانيتك.</p><a class="btn btn-green" href="${wa("أريد الاستفسار عن الأسعار والباقات")}" target="_blank" rel="noopener">◉ استفسر عن الأسعار الآن</a></div></div>`;
 }
 
-const files = [
+let files = [
   ["📝", "نماذج واجبات", [["نموذج واجب 1", "xBCtuEPnzwmjWUaY.pdf"], ["نموذج واجب 2", "ZQWIFqsYHIosworf.pdf"], ["نموذج واجب 3", "uLgCcgITrWNppCLi.pdf"], ["نموذج واجب 4", "ZNKYWKvxzeBjutAI.pdf"]]],
   ["🖥️", "نماذج عروض بوربوينت", [["عرض تقديمي 1", "HYpjmoxQISxaWmTa.pdf"], ["عرض تقديمي 2", "PCSGNdLiEhfmHkJy.pdf"], ["عرض تقديمي 3", "oFISCrxRecNNNMsU.pdf"], ["عرض تقديمي 4", "AqByvIVrwkpjRLUI.pdf"]]],
   ["👤", "نماذج سيرة ذاتية CV", [["سيرة ذاتية 1", "LGcZWkdZaZEccakJ.pdf"], ["سيرة ذاتية 2", "FTIwhNHHDuZDyfaF.pdf"], ["سيرة ذاتية 3", "LGcZWkdZaZEccakJ.pdf"]]],
@@ -159,7 +258,7 @@ const files = [
   ["📚", "نماذج بحوث", [["نموذج بحث 1", "xBCtuEPnzwmjWUaY.pdf"], ["نموذج بحث 2", "ZQWIFqsYHIosworf.pdf"]]],
   ["📄", "نماذج اختبارات", [["نموذج اختبار 1", "uLgCcgITrWNppCLi.pdf"], ["نموذج اختبار 2", "ZNKYWKvxzeBjutAI.pdf"]]],
 ];
-const fileBase = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663231231378/";
+let fileBase = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663231231378/";
 function downloadsPage() {
   return `<div class="container section"><div class="text-center"><h1 class="page-title">مركز التحميلات</h1><p class="page-intro">مكتبة شاملة من النماذج والملفات الأكاديمية الجاهزة للتحميل والاستخدام المباشر — 8 فئات، مجاناً للجميع.</p></div>${files.map(([emoji, title, items], category) => `<section class="download-section"><div class="section-heading"><span>${emoji}</span><h2>${title}</h2><span class="count">${items.length} ملف</span></div><div class="grid grid-4">${items.map(([name, file], i) => `<div class="card file-card"><div class="file-info"><span class="file-icon">▤</span><div><div class="file-name">${name}</div><div class="file-meta">تحميل: ${100 + ((category + 1) * (i + 3) * 17)}+ مرة</div></div></div><a class="btn btn-outline" style="padding:.4rem .6rem;font-size:.72rem" href="${fileBase + file}" target="_blank" rel="noopener">⇩ تحميل</a></div>`).join("")}</div></section>`).join("")}</div>`;
 }
@@ -191,7 +290,7 @@ function assignmentPage() {
   return `<div class="container section" style="max-width:950px"><div class="text-center"><div class="round-icon">🎓</div><h1 class="page-title">نموذج تسليم الواجب</h1><p class="page-intro">أكمل البيانات أدناه وسيتم إرسال طلبك تلقائياً عبر واتساب ليتم التواصل معك فوراً.</p></div><div class="card form-shell"><div class="form-banner">▣ تعبئة بيانات الطلب</div><form class="form-body" data-form="assignment"><section class="form-section"><h3>👤 بيانات الطالب</h3><div class="grid grid-2"><div class="field"><label>اسم الطالب *</label><input name="studentName" required placeholder="محمد أحمد العمري" /></div><div class="field"><label>الرقم الجامعي *</label><input name="studentId" required placeholder="123456789" /></div></div></section><section class="form-section"><h3>🏛️ البيانات الأكاديمية</h3><div class="grid grid-2"><div class="field"><label>اسم الجامعة *</label><select name="university" required><option value="">اختر جامعتك...</option>${UNIVERSITIES.map((u) => `<option>${u}</option>`).join("")}<option>جامعة أخرى</option></select></div><div class="field"><label>الكلية *</label><input name="college" required placeholder="مثال: كلية الحاسب والمعلومات" /></div><div class="field"><label>القسم</label><input name="department" placeholder="مثال: قسم علوم الحاسب" /></div><div class="field"><label>اسم المقرر *</label><input name="course" required placeholder="مثال: برمجة 1 - CS101" /></div><div class="field"><label>دكتور المقرر *</label><input name="professor" required placeholder="مثال: د. عبدالله محمد" /></div></div></section><section class="form-section"><h3>📋 تفاصيل الطلب</h3><div class="grid grid-2"><div class="field"><label>نوع الخدمة المطلوبة *</label><select name="serviceType" required><option value="">اختر نوع الخدمة...</option>${SERVICE_TYPES.map((s, i) => `<option>${i + 1}. ${s}</option>`).join("")}</select></div><div class="field"><label>الموعد النهائي للتسليم *</label><input type="date" name="deadline" required min="${isoDay()}" /></div><div class="field"><label>وصف الواجب بالتفصيل *</label><textarea name="description" required placeholder="اكتب هنا جميع تفاصيل الواجب والشروط المطلوبة بدقة لضمان أعلى جودة ممكنة..."></textarea></div><div class="field"><label>إرفاق ملف <small class="text-muted">(اختياري)</small></label><label class="file-drop">⇧<span>اضغط لرفع ملف (PDF, Word, صورة)</span><input name="attachment" type="file" hidden accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" /></label><small class="text-muted text-center">سيُطلب إرسال الملفات عبر واتساب بعد الإرسال</small></div></div></section><button class="btn btn-green" style="width:100%;min-height:3.5rem;font-size:1.05rem" type="submit">➤ إرسال الطلب عبر واتساب</button></form></div></div>`;
 }
 
-const contactItems = [["◉", "واتساب", "+966 56 768 0470", wa()], ["☎", "جوال", "+966 56 768 0470", "tel:+966567680470"], ["✉", "البريد الإلكتروني", "wajbatbls@gmail.com", "mailto:wajbatbls@gmail.com"], ["◷", "ساعات العمل", "متواجدون 24/7", ""], ["⌖", "العنوان", "الرياض، المملكة العربية السعودية", ""]];
+let contactItems = [["◉", "واتساب", "+966 56 768 0470", wa()], ["☎", "جوال", "+966 56 768 0470", "tel:+966567680470"], ["✉", "البريد الإلكتروني", "wajbatbls@gmail.com", "mailto:wajbatbls@gmail.com"], ["◷", "ساعات العمل", "متواجدون 24/7", ""], ["⌖", "العنوان", "الرياض، المملكة العربية السعودية", ""]];
 function contactPage() {
   return `<div class="container section" style="max-width:1200px"><div class="text-center"><h1 class="page-title">اتصل بنا</h1><p class="page-intro">نحن هنا دائماً لخدمتك والإجابة على جميع استفساراتك الأكاديمية.</p></div><div class="grid grid-2" style="grid-template-columns:2fr 3fr;align-items:start"><div class="grid">${contactItems.map(([ico, label, value, href]) => `<div class="card contact-item"><span class="contact-icon">${ico}</span><div><small class="text-muted">${label}</small>${href ? `<a class="contact-value" href="${href}" ${href.startsWith("http") ? 'target="_blank" rel="noopener"' : ""}>${value}</a>` : `<div class="contact-value">${value}</div>`}</div></div>`).join("")}<div class="card card-pad"><h3>وسائل التواصل الاجتماعي</h3><div class="social-row"><a class="social" href="${wa()}" target="_blank" rel="noopener">◉</a><a class="social" href="#" aria-label="فيسبوك">f</a><a class="social" href="#" aria-label="إنستغرام">◎</a><a class="social" href="#" aria-label="تويتر">𝕏</a><a class="social" href="#" aria-label="يوتيوب">▶</a></div></div><a class="btn btn-green" href="${wa("أريد التواصل مع فريق واجبات بلس")}" target="_blank" rel="noopener">◉ تواصل فوري عبر واتساب</a></div><div class="grid"><div class="card card-pad"><h2>أرسل لنا رسالة</h2><form data-form="contact" class="grid"><div class="grid grid-2"><div class="field"><label>الاسم الكريم *</label><input name="name" required placeholder="محمد أحمد" /></div><div class="field"><label>رقم الجوال *</label><input name="phone" required placeholder="05XXXXXXXX" /></div></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" placeholder="example@email.com" dir="ltr" /></div><div class="field"><label>الموضوع *</label><input name="subject" required placeholder="استفسار عن خدمة..." /></div><div class="field"><label>الرسالة *</label><textarea name="message" required placeholder="اكتب رسالتك أو استفسارك هنا..."></textarea></div><button class="btn btn-primary" type="submit">➤ إرسال الرسالة</button></form></div><div class="card" style="overflow:hidden"><div class="card-pad" style="padding-bottom:.6rem"><b>⌖ موقعنا — الرياض، المملكة العربية السعودية</b></div><iframe class="map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3624.674!2d46.6753!3d24.7136!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3e2f03890d489399%3A0xba974d1c98e79fd5!2sRiyadh%2C%20Saudi%20Arabia!5e0!3m2!1sen!2ssa!4v1234567890" loading="lazy" title="موقعنا على الخريطة"></iframe></div></div></div></div>`;
 }
@@ -208,7 +307,7 @@ function partnersPage() {
 }
 
 function statsPage() {
-  return state.statsLoggedIn ? statsDashboard() : `<div class="stats-page"><div class="container"><div class="glass login-panel"><div class="round-icon" style="background:rgba(0,201,167,.2);color:var(--accent)">▣</div><h2>📊 إحصائيات الموقع</h2><p>للمالك فقط — تسجيل الدخول مطلوب</p><form class="form" data-form="stats-login"><div class="field"><label>🔑 الرمز السري</label><input name="code" type="password" required placeholder="أدخل الرمز..." dir="ltr" autocomplete="off" /></div><div class="field"><label>🔒 كلمة المرور</label><input name="pass" type="password" required placeholder="أدخل كلمة المرور..." autocomplete="off" /></div><div class="login-error"></div><button class="btn" style="color:#0f2b5b;background:linear-gradient(90deg,#00c9a7,#ffd700)" type="submit">🔓 دخول</button></form></div></div></div>`;
+  return `<div class="stats-page"><div class="container"><div class="glass login-panel"><div class="round-icon" style="background:rgba(0,201,167,.2);color:var(--accent)">▣</div><h2>📊 إحصائيات الموقع</h2><p>هذه البيانات محمية ومخصّصة للمالك فقط.</p></div></div></div>`;
 }
 function statsDashboard() {
   const stats = loadStats();
@@ -296,11 +395,6 @@ async function handleForm(form) {
     const message = `🎓 *طلب خدمة أكاديمية جديد — واجبات بلس*\n━━━━━━━━━━━━━━━━━━\n\n👤 *بيانات الطالب:*\n• الاسم: ${data.studentName}\n• الرقم الجامعي: ${data.studentId}\n\n🏛️ *البيانات الأكاديمية:*\n• الجامعة: ${data.university}\n• الكلية: ${data.college}\n• القسم: ${data.department}\n• المقرر: ${data.course}\n• الدكتور: ${data.professor}\n\n📋 *تفاصيل الطلب:*\n• نوع الخدمة: ${payload.service_type}\n• الموعد النهائي: ${data.deadline}\n\n📝 *الوصف:*\n${data.description}`;
     toast("✅ تم تجهيز الطلب!", "سيتم تحويلك إلى واتساب لإتمام الطلب."); setTimeout(() => window.open(wa(message), "_blank", "noopener"), 500); form.reset(); return;
   }
-  if (form.dataset.form === "stats-login") {
-    const error = form.querySelector(".login-error");
-    if (data.code === ownerCode && data.pass === ownerPass) { state.statsLoggedIn = true; render(); }
-    else { error.textContent = "الرمز أو كلمة المرور غير صحيحة"; error.className = "login-error error"; }
-  }
 }
 
 document.addEventListener("click", (event) => {
@@ -328,14 +422,20 @@ document.addEventListener("input", (event) => {
   const list = document.querySelector("#faq-list");
   if (list) list.innerHTML = faqItems(FAQS.filter((faq) => `${faq.q} ${faq.a}`.includes(query)));
 });
-window.addEventListener("hashchange", () => { state.article = null; state.sidebar = false; render(); if (currentPath() !== "/stats") recordVisit(); });
+window.addEventListener("hashchange", () => { state.article = null; state.sidebar = false; render(); if (currentPath() !== "/stats") recordVisit(); narrateOpenedService(); });
 window.addEventListener("scroll", () => document.querySelector(".back-top")?.classList.toggle("visible", window.scrollY > 300));
 
-if (localStorage.getItem("wajbat-theme") === "dark") document.body.classList.add("dark");
-const hasInitialHash = Boolean(location.hash);
-if (!hasInitialHash) {
-  location.hash = "/";
-} else {
-  render();
-  if (currentPath() !== "/stats") recordVisit();
+async function bootSite() {
+  try { applyManagedContent(await rpcQuery("site.publicContent")); } catch { /* تُستخدم البيانات الأصلية المرفقة إذا تعذر الاتصال. */ }
+  if (localStorage.getItem("wajbat-theme") === "dark") document.body.classList.add("dark");
+  const hasInitialHash = Boolean(location.hash);
+  if (!hasInitialHash) location.hash = "/";
+  else {
+    render();
+    if (currentPath() !== "/stats") recordVisit();
+    narrateOpenedService();
+  }
+  greetVisitor();
 }
+
+void bootSite();

@@ -287,7 +287,9 @@ function pageContent() {
 }
 
 function render() {
-  document.title = ({ "/": "واجبات بلس | منصتك الذكية للتعلم", "/services": "الخدمات الأكاديمية | واجبات بلس", "/subscriptions": "باقات الاشتراك | واجبات بلس", "/downloads": "مركز التحميلات | واجبات بلس", "/blog": "المدونة الأكاديمية | واجبات بلس", "/contact": "اتصل بنا | واجبات بلس" }[currentPath()] || "واجبات بلس");
+  const path = currentPath();
+  if (path === "/") syncSeoMetadata();
+  else document.title = ({ "/services": "الخدمات الأكاديمية | واجبات بلس", "/subscriptions": "باقات الاشتراك | واجبات بلس", "/downloads": "مركز التحميلات | واجبات بلس", "/blog": "المدونة الأكاديمية | واجبات بلس", "/contact": "اتصل بنا | واجبات بلس" }[path] || "واجبات بلس");
   document.querySelector("#app").innerHTML = layout(pageContent());
   if (currentPath() === "/contact") {
     const managedSocial = { "فيسبوك": socialLinks.facebook, "إنستغرام": socialLinks.instagram, "تويتر": socialLinks.twitter, "يوتيوب": socialLinks.youtube };

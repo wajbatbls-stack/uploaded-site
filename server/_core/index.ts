@@ -49,6 +49,12 @@ async function startServer() {
     const adminFile = process.env.NODE_ENV === "development"
       ? path.resolve(process.cwd(), "client/public/admin.html")
       : path.resolve(import.meta.dirname, "public/admin.html");
+    // لا تُخزَّن صفحة الإدارة: فهي نقطة دخول محمية وتتغير مع كل إصدار لأصول المالك.
+    res.set({
+      "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+      Pragma: "no-cache",
+      Expires: "0",
+    });
     res.sendFile(adminFile);
   });
   // development mode uses Vite, production mode uses static files

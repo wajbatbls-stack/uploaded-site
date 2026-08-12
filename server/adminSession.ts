@@ -2,8 +2,23 @@ import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { jwtVerify, SignJWT } from "jose";
 import { parse } from "cookie";
+import {
+  generateAuthenticationOptions,
+  generateRegistrationOptions,
+  verifyAuthenticationResponse,
+  verifyRegistrationResponse,
+} from "@simplewebauthn/server";
 import { ownerAccounts, ownerSessions } from "../drizzle/schema";
-import { getDb } from "./db";
+import {
+  consumeOwnerWebAuthnChallenge,
+  createOwnerPasskey,
+  createOwnerWebAuthnChallenge,
+  deleteOwnerPasskey,
+  getOwnerPasskey,
+  getDb,
+  listOwnerPasskeys,
+  useOwnerPasskey,
+} from "./db";
 import { ENV } from "./_core/env";
 
 export const ADMIN_SESSION_COOKIE = "wajbat_admin_session";
@@ -84,6 +99,11 @@ export async function updateAdminCredentials(input: { currentPassword: string; e
   return { id: account.id, email: nextEmail, sessionVersion: nextVersion };
 }
 
+export async function verifyAdminCurrentPassword(currentPassword: string) {
+  const account = await getOrSeedOwnerAccount();
+  return Boolean(account && verifyPassword(currentPassword, account.passwordHash));
+}
+
 export async function createAdminSession(account?: OwnerAccount, metadata: SessionMetadata = {}) {
   const activeAccount = account ?? await getOrSeedOwnerAccount();
   const version = activeAccount?.sessionVersion ?? 1;
@@ -154,4 +174,119 @@ export async function revokeOtherAdminSessions(cookieHeader: string | undefined,
     isNull(ownerSessions.revokedAt),
   ));
   return { accountId: account.id };
+}
+
+type WebAuthnContext = { origin: string; rpId: string };
+
+function parseStoredTransports(value: string | null) {
+  if (!value) return undefined;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed.filter(item => typeof item === "string") : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export async function startOwnerPasskeyRegistration(context: WebAuthnContext) {
+  const account = await getOrSeedOwnerAccount();
+  if (!account) throw new Error("تعذر العثور على حساب المالك");
+  const registered = await listOwnerPasskeys(account.id);
+  const options = await generateRegistrationOptions({
+    rpName: "لوحة إدارة واجبات بلس",
+    rpID: context.rpId,
+    userID: new TextEncoder().encode(String(account.id)),
+    userName: account.email,
+    userDisplayName: "مالك واجبات بلس",
+    attestationType: "none",
+    timeout: 60_000,
+    excludeCredentials: registered.map(passkey => ({ id: passkey.credentialId })),
+    authenticatorSelection: { residentKey: "preferred", userVerification: "required" },
+  });
+  await createOwnerWebAuthnChallenge({
+    ownerAccountId: account.id,
+    challenge: options.challenge,
+    ceremony: "registration",
+    origin: context.origin,
+    rpId: context.rpId,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+  });
+  return options;
+}
+
+export async function finishOwnerPasskeyRegistration(input: { challenge: string; response: unknown; label: string; ownerAccountId: number }) {
+  const challenge = await consumeOwnerWebAuthnChallenge(input.challenge, "registration");
+  if (!challenge || challenge.ownerAccountId !== input.ownerAccountId) throw new Error("انتهت جلسة تسجيل Passkey أو لا تنتمي إلى الحساب الحالي");
+  const verification = await verifyRegistrationResponse({
+    response: input.response as Parameters<typeof verifyRegistrationResponse>[0]["response"],
+    expectedChallenge: challenge.challenge,
+    expectedOrigin: challenge.origin,
+    expectedRPID: challenge.rpId,
+    requireUserVerification: true,
+  });
+  if (!verification.verified || !verification.registrationInfo) throw new Error("تعذر التحقق من Passkey المسجّل");
+  const credential = verification.registrationInfo.credential;
+  await createOwnerPasskey({
+    ownerAccountId: input.ownerAccountId,
+    credentialId: credential.id,
+    publicKey: Buffer.from(credential.publicKey).toString("base64url"),
+    counter: credential.counter,
+    transports: credential.transports?.length ? JSON.stringify(credential.transports) : null,
+    label: input.label.trim().slice(0, 120) || "Passkey المالك",
+  });
+  return { success: true as const };
+}
+
+export async function startOwnerPasskeyAuthentication(context: WebAuthnContext) {
+  const account = await getOrSeedOwnerAccount();
+  if (!account) throw new Error("تعذر العثور على حساب المالك");
+  const passkeys = await listOwnerPasskeys(account.id);
+  if (!passkeys.length) throw new Error("لم يتم إعداد Passkey لحساب المالك بعد");
+  const options = await generateAuthenticationOptions({
+    rpID: context.rpId,
+    timeout: 60_000,
+    userVerification: "required",
+    allowCredentials: passkeys.map(passkey => ({ id: passkey.credentialId })),
+  });
+  await createOwnerWebAuthnChallenge({
+    ownerAccountId: account.id,
+    challenge: options.challenge,
+    ceremony: "authentication",
+    origin: context.origin,
+    rpId: context.rpId,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000),
+  });
+  return options;
+}
+
+export async function finishOwnerPasskeyAuthentication(input: { challenge: string; response: unknown; metadata?: SessionMetadata }) {
+  const challenge = await consumeOwnerWebAuthnChallenge(input.challenge, "authentication");
+  if (!challenge || !challenge.ownerAccountId) throw new Error("انتهت جلسة دخول Passkey");
+  const credentialId = typeof (input.response as { id?: unknown }).id === "string" ? (input.response as { id: string }).id : "";
+  const passkey = credentialId ? await getOwnerPasskey(credentialId) : undefined;
+  if (!passkey || passkey.ownerAccountId !== challenge.ownerAccountId) throw new Error("Passkey غير معروف");
+  const verification = await verifyAuthenticationResponse({
+    response: input.response as Parameters<typeof verifyAuthenticationResponse>[0]["response"],
+    expectedChallenge: challenge.challenge,
+    expectedOrigin: challenge.origin,
+    expectedRPID: challenge.rpId,
+    credential: {
+      id: passkey.credentialId,
+      publicKey: Buffer.from(passkey.publicKey, "base64url"),
+      counter: passkey.counter,
+      transports: parseStoredTransports(passkey.transports) as Parameters<typeof verifyAuthenticationResponse>[0]["credential"]["transports"],
+    },
+    requireUserVerification: true,
+  });
+  if (!verification.verified) throw new Error("تعذر التحقق من Passkey");
+  await useOwnerPasskey(passkey.credentialId, verification.authenticationInfo.newCounter);
+  const account = await getOrSeedOwnerAccount();
+  if (!account || account.id !== challenge.ownerAccountId) throw new Error("تعذر إتمام جلسة المالك");
+  return createAdminSession(account, input.metadata);
+}
+
+export async function removeOwnerPasskey(ownerAccountId: number, passkeyId: number, currentPassword: string) {
+  if (!(await verifyAdminCurrentPassword(currentPassword))) return false;
+  await deleteOwnerPasskey(ownerAccountId, passkeyId);
+  return true;
 }

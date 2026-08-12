@@ -118,11 +118,51 @@ async function runInteractiveLogin(command, viewport) {
     links: [...document.querySelectorAll('[data-select]')].map(el => el.dataset.select).filter(Boolean)
   }))()`, returnByValue: true });
   const navState = JSON.parse(navigation.result.value);
-  const requiredCmsLinks = ["homePage", "design", "universities", "team", "gallery", "analytics", "requests", "siteSettings", "account"];
+  const requiredCmsLinks = ["ownerLogin", "homePage", "design", "universities", "team", "gallery", "analytics", "requests", "siteSettings", "account"];
   if (!navState.shell || !navState.sidebar || !requiredCmsLinks.every(key => navState.links.includes(key))) {
     throw new Error(`Redesigned dashboard navigation is incomplete: ${JSON.stringify(navState)}`);
   }
   const suffix = viewport.mobile ? "mobile" : "desktop";
+  if (!viewport.mobile) {
+    await command("Runtime.evaluate", { expression: `document.querySelector('[data-select="ownerLogin"]')?.click()` });
+    await wait(450);
+    const ownerLoginView = await command("Runtime.evaluate", { expression: `(() => {
+      const form = document.querySelector('[data-owner-login-settings]');
+      const preview = document.querySelector('[data-owner-login-preview]');
+      const security = document.querySelector('[data-owner-login-security]');
+      const passkeys = document.querySelector('[data-owner-passkeys]');
+      const values = { title: form?.elements.title?.value || '', gradient: form?.elements.backgroundGradient?.value || '' };
+      let requests = 0;
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = async (...args) => { requests += 1; return nativeFetch(...args); };
+      if (form?.elements.title) {
+        form.elements.title.value = 'معاينة متصفح معزولة';
+        form.elements.title.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      const previewText = preview?.textContent || '';
+      window.fetch = nativeFetch;
+      return JSON.stringify({
+        title: document.querySelector('.workspace h2')?.textContent?.trim() || '',
+        hasForm: !!form,
+        hasPreview: !!preview,
+        previewReflected: previewText.includes('معاينة متصفح معزولة'),
+        hasTemplates: !!form?.elements.template && !!form?.elements.backgroundGradient,
+        hasUploads: !!form?.querySelector('[data-owner-login-upload="logo"]') && !!form?.querySelector('[data-owner-login-upload="ownerPhoto"]'),
+        hasSecurity: !!security && !!document.querySelector('[data-owner-login-credentials]'),
+        hasPasskeys: !!passkeys && !!passkeys.querySelector('[data-owner-passkey-register]'),
+        hasPreviousRestore: !!document.querySelector('[data-owner-login-restore-previous]'),
+        noNetworkSaveDuringPreview: requests === 0,
+        values,
+      });
+    })()`, returnByValue: true });
+    const ownerLoginState = JSON.parse(ownerLoginView.result.value);
+    if (!ownerLoginState.title.includes('إعدادات دخول المالك') || !ownerLoginState.hasForm || !ownerLoginState.hasPreview || !ownerLoginState.previewReflected || !ownerLoginState.hasTemplates || !ownerLoginState.hasUploads || !ownerLoginState.hasSecurity || !ownerLoginState.hasPasskeys || !ownerLoginState.hasPreviousRestore || !ownerLoginState.noNetworkSaveDuringPreview) {
+      throw new Error(`Owner login settings workspace is incomplete: ${JSON.stringify(ownerLoginState)}`);
+    }
+    await capture(`${suffix}-owner-login-settings`);
+    await command("Runtime.evaluate", { expression: `document.querySelector('[data-select="dashboard"]')?.click()` });
+    await wait(250);
+  }
   await capture(`${suffix}-dashboard`);
   if (viewport.mobile) {
     const menuState = await command("Runtime.evaluate", { expression: `(() => {

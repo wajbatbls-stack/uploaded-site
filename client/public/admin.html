@@ -32,6 +32,10 @@
           document.body.append(structuredEditor);
         };
         document.body.append(mediaBinding);
+        const ownerLoginSecurity = document.createElement("script");
+        ownerLoginSecurity.src = "/assets/js/admin-owner-login-security.js";
+        ownerLoginSecurity.defer = true;
+        document.body.append(ownerLoginSecurity);
         const securityControls = document.createElement("script");
         securityControls.src = "/assets/js/admin-security-controls.js";
         securityControls.defer = true;

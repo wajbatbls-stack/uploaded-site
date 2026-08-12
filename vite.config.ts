@@ -191,7 +191,7 @@ function publishVersionedEntryAssets(): Plugin {
   const sourceRoot = path.resolve(import.meta.dirname, "client", "public", "assets");
   const entries = [
     { source: "js/app.js", destination: "js/site-app-r6.js" },
-    { source: "js/admin-login-fix-v2.js", destination: "js/admin-app-r6.js" },
+    { source: "js/admin-login-fix-v2.js", destination: "js/admin-app-r7.js" },
   ];
 
   return {

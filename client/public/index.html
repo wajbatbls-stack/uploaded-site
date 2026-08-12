@@ -19,6 +19,11 @@
   <body>
     <div id="app"></div>
     <div id="toast-region" aria-live="polite" aria-atomic="true"></div>
-    <script type="module" src="./assets/js/app.js?release=20260812-r5"></script>
+    <script type="module">
+      const appModule = document.createElement("script");
+      appModule.type = "module";
+      appModule.src = "/assets/js/site-app-r6.js";
+      document.body.append(appModule);
+    </script>
   </body>
 </html>

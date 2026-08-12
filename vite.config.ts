@@ -176,7 +176,39 @@ function copyAdminAssets(): Plugin {
   };
 }
 
-const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), copyAdminAssets()];
+/**
+ * تُنسخ نقاط دخول النسخة المنشورة بأسماء إصدار مستقلة؛ إذ لا تكفي معاملات
+ * الاستعلام وحدها عندما تحتفظ شبكة التوزيع بنسخة قديمة من الحزمة المحزّمة.
+ */
+function publishVersionedEntryAssets(): Plugin {
+  const sourceRoot = path.resolve(import.meta.dirname, "client", "public", "assets");
+  const entries = [
+    { source: "js/app.js", destination: "js/site-app-r6.js" },
+    { source: "js/admin-login-fix-v2.js", destination: "js/admin-app-r6.js" },
+  ];
+
+  return {
+    name: "publish-wajbat-versioned-entry-assets",
+    configureServer(server: ViteDevServer) {
+      for (const entry of entries) {
+        server.middlewares.use(`/assets/${entry.destination}`, (_req, res) => {
+          res.setHeader("Content-Type", "application/javascript; charset=utf-8");
+          fs.createReadStream(path.join(sourceRoot, entry.source)).pipe(res);
+        });
+      }
+    },
+    closeBundle() {
+      const destinationRoot = path.resolve(import.meta.dirname, "dist", "public", "assets");
+      for (const entry of entries) {
+        const target = path.join(destinationRoot, entry.destination);
+        fs.mkdirSync(path.dirname(target), { recursive: true });
+        fs.copyFileSync(path.join(sourceRoot, entry.source), target);
+      }
+    },
+  };
+}
+
+const plugins = [react(), tailwindcss(), jsxLocPlugin(), vitePluginManusRuntime(), vitePluginManusDebugCollector(), copyAdminAssets(), publishVersionedEntryAssets()];
 
 export default defineConfig({
   plugins,

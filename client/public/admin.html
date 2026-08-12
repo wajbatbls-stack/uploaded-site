@@ -12,6 +12,11 @@
   </head>
   <body>
     <div id="admin-root"></div>
-    <script type="module" src="/assets/js/admin-login-fix-v2.js?release=20260812-r5"></script>
+    <script type="module">
+      const adminModule = document.createElement("script");
+      adminModule.type = "module";
+      adminModule.src = "/assets/js/admin-app-r6.js";
+      document.body.append(adminModule);
+    </script>
   </body>
 </html>

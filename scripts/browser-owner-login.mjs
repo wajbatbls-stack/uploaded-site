@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
-import { rmSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 
 const chromePort = 9227;
 const chromeProfile = "/tmp/wajbat-owner-login-browser";
 const baseUrl = process.env.TEST_BASE_URL || "http://localhost:3000";
 const email = process.env.ADMIN_EMAIL;
 const password = process.env.ADMIN_PASSWORD;
+const evidenceDir = "/tmp/wajbat-admin-redesign-evidence";
 
 if (!email || !password) throw new Error("ADMIN_EMAIL and ADMIN_PASSWORD must be configured for this test");
 
@@ -16,6 +17,8 @@ function removeProfile() {
 }
 
 removeProfile();
+rmSync(evidenceDir, { recursive: true, force: true });
+mkdirSync(evidenceDir, { recursive: true });
 const chrome = spawn("/usr/bin/chromium", [
   "--headless=new", "--no-sandbox", "--disable-gpu", `--remote-debugging-port=${chromePort}`,
   `--user-data-dir=${chromeProfile}`, "--window-size=1280,900", "about:blank",
@@ -104,6 +107,65 @@ async function runInteractiveLogin(command, viewport) {
     if (result.dashboard || result.browserValidation || result.error) break;
   }
   if (!result.dashboard || result.browserValidation || result.error) throw new Error(`Interactive login failed: ${JSON.stringify(result)}`);
+
+  const capture = async name => {
+    const screenshot = await command("Page.captureScreenshot", { format: "png", captureBeyondViewport: true });
+    writeFileSync(`${evidenceDir}/${name}.png`, Buffer.from(screenshot.data, "base64"));
+  };
+  const navigation = await command("Runtime.evaluate", { expression: `(() => JSON.stringify({
+    shell: !!document.querySelector('.admin-shell'),
+    sidebar: !!document.querySelector('.admin-sidebar, .admin-nav, aside'),
+    links: [...document.querySelectorAll('[data-select]')].map(el => el.dataset.select).filter(Boolean)
+  }))()`, returnByValue: true });
+  const navState = JSON.parse(navigation.result.value);
+  if (!navState.shell || !navState.sidebar || !navState.links.includes("requests") || !navState.links.includes("siteSettings")) {
+    throw new Error(`Redesigned dashboard navigation is incomplete: ${JSON.stringify(navState)}`);
+  }
+  const suffix = viewport.mobile ? "mobile" : "desktop";
+  await capture(`${suffix}-dashboard`);
+  if (viewport.mobile) {
+    const menuState = await command("Runtime.evaluate", { expression: `(() => {
+      document.querySelector('[data-sidebar-toggle]')?.click();
+      return JSON.stringify({ open: document.querySelector('.admin-shell')?.classList.contains('nav-open') || false });
+    })()`, returnByValue: true });
+    if (!JSON.parse(menuState.result.value).open) throw new Error("Mobile navigation did not open");
+    await capture(`${suffix}-navigation`);
+  } else {
+    const alertsView = await command("Runtime.evaluate", { expression: `(() => JSON.stringify({
+      hasAlerts: !!document.querySelector('.alert-panel, .alert-action'),
+      alertActions: document.querySelectorAll('.alert-action').length
+    }))()`, returnByValue: true });
+    const alertsState = JSON.parse(alertsView.result.value);
+    if (!alertsState.hasAlerts) throw new Error(`Dashboard alert panel did not render: ${JSON.stringify(alertsState)}`);
+    await capture(`${suffix}-alerts`);
+    await command("Runtime.evaluate", { expression: `document.querySelector('[data-select="messages"]')?.click()` });
+    await wait(300);
+    const emptyView = await command("Runtime.evaluate", { expression: `(() => JSON.stringify({
+      hasMessagesView: !!document.querySelector('.workspace, .admin-content, .admin-main'),
+      hasEmptyState: !!document.querySelector('.empty'),
+      emptyText: document.querySelector('.empty')?.textContent?.trim() || ''
+    }))()`, returnByValue: true });
+    const emptyState = JSON.parse(emptyView.result.value);
+    if (!emptyState.hasMessagesView || !emptyState.hasEmptyState) throw new Error(`Messages empty state did not render: ${JSON.stringify(emptyState)}`);
+    await capture(`${suffix}-empty-messages`);
+    await command("Runtime.evaluate", { expression: `document.querySelector('[data-select="requests"]')?.click()` });
+    await wait(300);
+    const requestsView = await command("Runtime.evaluate", { expression: `(() => JSON.stringify({
+      title: document.querySelector('.admin-content h1, .admin-main h1, main h1')?.textContent?.trim() || '',
+      hasRequestControls: !!document.querySelector('[data-request-status], [data-save-request], select')
+    }))()`, returnByValue: true });
+    const requestsState = JSON.parse(requestsView.result.value);
+    if (!requestsState.hasRequestControls) throw new Error(`Requests module did not render after navigation: ${JSON.stringify(requestsState)}`);
+    await capture(`${suffix}-requests`);
+    await command("Runtime.evaluate", { expression: `document.querySelector('[data-select="siteSettings"]')?.click()` });
+    await wait(300);
+    const settingsView = await command("Runtime.evaluate", { expression: `(() => JSON.stringify({
+      hasSettings: !!document.querySelector('[data-setting], #seo-title, input[name*="seo"], textarea')
+    }))()`, returnByValue: true });
+    if (!JSON.parse(settingsView.result.value).hasSettings) throw new Error("Settings module did not render after navigation");
+    await capture(`${suffix}-settings`);
+  }
+  result.redesign = { navigation: navState, screenshots: suffix };
   return result;
 }
 

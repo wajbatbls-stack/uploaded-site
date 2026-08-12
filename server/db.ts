@@ -1,4 +1,4 @@
-import { and, desc, eq, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   adminAuditEvents,
@@ -63,19 +63,21 @@ const collectionLabels: Record<string, string> = {
   partners: "الشركاء",
   faqs: "الأسئلة الشائعة",
   siteSettings: "إعدادات الموقع والإعلانات وSEO",
+  aboutContent: "من نحن",
+  teamMembers: "فريق الإدارة",
 };
 
 export async function ensureSiteSeeded() {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة");
-  const seeded = await db.select({ id: contentCollections.id }).from(contentCollections).limit(1);
-  if (seeded.length) return;
-  const records = Object.entries(SITE_SEED).map(([collectionKey, content]) => ({
+  const seeded = await db.select({ collectionKey: contentCollections.collectionKey }).from(contentCollections);
+  const existingKeys = new Set(seeded.map(row => row.collectionKey));
+  const records = Object.entries(SITE_SEED).filter(([collectionKey]) => !existingKeys.has(collectionKey)).map(([collectionKey, content]) => ({
     collectionKey,
     label: collectionLabels[collectionKey] ?? collectionKey,
     content: JSON.stringify(content),
   }));
-  await db.insert(contentCollections).values(records);
+  if (records.length) await db.insert(contentCollections).values(records);
 }
 
 export async function getPublicSiteContent() {
@@ -238,22 +240,48 @@ export async function recordAdminAudit(action: string, entityType: string, entit
   if (db) await db.insert(adminAuditEvents).values({ action, entityType, entityId: entityId ?? null, details: details ? JSON.stringify(details) : null });
 }
 
+const ARABIC_MONTHS: Record<string, number> = { "يناير": 0, "فبراير": 1, "مارس": 2, "أبريل": 3, "مايو": 4, "يونيو": 5, "يوليو": 6, "أغسطس": 7, "سبتمبر": 8, "أكتوبر": 9, "نوفمبر": 10, "ديسمبر": 11 };
+
+export function sortRecentArticles(items: unknown[]): Record<string, unknown>[] {
+  return items
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .map((item, index) => {
+      const publishedText = typeof item.publishedText === "string" ? item.publishedText.trim() : "";
+      const match = publishedText.match(/^(\d{1,2})\s+(يناير|فبراير|مارس|أبريل|مايو|يونيو|يوليو|أغسطس|سبتمبر|أكتوبر|نوفمبر|ديسمبر)\s+(\d{4})$/);
+      const publishedAt = match ? Date.UTC(Number(match[3]), ARABIC_MONTHS[match[2]], Number(match[1])) : 0;
+      return { ...item, __publishedAt: publishedAt, __index: index };
+    })
+    .sort((left, right) => Number(right.__publishedAt) - Number(left.__publishedAt) || Number(left.__index) - Number(right.__index))
+    .slice(0, 10)
+    .map(({ __publishedAt: _publishedAt, __index: _index, ...item }) => item);
+}
+
 export async function getAdminStats() {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة");
-  const [[{ visits }], [{ orders }], [{ requests }], [{ messages }], [{ pendingReviews }]] = await Promise.all([
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 6);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const [[{ visits }], [{ orders }], [{ requests }], [{ messages }], [{ pendingReviews }], [{ visitsToday }], [{ visitsWeek }], [{ visitsMonth }]] = await Promise.all([
     db.select({ visits: sql<number>`count(*)` }).from(siteVisits),
     db.select({ orders: sql<number>`count(*)` }).from(siteOrders),
     db.select({ requests: sql<number>`count(*)` }).from(assignmentRequests),
     db.select({ messages: sql<number>`count(*)` }).from(contactMessages).where(eq(contactMessages.status, "new")),
     db.select({ pendingReviews: sql<number>`count(*)` }).from(submittedReviews).where(eq(submittedReviews.status, "pending")),
+    db.select({ visitsToday: sql<number>`count(*)` }).from(siteVisits).where(gte(siteVisits.visitedAt, todayStart)),
+    db.select({ visitsWeek: sql<number>`count(*)` }).from(siteVisits).where(gte(siteVisits.visitedAt, weekStart)),
+    db.select({ visitsMonth: sql<number>`count(*)` }).from(siteVisits).where(gte(siteVisits.visitedAt, monthStart)),
   ]);
   const visitCount = sql<number>`count(*)`;
-  const [recentVisits, recentOrders, recentRequests, recentMessages, activities, dailyVisitRows, trafficSources, deviceTypes, requestStatuses] = await Promise.all([
+  const [recentVisits, recentOrders, recentRequests, recentMessages, recentReviews, recentMedia, activities, dailyVisitRows, trafficSources, deviceTypes, requestStatuses, contentViewRows, articleCollection] = await Promise.all([
     db.select().from(siteVisits).orderBy(desc(siteVisits.visitedAt)).limit(50),
     db.select().from(siteOrders).orderBy(desc(siteOrders.submittedAt)).limit(50),
     db.select().from(assignmentRequests).orderBy(desc(assignmentRequests.createdAt)).limit(10),
     db.select().from(contactMessages).orderBy(desc(contactMessages.createdAt)).limit(10),
+    db.select().from(submittedReviews).orderBy(desc(submittedReviews.createdAt)).limit(10),
+    db.select().from(mediaFiles).orderBy(desc(mediaFiles.createdAt)).limit(10),
     db.select().from(adminAuditEvents).orderBy(desc(adminAuditEvents.createdAt)).limit(30),
     db.select({ visitedAt: siteVisits.visitedAt }).from(siteVisits)
       .where(sql`${siteVisits.visitedAt} >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)`)
@@ -264,6 +292,10 @@ export async function getAdminStats() {
       .groupBy(siteVisits.deviceType).orderBy(desc(visitCount)),
     db.select({ status: assignmentRequests.status, count: sql<number>`count(*)` }).from(assignmentRequests)
       .groupBy(assignmentRequests.status),
+    db.select({ path: siteVisits.path, count: visitCount }).from(siteVisits)
+      .where(or(like(siteVisits.path, "/services/%"), like(siteVisits.path, "/blog/articles/%"), like(siteVisits.path, "/downloads/files/%")))
+      .groupBy(siteVisits.path).orderBy(desc(visitCount)).limit(60),
+    db.select({ content: contentCollections.content }).from(contentCollections).where(eq(contentCollections.collectionKey, "articles")).limit(1),
   ]);
   const dailyVisitMap = new Map<string, number>();
   for (const visit of dailyVisitRows) {
@@ -271,7 +303,17 @@ export async function getAdminStats() {
     dailyVisitMap.set(date, (dailyVisitMap.get(date) ?? 0) + 1);
   }
   const dailyVisits = Array.from(dailyVisitMap.entries()).map(([date, count]) => ({ date, count }));
-  return { visits, orders, requests, messages, pendingReviews, recentVisits, recentOrders, recentRequests, recentMessages, activities, dailyVisits, trafficSources, deviceTypes, requestStatuses };
+  let recentArticles: unknown[] = [];
+  try {
+    const parsed = articleCollection[0] ? JSON.parse(articleCollection[0].content) : [];
+    recentArticles = Array.isArray(parsed) ? sortRecentArticles(parsed) : [];
+  } catch {
+    recentArticles = [];
+  }
+  const topServices = contentViewRows.filter(row => row.path.startsWith("/services/")).slice(0, 5);
+  const topArticles = contentViewRows.filter(row => row.path.startsWith("/blog/articles/")).slice(0, 5);
+  const topDownloads = contentViewRows.filter(row => row.path.startsWith("/downloads/files/")).slice(0, 5);
+  return { visits, visitsToday, visitsWeek, visitsMonth, orders, requests, messages, pendingReviews, recentVisits, recentOrders, recentRequests, recentMessages, recentReviews, recentMedia, recentArticles, activities, dailyVisits, trafficSources, deviceTypes, requestStatuses, topServices, topArticles, topDownloads };
 }
 
 export async function exportSiteBackup() {

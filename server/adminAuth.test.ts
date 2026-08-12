@@ -28,4 +28,35 @@ describe("adminAuth.login", () => {
     expect(cookies[0]?.value.length).toBeGreaterThan(30);
     expect(cookies[0]?.options).toMatchObject({ httpOnly: true, sameSite: "lax", path: "/" });
   });
+
+  it("revokes the server-side owner session on logout", async () => {
+    const cookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
+    const cleared: string[] = [];
+    const loginCtx = {
+      user: null,
+      req: { headers: {} },
+      res: {
+        cookie: (name: string, value: string, options: Record<string, unknown>) => cookies.push({ name, value, options }),
+        clearCookie: (name: string) => cleared.push(name),
+      },
+    } as unknown as TrpcContext;
+
+    await appRouter.createCaller(loginCtx).adminAuth.login({
+      email: process.env.ADMIN_EMAIL!,
+      password: process.env.ADMIN_PASSWORD!,
+    });
+    const token = cookies[0]?.value;
+    expect(token).toBeTruthy();
+
+    const authenticatedCtx = {
+      user: null,
+      req: { headers: { cookie: `wajbat_admin_session=${token}` } },
+      res: loginCtx.res,
+    } as unknown as TrpcContext;
+    await expect(appRouter.createCaller(authenticatedCtx).adminAuth.account()).resolves.toMatchObject({ email: process.env.ADMIN_EMAIL });
+
+    await appRouter.createCaller(authenticatedCtx).adminAuth.logout();
+    expect(cleared).toContain("wajbat_admin_session");
+    await expect(appRouter.createCaller(authenticatedCtx).adminAuth.account()).rejects.toThrow();
+  });
 });

@@ -68,6 +68,22 @@ export const ownerAccounts = mysqlTable("owner_accounts", {
   ownerEmailUnique: uniqueIndex("owner_accounts_email_unique").on(table.email),
 }));
 
+/** Individually revocable owner sessions. The JWT contains only the opaque session id. */
+export const ownerSessions = mysqlTable("owner_sessions", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  ownerAccountId: int("ownerAccountId").notNull(),
+  sessionId: varchar("sessionId", { length: 96 }).notNull(),
+  userAgent: varchar("userAgent", { length: 512 }),
+  ipAddress: varchar("ipAddress", { length: 64 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  lastSeenAt: timestamp("lastSeenAt").defaultNow().onUpdateNow().notNull(),
+  expiresAt: timestamp("expiresAt").notNull(),
+  revokedAt: timestamp("revokedAt"),
+}, table => ({
+  ownerSessionIdUnique: uniqueIndex("owner_sessions_session_id_unique").on(table.sessionId),
+  ownerSessionAccountIndex: index("owner_sessions_owner_account_index").on(table.ownerAccountId, table.revokedAt),
+}));
+
 export const customers = mysqlTable("customers", {
   id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
   fullName: varchar("fullName", { length: 180 }).notNull(),

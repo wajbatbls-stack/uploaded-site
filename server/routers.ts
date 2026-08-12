@@ -6,12 +6,15 @@ import {
   createAdminSession,
   getAdminAccount,
   hasConfiguredAdminCredentials,
+  revokeCurrentAdminSession,
+  revokeOtherAdminSessions,
   updateAdminCredentials,
   validateAdminCredentials,
 } from "./adminSession";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { decodeAdminImage, decodeUpload } from "./adminUpload";
+import { uploadAndRegisterAdminMedia } from "./adminMediaUpload";
 import {
   createAssignmentRequest,
   createContactMessage,
@@ -85,11 +88,14 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const account = await validateAdminCredentials(input.email, input.password);
         if (!account) throw new TRPCError({ code: "UNAUTHORIZED", message: "بيانات الدخول غير صحيحة" });
-        const token = await createAdminSession(account.sessionVersion);
+        const userAgent = typeof ctx.req.headers["user-agent"] === "string" ? ctx.req.headers["user-agent"] : undefined;
+        const forwarded = typeof ctx.req.headers["x-forwarded-for"] === "string" ? ctx.req.headers["x-forwarded-for"].split(",")[0]?.trim() : undefined;
+        const token = await createAdminSession(account, { userAgent, ipAddress: forwarded });
         ctx.res.cookie(ADMIN_SESSION_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 12 * 60 * 60 * 1000 });
         return { success: true } as const;
       }),
-    logout: publicProcedure.mutation(({ ctx }) => {
+    logout: publicProcedure.mutation(async ({ ctx }) => {
+      await revokeCurrentAdminSession(ctx.req.headers.cookie);
       ctx.res.clearCookie(ADMIN_SESSION_COOKIE, { path: "/" });
       return { success: true } as const;
     }),
@@ -110,6 +116,14 @@ export const appRouter = router({
         ctx.res.clearCookie(ADMIN_SESSION_COOKIE, { path: "/" });
         await recordAdminAudit("credentials_updated", "owner_account", String(account.id));
         return { success: true, email: account.email, forceRelogin: true } as const;
+      }),
+    revokeOtherSessions: ownerProcedure
+      .input(z.object({ currentPassword: z.string().min(8).max(256) }))
+      .mutation(async ({ ctx, input }) => {
+        const result = await revokeOtherAdminSessions(ctx.req.headers.cookie, input.currentPassword);
+        if (!result) throw new TRPCError({ code: "UNAUTHORIZED", message: "تعذر إبطال الجلسات الأخرى" });
+        await recordAdminAudit("other_sessions_revoked", "owner_account", String(result.accountId));
+        return { success: true } as const;
       }),
   }),
 
@@ -159,11 +173,7 @@ export const appRouter = router({
       return storagePut("wajbat-plus/admin-images/logo." + image.extension, image.bytes, input.mimeType);
     }),
     uploadMedia: ownerProcedure.input(z.object({ mimeType: z.string().min(1).max(120), dataUrl: z.string().min(1).max(11_200_000), originalName: z.string().min(1).max(255), usage: z.string().max(80).optional() })).mutation(async ({ input }) => {
-      const upload = decodeUpload(input.dataUrl, input.mimeType);
-      const storage = await storagePut(`wajbat-plus/media/${upload.category}/${Date.now()}.${upload.extension}`, upload.bytes, input.mimeType);
-      const media = await registerMedia({ storageKey: storage.key, url: storage.url, originalName: input.originalName, mimeType: input.mimeType, sizeBytes: upload.bytes.length, category: upload.category, usage: input.usage });
-      await recordAdminAudit("media_uploaded", "media_file", String(media.id), { name: input.originalName });
-      return media;
+      return uploadAndRegisterAdminMedia(input, { storagePut, registerMedia, recordAdminAudit });
     }),
     media: ownerProcedure.input(z.object({ category: z.enum(["image", "document", "other"]).optional() }).optional()).query(({ input }) => listMedia(input?.category)),
     removeMedia: ownerProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {

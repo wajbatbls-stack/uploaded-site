@@ -20,6 +20,8 @@ let UNIVERSITIES = INITIAL_UNIVERSITIES;
 let logoUrl = "https://d2xsxph8kpxj0f.cloudfront.net/310519663266205125/c9haZQXaJt4uRTkEadgd4A/photo_AQAD7w1rG_fAmFJ-_4841a962.jpg";
 let siteSettings = {};
 let socialLinks = { facebook: "", instagram: "", twitter: "", youtube: "" };
+let managedAboutContent = null;
+let managedTeamMembers = null;
 const state = { sidebar: false, servicesOpen: false, selectedService: null, article: null };
 
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
@@ -31,6 +33,9 @@ function isoDay(date = new Date()) { return date.toISOString().slice(0, 10); }
 function recordVisit() {
   recordCloudVisit(currentPath()).catch(() => {});
   void rpcMutation("site.trackVisit", { path: currentPath() }).catch(() => {});
+}
+function recordContentView(path) {
+  void rpcMutation("site.trackVisit", { path }).catch(() => {});
 }
 function toast(title, description = "") {
   const region = document.querySelector("#toast-region");
@@ -94,6 +99,8 @@ function applyManagedContent(content) {
     category.emoji, category.title,
     visible(category.items).sort((a, b) => a.sortOrder - b.sortOrder).map((item) => [item.name, item.remoteFile]),
   ]);
+  if (content.aboutContent && typeof content.aboutContent === "object") managedAboutContent = content.aboutContent;
+  if (Array.isArray(content.teamMembers)) managedTeamMembers = visible(content.teamMembers).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   siteSettings = content.siteSettings || {};
   socialLinks = { facebook: siteSettings.facebook || "", instagram: siteSettings.instagram || "", twitter: siteSettings.twitter || "", youtube: siteSettings.youtube || "" };
   logoUrl = siteSettings.logoUrl || logoUrl;
@@ -219,7 +226,7 @@ let files = [
 ];
 let fileBase = "https://files.manuscdn.com/user_upload_by_module/session_file/310519663231231378/";
 function downloadsPage() {
-  return `<div class="container section"><div class="text-center"><h1 class="page-title">مركز التحميلات</h1><p class="page-intro">مكتبة شاملة من النماذج والملفات الأكاديمية الجاهزة للتحميل والاستخدام المباشر — 8 فئات، مجاناً للجميع.</p></div>${files.map(([emoji, title, items], category) => `<section class="download-section"><div class="section-heading"><span>${emoji}</span><h2>${title}</h2><span class="count">${items.length} ملف</span></div><div class="grid grid-4">${items.map(([name, file], i) => `<div class="card file-card"><div class="file-info"><span class="file-icon">▤</span><div><div class="file-name">${name}</div><div class="file-meta">تحميل: ${100 + ((category + 1) * (i + 3) * 17)}+ مرة</div></div></div><a class="btn btn-outline" style="padding:.4rem .6rem;font-size:.72rem" href="${fileBase + file}" target="_blank" rel="noopener">⇩ تحميل</a></div>`).join("")}</div></section>`).join("")}</div>`;
+  return `<div class="container section"><div class="text-center"><h1 class="page-title">مركز التحميلات</h1><p class="page-intro">مكتبة شاملة من النماذج والملفات الأكاديمية الجاهزة للتحميل والاستخدام المباشر — 8 فئات، مجاناً للجميع.</p></div>${files.map(([emoji, title, items], category) => `<section class="download-section"><div class="section-heading"><span>${emoji}</span><h2>${title}</h2><span class="count">${items.length} ملف</span></div><div class="grid grid-4">${items.map(([name, file], i) => `<div class="card file-card"><div class="file-info"><span class="file-icon">▤</span><div><div class="file-name">${name}</div><div class="file-meta">تحميل: ${100 + ((category + 1) * (i + 3) * 17)}+ مرة</div></div></div><a class="btn btn-outline" style="padding:.4rem .6rem;font-size:.72rem" href="${fileBase + file}" target="_blank" rel="noopener" data-action="track-download" data-download="${encodeURIComponent(name)}">⇩ تحميل</a></div>`).join("")}</div></section>`).join("")}</div>`;
 }
 
 function testimonialsPage() {
@@ -280,7 +287,7 @@ function pageContent() {
     case "/faq": return faqPage();
     case "/assignment": return assignmentPage();
     case "/contact": return contactPage();
-    case "/about": return aboutPage();
+    case "/about": return managedAboutPage();
     case "/partners": return partnersPage();
     default: return notFound();
   }
@@ -379,9 +386,10 @@ document.addEventListener("click", (event) => {
   if (action === "close-sidebar") { state.sidebar = false; render(); }
   if (action === "toggle-services") { state.servicesOpen = !state.servicesOpen; render(); }
   if (action === "toggle-theme") { document.body.classList.toggle("dark"); localStorage.setItem("wajbat-theme", document.body.classList.contains("dark") ? "dark" : "light"); render(); }
-  if (action === "select-service") { state.selectedService = Number(target.dataset.service); go(`/services?category=${state.selectedService}`); }
+  if (action === "select-service") { state.selectedService = Number(target.dataset.service); recordContentView(`/services/${encodeURIComponent(String(state.selectedService))}`); go(`/services?category=${state.selectedService}`); }
   if (action === "back-services") { state.selectedService = null; go("/services"); }
-  if (action === "open-article") { state.article = ARTICLES.find((a) => a.id === Number(target.dataset.article)); render(); }
+  if (action === "open-article") { state.article = ARTICLES.find((a) => a.id === Number(target.dataset.article)); recordContentView(`/blog/articles/${encodeURIComponent(String(target.dataset.article || ""))}`); render(); }
+  if (action === "track-download") recordContentView(`/downloads/files/${String(target.dataset.download || "")}`);
   if (action === "close-modal" && (target.classList.contains("modal-close") || !target.closest("[data-modal-card]"))) { state.article = null; render(); }
   if (action === "toggle-faq") { target.parentElement.classList.toggle("open"); }
   if (action === "top") window.scrollTo({ top: 0, behavior: "smooth" });
@@ -399,6 +407,18 @@ document.addEventListener("input", (event) => {
 });
 window.addEventListener("hashchange", () => { state.article = null; state.sidebar = false; render(); recordVisit(); });
 window.addEventListener("scroll", () => document.querySelector(".back-top")?.classList.toggle("visible", window.scrollY > 300));
+
+function managedAboutPage() {
+  const fallbackGoals = [["🛡", "جودة المخرجات", "ضمان أعلى معايير الجودة الأكاديمية في جميع الخدمات المقدمة."], ["♟", "رضا الطلاب", "تحقيق أعلى معدلات الرضا لعملائنا من الطلاب والطالبات."], ["🏆", "التميز المهني", "استقطاب أفضل الكفاءات الأكاديمية لتقديم خدماتنا."], ["▤", "التطور المستمر", "مواكبة أحدث التطورات في المناهج وأساليب التعليم."]];
+  const fallbackTeam = [["أحمد عبدالله", "المدير التنفيذي"], ["سارة محمد", "مدير الشؤون الأكاديمية"], ["محمد فهد", "مدير التقنية"], ["نورة خالد", "مدير خدمة العملاء"]];
+  const about = managedAboutContent && typeof managedAboutContent === "object" ? managedAboutContent : {};
+  const goals = Array.isArray(about.goals) && about.goals.length ? about.goals.map(goal => [goal.emoji || "◉", goal.title || "", goal.description || ""]) : fallbackGoals;
+  const team = Array.isArray(managedTeamMembers) && managedTeamMembers.length ? managedTeamMembers : fallbackTeam.map(([name, role]) => ({ name, role, photoUrl: "" }));
+  const intro = about.intro || "واجبات بلس هي منصة تعليمية سعودية رائدة، تأسست بهدف تقديم الدعم الأكاديمي الشامل للطلاب والطالبات في مختلف المراحل الدراسية، من خلال نخبة من الخبراء والأكاديميين المتخصصين.";
+  const vision = about.vision || "أن نكون المنصة الأكاديمية الرائدة والموثوقة الأولى في المملكة العربية السعودية، والوجهة المفضلة لكل طالب يبحث عن التميز والنجاح الأكاديمي.";
+  const mission = about.mission || "تقديم خدمات أكاديمية احترافية وعالية الجودة تدعم مسيرة الطلاب العلمية، وتساهم في تذليل الصعاب التي تواجههم، بأسعار تنافسية وبسرية تامة.";
+  return `<div class="container section"><div class="text-center"><h1 class="page-title">من نحن</h1><p class="page-intro">${esc(intro)}</p></div><div class="grid grid-2"><div class="card about-box" style="border-top:4px solid var(--primary)"><div class="round-icon">◉</div><h2>رؤيتنا</h2><p class="text-muted">${esc(vision)}</p></div><div class="card about-box" style="border-top:4px solid var(--accent)"><div class="round-icon">◎</div><h2>رسالتنا</h2><p class="text-muted">${esc(mission)}</p></div></div><section class="section"><h2 class="text-center">أهدافنا الاستراتيجية</h2><div class="grid grid-4" style="margin-top:2rem">${goals.map(([emoji, title, description]) => `<div class="card goal-card"><div class="goal-icon">${esc(emoji)}</div><h3>${esc(title)}</h3><p>${esc(description)}</p></div>`).join("")}</div></section><section class="section"><h2 class="text-center">فريق الإدارة</h2><div class="grid grid-4" style="margin-top:2rem">${team.map(member => `<div class="team"><div class="team-avatar">${member.photoUrl ? `<img src="${esc(member.photoUrl)}" alt="${esc(member.name)}" />` : "♟"}</div><h3>${esc(member.name)}</h3><p style="color:var(--accent);font-size:.85rem;font-weight:700">${esc(member.role)}</p></div>`).join("")}</div></section></div>`;
+}
 
 async function bootSite() {
   try { applyManagedContent(await rpcQuery("site.publicContent")); } catch { /* تُستخدم البيانات الأصلية المرفقة إذا تعذر الاتصال. */ }

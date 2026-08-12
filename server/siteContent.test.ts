@@ -13,5 +13,8 @@ describe("site content persistence", () => {
     expect(Array.isArray(content.partners)).toBe(true);
     expect(Array.isArray(content.faqs)).toBe(true);
     expect(content.siteSettings).toBeTruthy();
+    expect(content.aboutContent).toBeTruthy();
+    expect(Array.isArray((content.aboutContent as { goals?: unknown }).goals)).toBe(true);
+    expect(Array.isArray(content.teamMembers)).toBe(true);
   });
 });

@@ -20,7 +20,6 @@ let UNIVERSITIES = INITIAL_UNIVERSITIES;
 let logoUrl = "https://d2xsxph8kpxj0f.cloudfront.net/310519663266205125/c9haZQXaJt4uRTkEadgd4A/photo_AQAD7w1rG_fAmFJ-_4841a962.jpg";
 let siteSettings = {};
 let socialLinks = { facebook: "", instagram: "", twitter: "", youtube: "" };
-const statsKey = "wajbat_stats_v1";
 const state = { sidebar: false, servicesOpen: false, selectedService: null, article: null };
 
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
@@ -28,40 +27,10 @@ const wa = (message = "") => `https://wa.me/${SITE_CONFIG.whatsapp}?text=${encod
 const link = (path, label, className = "") => `<a class="${className}" href="#${path}">${label}</a>`;
 const icon = (emoji) => `<span aria-hidden="true">${emoji}</span>`;
 
-const defaultStats = () => ({
-  totalVisitors: 0, todayDate: isoDay(), todayVisitors: 0, monthKey: isoMonth(),
-  monthVisitors: 0, totalOrders: 0, totalServices: 0, lastVisit: "",
-  visitLog: [], orderLog: [], weeklyVisits: {},
-});
 function isoDay(date = new Date()) { return date.toISOString().slice(0, 10); }
-function isoMonth(date = new Date()) { return date.toISOString().slice(0, 7); }
-function arabicDate() { return new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "2-digit", day: "2-digit" }); }
-function arabicTime() { return new Date().toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true }); }
-function loadStats() {
-  try { return { ...defaultStats(), ...(JSON.parse(localStorage.getItem(statsKey) || "null") || {}) }; }
-  catch { return defaultStats(); }
-}
-function saveStats(stats) { try { localStorage.setItem(statsKey, JSON.stringify(stats)); } catch { /* Static hosting may block storage. */ } }
 function recordVisit() {
-  const data = loadStats();
-  const day = isoDay(), month = isoMonth();
-  if (data.todayDate !== day) { data.todayDate = day; data.todayVisitors = 0; }
-  if (data.monthKey !== month) { data.monthKey = month; data.monthVisitors = 0; }
-  data.totalVisitors += 1; data.todayVisitors += 1; data.monthVisitors += 1;
-  data.lastVisit = `${arabicDate()} — ${arabicTime()}`;
-  data.visitLog = [{ date: arabicDate(), time: arabicTime() }, ...data.visitLog].slice(0, 200);
-  data.weeklyVisits[day] = (data.weeklyVisits[day] || 0) + 1;
-  const keys = Object.keys(data.weeklyVisits).sort().slice(-30);
-  data.weeklyVisits = Object.fromEntries(keys.map((key) => [key, data.weeklyVisits[key]]));
-  saveStats(data);
   recordCloudVisit(currentPath()).catch(() => {});
   void rpcMutation("site.trackVisit", { path: currentPath() }).catch(() => {});
-}
-function recordOrder(service, student) {
-  const data = loadStats();
-  data.totalOrders += 1; data.totalServices += 1;
-  data.orderLog = [{ date: arabicDate(), time: arabicTime(), service, student: student || "غير محدد" }, ...data.orderLog].slice(0, 200);
-  saveStats(data);
 }
 function toast(title, description = "") {
   const region = document.querySelector("#toast-region");
@@ -221,7 +190,7 @@ function homePage() {
     <div><h1>واجبات بلس</h1><p class="typing"><span id="typing-text"></span><span class="typing-cursor">|</span></p></div>
     <div class="hero-actions"><a class="btn btn-green" href="${wa("أريد طلب خدمة")}" target="_blank" rel="noopener">🚀 اطلب خدمتك الآن</a>${link("/services", "📚 تصفح الخدمات", "btn btn-outline")}</div>
     <div class="hero-badge">⭐ ضمان الجودة 100% · سرية تامة · دعم 24/7 ⭐</div>
-  </div></section><section class="stats-strip"><div class="container"><h2 class="text-center text-primary">أرقامنا تتحدث</h2><div class="grid grid-4" style="margin-top:2rem">${[["5000+", "طالب راضٍ"], ["75+", "خدمة متميزة"], ["99%", "نسبة الرضا"], ["24/7", "ساعة دعم"]].map(([num, label]) => `<div class="stat-box"><div class="stat-number">${num}</div><div class="stat-label">${label}</div></div>`).join("")}</div></div></section>`;
+  </div></section>`;
 }
 
 function servicesPage() {
@@ -288,27 +257,12 @@ function contactPage() {
 function aboutPage() {
   const goals = [["🛡", "جودة المخرجات", "ضمان أعلى معايير الجودة الأكاديمية في جميع الخدمات المقدمة."], ["♟", "رضا الطلاب", "تحقيق أعلى معدلات الرضا لعملائنا من الطلاب والطالبات."], ["🏆", "التميز المهني", "استقطاب أفضل الكفاءات الأكاديمية لتقديم خدماتنا."], ["▤", "التطور المستمر", "مواكبة أحدث التطورات في المناهج وأساليب التعليم."]];
   const team = [["أحمد عبدالله", "المدير التنفيذي"], ["سارة محمد", "مدير الشؤون الأكاديمية"], ["محمد فهد", "مدير التقنية"], ["نورة خالد", "مدير خدمة العملاء"]];
-  return `<div class="container section"><div class="text-center"><h1 class="page-title">من نحن</h1><p class="page-intro">واجبات بلس هي منصة تعليمية سعودية رائدة، تأسست بهدف تقديم الدعم الأكاديمي الشامل للطلاب والطالبات في مختلف المراحل الدراسية، من خلال نخبة من الخبراء والأكاديميين المتخصصين.</p></div><div class="grid grid-2"><div class="card about-box" style="border-top:4px solid var(--primary)"><div class="round-icon">◉</div><h2>رؤيتنا</h2><p class="text-muted">أن نكون المنصة الأكاديمية الرائدة والموثوقة الأولى في المملكة العربية السعودية، والوجهة المفضلة لكل طالب يبحث عن التميز والنجاح الأكاديمي.</p></div><div class="card about-box" style="border-top:4px solid var(--accent)"><div class="round-icon">◎</div><h2>رسالتنا</h2><p class="text-muted">تقديم خدمات أكاديمية احترافية وعالية الجودة تدعم مسيرة الطلاب العلمية، وتساهم في تذليل الصعاب التي تواجههم، بأسعار تنافسية وبسرية تامة.</p></div></div><section class="section"><h2 class="text-center">أهدافنا الاستراتيجية</h2><div class="grid grid-4" style="margin-top:2rem">${goals.map(([ico, title, desc]) => `<div class="card goal-card"><div class="goal-icon">${ico}</div><h3>${title}</h3><p>${desc}</p></div>`).join("")}</div></section><div class="card card-pad" style="color:#fff;background:var(--primary)"><div class="grid grid-4 text-center">${[["5000+", "طالب مستفيد"], ["99%", "نسبة الرضا"], ["50+", "خدمة متخصصة"], ["3+", "سنوات خبرة"]].map(([num, label]) => `<div><b style="font-size:2.3rem;display:block">${num}</b><span style="opacity:.75">${label}</span></div>`).join("")}</div></div><section class="section"><h2 class="text-center">فريق الإدارة</h2><div class="grid grid-4" style="margin-top:2rem">${team.map(([name, role]) => `<div class="team"><div class="team-avatar">♟</div><h3>${name}</h3><p style="color:var(--accent);font-size:.85rem;font-weight:700">${role}</p></div>`).join("")}</div></section></div>`;
+  return `<div class="container section"><div class="text-center"><h1 class="page-title">من نحن</h1><p class="page-intro">واجبات بلس هي منصة تعليمية سعودية رائدة، تأسست بهدف تقديم الدعم الأكاديمي الشامل للطلاب والطالبات في مختلف المراحل الدراسية، من خلال نخبة من الخبراء والأكاديميين المتخصصين.</p></div><div class="grid grid-2"><div class="card about-box" style="border-top:4px solid var(--primary)"><div class="round-icon">◉</div><h2>رؤيتنا</h2><p class="text-muted">أن نكون المنصة الأكاديمية الرائدة والموثوقة الأولى في المملكة العربية السعودية، والوجهة المفضلة لكل طالب يبحث عن التميز والنجاح الأكاديمي.</p></div><div class="card about-box" style="border-top:4px solid var(--accent)"><div class="round-icon">◎</div><h2>رسالتنا</h2><p class="text-muted">تقديم خدمات أكاديمية احترافية وعالية الجودة تدعم مسيرة الطلاب العلمية، وتساهم في تذليل الصعاب التي تواجههم، بأسعار تنافسية وبسرية تامة.</p></div></div><section class="section"><h2 class="text-center">أهدافنا الاستراتيجية</h2><div class="grid grid-4" style="margin-top:2rem">${goals.map(([ico, title, desc]) => `<div class="card goal-card"><div class="goal-icon">${ico}</div><h3>${title}</h3><p>${desc}</p></div>`).join("")}</div></section><section class="section"><h2 class="text-center">فريق الإدارة</h2><div class="grid grid-4" style="margin-top:2rem">${team.map(([name, role]) => `<div class="team"><div class="team-avatar">♟</div><h3>${name}</h3><p style="color:var(--accent);font-size:.85rem;font-weight:700">${role}</p></div>`).join("")}</div></section></div>`;
 }
 
 function partnersPage() {
   const section = (title, emoji, data, countLabel) => `<section class="download-section"><div class="section-heading"><span>${emoji}</span><h2>${title}</h2><span class="count">${data.length} ${countLabel}</span></div><div class="grid grid-5">${data.map((item) => { const [name, location] = item.split(" - "); return `<div class="card partner-card"><div><div class="partner-icon">${emoji}</div><h3>${name}</h3><p>${location || ""}</p></div></div>`; }).join("")}</div></section>`;
   return `<div class="container section"><div class="text-center"><h1 class="page-title">شركاء النجاح</h1><p class="page-intro">نفخر بخدمة طلاب وطالبات أعرق الجامعات السعودية والمعاهد التعليمية ونسعى دائماً لدعم مسيرتهم الأكاديمية.</p></div>${section("الجامعات السعودية", "▣", UNIVERSITIES, "جامعة")}${section("المعاهد التعليمية", "▤", INSTITUTES, "معهد")}${section("جهات أخرى", "🤝", OTHERS, "جهات")}<div class="card card-pad text-center" style="max-width:800px;margin:2rem auto;background:linear-gradient(to right,var(--primary-soft),color-mix(in srgb,var(--accent) 8%,transparent))"><h2>هل جامعتك غير مدرجة؟</h2><p class="text-muted">نحن نقدم خدماتنا لجميع الطلاب في مختلف الجامعات والكليات داخل وخارج المملكة. لا تتردد في التواصل معنا.</p><a class="btn btn-primary" href="${wa("أريد الاستفسار عن خدماتكم")}" target="_blank" rel="noopener">تواصل معنا الآن</a></div></div>`;
-}
-
-function statsPage() {
-  return `<div class="stats-page"><div class="container"><div class="glass login-panel"><div class="round-icon" style="background:rgba(0,201,167,.2);color:var(--accent)">▣</div><h2>📊 إحصائيات الموقع</h2><p>هذه البيانات محمية ومخصّصة للمالك فقط.</p></div></div></div>`;
-}
-function statsDashboard() {
-  const stats = loadStats();
-  const date = new Date().toLocaleDateString("ar-SA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-  const chart = getLast7Days(stats);
-  const max = Math.max(...chart.map((d) => d.visitors), 1);
-  const row = (values) => `<tr>${values.map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`;
-  return `<div class="stats-page"><div class="container"><div style="display:flex;justify-content:space-between;gap:1rem;align-items:center;margin-bottom:2rem;flex-wrap:wrap"><div><h1 style="margin:0">▥ لوحة إحصائيات الموقع</h1><p style="color:rgba(255,255,255,.5);margin:.3rem 0">${date}</p><small style="color:var(--accent)">📊 جميع الأرقام حقيقية من زوار الموقع الفعليين</small></div><div class="header-actions print-hide"><button class="btn btn-outline" data-action="print">▣ طباعة</button><button class="btn" style="color:#0f2b5b;background:linear-gradient(90deg,#00c9a7,#ffd700)" data-action="export">⇩ تصدير PDF</button><button class="btn btn-outline" style="color:#fecaca;border-color:rgba(255,100,100,.4)" data-action="stats-logout">خروج</button></div></div><div id="stats-dashboard"><div class="grid grid-3" style="margin-bottom:2rem">${[["👥 إجمالي الزوار", stats.totalVisitors], ["📅 زوار اليوم", stats.todayVisitors], ["📆 زوار هذا الشهر", stats.monthVisitors], ["📝 إجمالي الطلبات", stats.totalOrders], ["🛠️ إجمالي الخدمات", stats.totalServices], ["⏳ آخر زيارة", stats.lastVisit || "—"]].map(([label, value]) => `<div class="glass stat-glass"><span class="stat-glass-icon">${label.split(" ")[0]}</span><div><label>${label.slice(2)}</label><strong style="${typeof value === "string" ? "font-size:.8rem" : ""}">${esc(value)}</strong></div></div>`).join("")}</div><div class="glass card-pad" style="margin-bottom:2rem"><h2 style="margin-top:0;font-size:1.05rem">▥ الزوار — آخر 7 أيام (بيانات حقيقية)</h2><div class="chart">${chart.map((item) => `<div class="bar"><span class="bar-value">${item.visitors}</span><span class="bar-fill" style="height:${Math.max((item.visitors / max) * 100, 3)}%"></span><span class="bar-day">${item.day}</span></div>`).join("")}</div></div><div class="glass" style="margin-bottom:2rem;overflow:hidden"><div class="card-pad"><h2 style="margin:0;font-size:1.05rem">◉ سجل الزيارات <small style="float:left;color:rgba(255,255,255,.45)">${stats.visitLog.length} زيارة مسجلة</small></h2></div>${stats.visitLog.length ? `<div style="max-height:260px;overflow:auto"><table class="stats-table"><thead>${row(["الرقم", "التاريخ", "الوقت"])}</thead><tbody>${stats.visitLog.map((v, i) => row([i + 1, v.date, v.time])).join("")}</tbody></table></div>` : '<div class="card-pad" style="color:rgba(255,255,255,.4);text-align:center">لا توجد زيارات مسجلة بعد</div>'}</div><div class="glass" style="overflow:hidden"><div class="card-pad"><h2 style="margin:0;font-size:1.05rem">▤ سجل الطلبات المقدمة <small style="float:left;color:rgba(255,255,255,.45)">${stats.orderLog.length} طلب مسجل</small></h2></div>${stats.orderLog.length ? `<div style="max-height:260px;overflow:auto"><table class="stats-table"><thead>${row(["التاريخ", "الوقت", "اسم الطالب", "نوع الخدمة"])}</thead><tbody>${stats.orderLog.map((o) => row([o.date, o.time, o.student, o.service])).join("")}</tbody></table></div>` : '<div class="card-pad" style="color:rgba(255,255,255,.4);text-align:center">لا توجد طلبات مسجلة بعد — ستظهر هنا عند إرسال نماذج تسليم الواجب</div>'}</div></div></div></div>`;
-}
-function getLast7Days(stats) {
-  return Array.from({ length: 7 }, (_, index) => { const date = new Date(); date.setDate(date.getDate() - (6 - index)); return { day: date.toLocaleDateString("ar-SA", { weekday: "short" }), visitors: stats.weeklyVisits[isoDay(date)] || 0 }; });
 }
 
 function notFound() {
@@ -396,15 +350,21 @@ async function handleForm(form) {
     toast("تم إرسال رسالتك ✓", "سنقوم بالرد عليك في أقرب وقت ممكن."); form.reset(); return;
   }
   if (form.dataset.form === "assignment") {
+    const description = String(data.description || "").trim();
+    if (description.length < 8) {
+      const descriptionField = form.elements.description;
+      descriptionField?.focus();
+      toast("أكمل وصف الواجب", "يرجى كتابة وصف الواجب بالتفصيل، بما لا يقل عن 8 أحرف.");
+      return;
+    }
     const attachment = form.elements.attachment?.files?.[0];
     let attachmentMediaId;
     if (attachment) {
       const uploaded = await rpcMutation("site.uploadRequestAttachment", { mimeType: attachment.type, dataUrl: await fileToDataUrl(attachment), originalName: attachment.name });
       attachmentMediaId = uploaded.id;
     }
-    const payload = { studentName: data.studentName, studentId: data.studentId, university: data.university, college: data.college, department: data.department || undefined, course: data.course, professor: data.professor, serviceType: data.serviceType.replace(/^\d+\.\s*/, ""), deadline: data.deadline, description: data.description, email: data.email || undefined, phone: data.phone || undefined, attachmentMediaId };
+    const payload = { studentName: data.studentName, studentId: data.studentId, university: data.university, college: data.college, department: data.department || undefined, course: data.course, professor: data.professor, serviceType: data.serviceType.replace(/^\d+\.\s*/, ""), deadline: data.deadline, description, email: data.email || undefined, phone: data.phone || undefined, attachmentMediaId };
     const saved = await rpcMutation("site.submitAssignment", payload);
-    recordOrder(payload.serviceType, payload.studentName);
     toast("تم حفظ طلبك بنجاح", `رقم الطلب: #${saved.requestId}. سيتواصل معك الفريق قريباً.`); form.reset(); return;
   }
 }
@@ -423,11 +383,12 @@ document.addEventListener("click", (event) => {
   if (action === "close-modal" && (target.classList.contains("modal-close") || !target.closest("[data-modal-card]"))) { state.article = null; render(); }
   if (action === "toggle-faq") { target.parentElement.classList.toggle("open"); }
   if (action === "top") window.scrollTo({ top: 0, behavior: "smooth" });
-  if (action === "stats-logout") { state.statsLoggedIn = false; render(); }
-  if (action === "print") window.print();
-  if (action === "export") { toast("تصدير PDF", "يمكنك اختيار حفظ كملف PDF من نافذة الطباعة."); setTimeout(() => window.print(), 250); }
 });
-document.addEventListener("submit", (event) => { const form = event.target.closest("form[data-form]"); if (form) { event.preventDefault(); handleForm(form).catch((error) => toast("تعذر الإرسال", error?.message || "يرجى المحاولة مرة أخرى.")); } });
+document.addEventListener("submit", (event) => { const form = event.target.closest("form[data-form]"); if (form) { event.preventDefault(); handleForm(form).catch((error) => {
+  const rawMessage = String(error?.message || "");
+  const validationFailure = /description|too_small|expected string to have|validation/i.test(rawMessage);
+  toast("تعذر الإرسال", validationFailure ? "يرجى التحقق من جميع الحقول المطلوبة وإكمال وصف الواجب بالتفصيل." : "تعذر حفظ الطلب حالياً. يرجى المحاولة مرة أخرى.");
+}); } });
 document.addEventListener("input", (event) => {
   if (event.target.dataset.action !== "faq-search") return;
   const query = event.target.value.trim();

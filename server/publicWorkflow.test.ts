@@ -19,10 +19,10 @@ describe("رفع المرفقات العامة", () => {
 });
 
 describe("نماذج الزوار", () => {
-  it("يرفض طلب الواجب غير المكتمل قبل محاولة حفظه", async () => {
+  it("يرفض طلب الواجب غير المكتمل والوصف الأقصر من ثمانية أحرف قبل محاولة الحفظ", async () => {
     const caller = appRouter.createCaller(publicContext);
     await expect(caller.site.submitAssignment({
-      studentName: "م", studentId: "1", university: "", college: "", course: "", professor: "", serviceType: "", deadline: "اليوم", description: "قصير",
+      studentName: "م", studentId: "1", university: "", college: "", course: "", professor: "", serviceType: "", deadline: "اليوم", description: "سبعة77",
     } as never)).rejects.toBeTruthy();
   });
 

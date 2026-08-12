@@ -19,6 +19,7 @@ let SERVICE_SUBS = INITIAL_SERVICE_SUBS;
 let UNIVERSITIES = INITIAL_UNIVERSITIES;
 let logoUrl = "https://d2xsxph8kpxj0f.cloudfront.net/310519663266205125/c9haZQXaJt4uRTkEadgd4A/photo_AQAD7w1rG_fAmFJ-_4841a962.jpg";
 let siteSettings = {};
+let socialLinks = { facebook: "", instagram: "", twitter: "", youtube: "" };
 const statsKey = "wajbat_stats_v1";
 const state = { sidebar: false, servicesOpen: false, selectedService: null, article: null };
 
@@ -54,14 +55,13 @@ function recordVisit() {
   data.weeklyVisits = Object.fromEntries(keys.map((key) => [key, data.weeklyVisits[key]]));
   saveStats(data);
   recordCloudVisit(currentPath()).catch(() => {});
-  void rpcMutation("site.trackVisit", { path: currentPath() });
+  void rpcMutation("site.trackVisit", { path: currentPath() }).catch(() => {});
 }
 function recordOrder(service, student) {
   const data = loadStats();
   data.totalOrders += 1; data.totalServices += 1;
   data.orderLog = [{ date: arabicDate(), time: arabicTime(), service, student: student || "غير محدد" }, ...data.orderLog].slice(0, 200);
   saveStats(data);
-  void rpcMutation("site.trackOrder", { studentName: student || "غير محدد", service });
 }
 function toast(title, description = "") {
   const region = document.querySelector("#toast-region");
@@ -91,14 +91,15 @@ async function rpcQuery(procedure, input = null) {
 }
 
 async function rpcMutation(procedure, input) {
-  try {
-    await fetch(`/api/trpc/${procedure}`, {
-      method: "POST",
-      credentials: "same-origin",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ json: input }),
-    });
-  } catch { /* يظل الموقع قابلاً للاستخدام عند تعذر تسجيل القياس. */ }
+  const response = await fetch(`/api/trpc/${procedure}`, {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ json: input }),
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(payload?.error?.json?.message || "تعذر حفظ البيانات، يرجى المحاولة مرة أخرى.");
+  return payload?.result?.data?.json ?? payload?.result?.data;
 }
 
 function applyManagedContent(content) {
@@ -125,6 +126,7 @@ function applyManagedContent(content) {
     visible(category.items).sort((a, b) => a.sortOrder - b.sortOrder).map((item) => [item.name, item.remoteFile]),
   ]);
   siteSettings = content.siteSettings || {};
+  socialLinks = { facebook: siteSettings.facebook || "", instagram: siteSettings.instagram || "", twitter: siteSettings.twitter || "", youtube: siteSettings.youtube || "" };
   logoUrl = siteSettings.logoUrl || logoUrl;
   fileBase = siteSettings.fileBaseUrl || fileBase;
   if (siteSettings.whatsapp) SITE_CONFIG.whatsapp = siteSettings.whatsapp;
@@ -135,37 +137,26 @@ function applyManagedContent(content) {
     ["◷", "ساعات العمل", siteSettings.businessHours || "متواجدون 24/7", ""],
     ["⌖", "العنوان", siteSettings.address || "الرياض، المملكة العربية السعودية", ""],
   ];
+  syncSeoMetadata();
 }
 
-let greetingPlayed = false;
-function speakGuide(text) {
-  if (!text || !("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "ar-SA";
-  utterance.rate = 0.92;
-  utterance.pitch = 1.14;
-  const voices = window.speechSynthesis.getVoices();
-  const preferredVoice = voices.find((voice) => /^ar/i.test(voice.lang) && /female|woman|أنثى|ليلى|مريم|zariyah|salma|hoda|naayf/i.test(voice.name))
-    || voices.find((voice) => /^ar/i.test(voice.lang));
-  if (preferredVoice) utterance.voice = preferredVoice;
-  window.speechSynthesis.speak(utterance);
-}
-
-function greetVisitor() {
-  if (greetingPlayed) return;
-  greetingPlayed = true;
-  const greeting = siteSettings.heroVoiceText || "مرحباً بك في واجبات بلس، منصتك الذكية للتعلم والخدمات الأكاديمية.";
-  setTimeout(() => speakGuide(greeting), 900);
-}
-
-function narrateOpenedService() {
-  if (currentPath() !== "/services") return;
-  const category = Number(queryParams().get("category"));
-  const service = SERVICES[Number.isInteger(category) && category >= 0 ? category : 0];
-  if (!service) return;
-  const template = siteSettings.serviceVoiceTemplate || "أهلاً بك في خدمة {service}. نوفر لك دعماً أكاديمياً متخصصاً مع جودة وخصوصية تامة.";
-  speakGuide(template.replace("{service}", service.title));
+function syncSeoMetadata() {
+  const title = String(siteSettings.metaTitle || "واجبات بلس | منصتك الذكية للتعلم والتفوق").trim();
+  const description = String(siteSettings.metaDescription || "منصة واجبات بلس للخدمات الأكاديمية والدعم التعليمي.").trim();
+  document.title = title;
+  const setMeta = (selector, attribute, value) => {
+    let element = document.head.querySelector(selector);
+    if (!element) {
+      element = document.createElement("meta");
+      const [name, key] = attribute;
+      element.setAttribute(name, key);
+      document.head.appendChild(element);
+    }
+    element.setAttribute("content", value);
+  };
+  setMeta('meta[name="description"]', ["name", "description"], description);
+  setMeta('meta[property="og:title"]', ["property", "og:title"], title);
+  setMeta('meta[property="og:description"]', ["property", "og:description"], description);
 }
 
 function logoMarkup(className = "brand-mark") {
@@ -192,7 +183,7 @@ function sidebar() {
     ["/", "🏠", "الرئيسية"], ["/services", "📚", "الخدمات"], ["/subscriptions", "📦", "الاشتراكات"],
     ["/downloads", "📥", "التحميلات"], ["/testimonials", "💬", "آراء الطلاب"], ["/blog", "📝", "المدونة"],
     ["/faq", "❓", "الأسئلة الشائعة"], ["/assignment", "📤", "تسليم الواجب"], ["/contact", "📞", "اتصل بنا"],
-    ["/about", "ℹ️", "من نحن"], ["/partners", "🌐", "الشركاء"], ["/stats", "📊", "إحصائيات الموقع"],
+    ["/about", "ℹ️", "من نحن"], ["/partners", "🌐", "الشركاء"],
   ];
   const serviceSubs = state.servicesOpen ? `<div class="nav-sub open">${SERVICE_SUBS.map((item, i) => link(`/services?category=${i}`, `• ${item}`)).join("")}</div>` : "";
   return `<div class="sidebar-backdrop ${state.sidebar ? "open" : ""}" data-action="close-sidebar"></div>
@@ -200,8 +191,7 @@ function sidebar() {
       <div class="sidebar-head"><a class="brand" href="#/">${logoMarkup()}<span><span class="brand-title">واجبات بلس</span><span class="brand-subtitle">Wajibat Plus</span></span></a><button class="btn-icon" data-action="close-sidebar">×</button></div>
       <nav class="sidebar-nav">${items.map(([href, emoji, label]) => {
         const active = path === href;
-        const owner = href === "/stats";
-        const row = `<a class="nav-link ${active ? "active" : ""} ${owner ? "owner" : ""}" href="#${href}">${icon(emoji)}<span>${label}</span>${owner ? '<small style="margin-right:auto">مالك</small>' : ""}</a>`;
+        const row = `<a class="nav-link ${active ? "active" : ""}" href="#${href}">${icon(emoji)}<span>${label}</span></a>`;
         return href === "/services" ? `<div><div style="display:flex;align-items:center"><span style="flex:1">${row}</span><button class="btn-icon" data-action="toggle-services">⌄</button></div>${serviceSubs}</div>` : row;
       }).join("")}</nav>
       <div class="sidebar-foot"><strong style="color:var(--primary)">واجبات بلس | Wajibat Plus</strong><br />📚🎓 منصتك الذكية للتعلم والتفوق</div>
@@ -287,7 +277,7 @@ function faqItems(items) {
 }
 
 function assignmentPage() {
-  return `<div class="container section" style="max-width:950px"><div class="text-center"><div class="round-icon">🎓</div><h1 class="page-title">نموذج تسليم الواجب</h1><p class="page-intro">أكمل البيانات أدناه وسيتم إرسال طلبك تلقائياً عبر واتساب ليتم التواصل معك فوراً.</p></div><div class="card form-shell"><div class="form-banner">▣ تعبئة بيانات الطلب</div><form class="form-body" data-form="assignment"><section class="form-section"><h3>👤 بيانات الطالب</h3><div class="grid grid-2"><div class="field"><label>اسم الطالب *</label><input name="studentName" required placeholder="محمد أحمد العمري" /></div><div class="field"><label>الرقم الجامعي *</label><input name="studentId" required placeholder="123456789" /></div></div></section><section class="form-section"><h3>🏛️ البيانات الأكاديمية</h3><div class="grid grid-2"><div class="field"><label>اسم الجامعة *</label><select name="university" required><option value="">اختر جامعتك...</option>${UNIVERSITIES.map((u) => `<option>${u}</option>`).join("")}<option>جامعة أخرى</option></select></div><div class="field"><label>الكلية *</label><input name="college" required placeholder="مثال: كلية الحاسب والمعلومات" /></div><div class="field"><label>القسم</label><input name="department" placeholder="مثال: قسم علوم الحاسب" /></div><div class="field"><label>اسم المقرر *</label><input name="course" required placeholder="مثال: برمجة 1 - CS101" /></div><div class="field"><label>دكتور المقرر *</label><input name="professor" required placeholder="مثال: د. عبدالله محمد" /></div></div></section><section class="form-section"><h3>📋 تفاصيل الطلب</h3><div class="grid grid-2"><div class="field"><label>نوع الخدمة المطلوبة *</label><select name="serviceType" required><option value="">اختر نوع الخدمة...</option>${SERVICE_TYPES.map((s, i) => `<option>${i + 1}. ${s}</option>`).join("")}</select></div><div class="field"><label>الموعد النهائي للتسليم *</label><input type="date" name="deadline" required min="${isoDay()}" /></div><div class="field"><label>وصف الواجب بالتفصيل *</label><textarea name="description" required placeholder="اكتب هنا جميع تفاصيل الواجب والشروط المطلوبة بدقة لضمان أعلى جودة ممكنة..."></textarea></div><div class="field"><label>إرفاق ملف <small class="text-muted">(اختياري)</small></label><label class="file-drop">⇧<span>اضغط لرفع ملف (PDF, Word, صورة)</span><input name="attachment" type="file" hidden accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" /></label><small class="text-muted text-center">سيُطلب إرسال الملفات عبر واتساب بعد الإرسال</small></div></div></section><button class="btn btn-green" style="width:100%;min-height:3.5rem;font-size:1.05rem" type="submit">➤ إرسال الطلب عبر واتساب</button></form></div></div>`;
+  return `<div class="container section" style="max-width:950px"><div class="text-center"><div class="round-icon">🎓</div><h1 class="page-title">نموذج تسليم الواجب</h1><p class="page-intro">أكمل البيانات أدناه لحفظ طلبك بأمان، وسيتواصل معك الفريق فور مراجعته.</p></div><div class="card form-shell"><div class="form-banner">▣ تعبئة بيانات الطلب</div><form class="form-body" data-form="assignment"><section class="form-section"><h3>👤 بيانات الطالب</h3><div class="grid grid-2"><div class="field"><label>اسم الطالب *</label><input name="studentName" required placeholder="محمد أحمد العمري" /></div><div class="field"><label>الرقم الجامعي *</label><input name="studentId" required placeholder="123456789" /></div><div class="field"><label>رقم الجوال</label><input name="phone" inputmode="tel" placeholder="05XXXXXXXX" /></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" dir="ltr" placeholder="example@email.com" /></div></div></section><section class="form-section"><h3>🏛️ البيانات الأكاديمية</h3><div class="grid grid-2"><div class="field"><label>اسم الجامعة *</label><select name="university" required><option value="">اختر جامعتك...</option>${UNIVERSITIES.map((u) => `<option>${u}</option>`).join("")}<option>جامعة أخرى</option></select></div><div class="field"><label>الكلية *</label><input name="college" required placeholder="مثال: كلية الحاسب والمعلومات" /></div><div class="field"><label>القسم</label><input name="department" placeholder="مثال: قسم علوم الحاسب" /></div><div class="field"><label>اسم المقرر *</label><input name="course" required placeholder="مثال: برمجة 1 - CS101" /></div><div class="field"><label>دكتور المقرر *</label><input name="professor" required placeholder="مثال: د. عبدالله محمد" /></div></div></section><section class="form-section"><h3>📋 تفاصيل الطلب</h3><div class="grid grid-2"><div class="field"><label>نوع الخدمة المطلوبة *</label><select name="serviceType" required><option value="">اختر نوع الخدمة...</option>${SERVICE_TYPES.map((s, i) => `<option>${i + 1}. ${s}</option>`).join("")}</select></div><div class="field"><label>الموعد النهائي للتسليم *</label><input type="date" name="deadline" required min="${isoDay()}" /></div><div class="field"><label>وصف الواجب بالتفصيل *</label><textarea name="description" required placeholder="اكتب هنا جميع تفاصيل الواجب والشروط المطلوبة بدقة لضمان أعلى جودة ممكنة..."></textarea></div><div class="field"><label>إرفاق ملف <small class="text-muted">(اختياري)</small></label><label class="file-drop">⇧<span>اضغط لرفع ملف (PDF, Word, صورة)</span><input name="attachment" type="file" hidden accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" /></label><small class="text-muted text-center">الحد الأقصى: 8 ميغابايت للملف و3 ميغابايت للصورة</small></div></div></section><button class="btn btn-green" style="width:100%;min-height:3.5rem;font-size:1.05rem" type="submit">➤ حفظ وإرسال الطلب</button></form></div></div>`;
 }
 
 let contactItems = [["◉", "واتساب", "+966 56 768 0470", wa()], ["☎", "جوال", "+966 56 768 0470", "tel:+966567680470"], ["✉", "البريد الإلكتروني", "wajbatbls@gmail.com", "mailto:wajbatbls@gmail.com"], ["◷", "ساعات العمل", "متواجدون 24/7", ""], ["⌖", "العنوان", "الرياض، المملكة العربية السعودية", ""]];
@@ -338,7 +328,6 @@ function pageContent() {
     case "/contact": return contactPage();
     case "/about": return aboutPage();
     case "/partners": return partnersPage();
-    case "/stats": return statsPage();
     default: return notFound();
   }
 }
@@ -346,6 +335,15 @@ function pageContent() {
 function render() {
   document.title = ({ "/": "واجبات بلس | منصتك الذكية للتعلم", "/services": "الخدمات الأكاديمية | واجبات بلس", "/subscriptions": "باقات الاشتراك | واجبات بلس", "/downloads": "مركز التحميلات | واجبات بلس", "/blog": "المدونة الأكاديمية | واجبات بلس", "/contact": "اتصل بنا | واجبات بلس" }[currentPath()] || "واجبات بلس");
   document.querySelector("#app").innerHTML = layout(pageContent());
+  if (currentPath() === "/contact") {
+    const managedSocial = { "فيسبوك": socialLinks.facebook, "إنستغرام": socialLinks.instagram, "تويتر": socialLinks.twitter, "يوتيوب": socialLinks.youtube };
+    Object.entries(managedSocial).forEach(([label, href]) => {
+      const anchor = document.querySelector(`.social[aria-label="${label}"]`);
+      if (!anchor) return;
+      if (href) { anchor.href = href; anchor.target = "_blank"; anchor.rel = "noopener"; }
+      else anchor.remove();
+    });
+  }
   window.scrollTo({ top: 0, behavior: "instant" });
   if (currentPath() === "/") { startClock(); startTyping(); }
 }
@@ -374,6 +372,15 @@ function startTyping() {
   window.typingTimer = setInterval(tick, 60);
 }
 
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("تعذر قراءة الملف"));
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
 async function handleForm(form) {
   const data = Object.fromEntries(new FormData(form).entries());
   if (form.dataset.form === "newsletter") {
@@ -381,19 +388,24 @@ async function handleForm(form) {
     toast("تم الاشتراك بنجاح!", result.error ? "تعذر الحفظ السحابي، لكن يمكنك المتابعة." : "شكراً لاشتراكك في نشرتنا البريدية."); form.reset(); return;
   }
   if (form.dataset.form === "review") {
-    const result = await saveRecord("student_reviews", { name: data.name, university: data.university, review: data.review });
-    toast("تم إرسال تقييمك", result.error ? "تعذر الحفظ السحابي، لكن تم استلام النموذج." : "شكراً لمشاركتك رأيك معنا، سيتم مراجعته ونشره قريباً."); form.reset(); return;
+    await rpcMutation("site.submitReview", { name: data.name, university: data.university, review: data.review, rating: 5 });
+    toast("تم إرسال تقييمك", "شكراً لمشاركتك رأيك معنا، سيتم مراجعته ونشره قريباً."); form.reset(); return;
   }
   if (form.dataset.form === "contact") {
-    const result = await saveRecord("contact_messages", { name: data.name, phone: data.phone, email: data.email || null, subject: data.subject, message: data.message });
-    toast("تم إرسال رسالتك ✓", result.error ? "تعذر الحفظ السحابي، يرجى التواصل عبر واتساب." : "سنقوم بالرد عليك في أقرب وقت ممكن."); form.reset(); return;
+    await rpcMutation("site.submitContact", { name: data.name, phone: data.phone, email: data.email || undefined, subject: data.subject, message: data.message });
+    toast("تم إرسال رسالتك ✓", "سنقوم بالرد عليك في أقرب وقت ممكن."); form.reset(); return;
   }
   if (form.dataset.form === "assignment") {
-    const payload = { university: data.university, college: data.college, department: data.department || null, student_name: data.studentName, student_id: data.studentId, course: data.course, professor: data.professor, service_type: data.serviceType.replace(/^\d+\.\s*/, ""), deadline: data.deadline, description: data.description };
-    await saveRecord("assignment_requests", payload);
-    recordOrder(payload.service_type, payload.student_name);
-    const message = `🎓 *طلب خدمة أكاديمية جديد — واجبات بلس*\n━━━━━━━━━━━━━━━━━━\n\n👤 *بيانات الطالب:*\n• الاسم: ${data.studentName}\n• الرقم الجامعي: ${data.studentId}\n\n🏛️ *البيانات الأكاديمية:*\n• الجامعة: ${data.university}\n• الكلية: ${data.college}\n• القسم: ${data.department}\n• المقرر: ${data.course}\n• الدكتور: ${data.professor}\n\n📋 *تفاصيل الطلب:*\n• نوع الخدمة: ${payload.service_type}\n• الموعد النهائي: ${data.deadline}\n\n📝 *الوصف:*\n${data.description}`;
-    toast("✅ تم تجهيز الطلب!", "سيتم تحويلك إلى واتساب لإتمام الطلب."); setTimeout(() => window.open(wa(message), "_blank", "noopener"), 500); form.reset(); return;
+    const attachment = form.elements.attachment?.files?.[0];
+    let attachmentMediaId;
+    if (attachment) {
+      const uploaded = await rpcMutation("site.uploadRequestAttachment", { mimeType: attachment.type, dataUrl: await fileToDataUrl(attachment), originalName: attachment.name });
+      attachmentMediaId = uploaded.id;
+    }
+    const payload = { studentName: data.studentName, studentId: data.studentId, university: data.university, college: data.college, department: data.department || undefined, course: data.course, professor: data.professor, serviceType: data.serviceType.replace(/^\d+\.\s*/, ""), deadline: data.deadline, description: data.description, email: data.email || undefined, phone: data.phone || undefined, attachmentMediaId };
+    const saved = await rpcMutation("site.submitAssignment", payload);
+    recordOrder(payload.serviceType, payload.studentName);
+    toast("تم حفظ طلبك بنجاح", `رقم الطلب: #${saved.requestId}. سيتواصل معك الفريق قريباً.`); form.reset(); return;
   }
 }
 
@@ -415,14 +427,14 @@ document.addEventListener("click", (event) => {
   if (action === "print") window.print();
   if (action === "export") { toast("تصدير PDF", "يمكنك اختيار حفظ كملف PDF من نافذة الطباعة."); setTimeout(() => window.print(), 250); }
 });
-document.addEventListener("submit", (event) => { const form = event.target.closest("form[data-form]"); if (form) { event.preventDefault(); handleForm(form); } });
+document.addEventListener("submit", (event) => { const form = event.target.closest("form[data-form]"); if (form) { event.preventDefault(); handleForm(form).catch((error) => toast("تعذر الإرسال", error?.message || "يرجى المحاولة مرة أخرى.")); } });
 document.addEventListener("input", (event) => {
   if (event.target.dataset.action !== "faq-search") return;
   const query = event.target.value.trim();
   const list = document.querySelector("#faq-list");
   if (list) list.innerHTML = faqItems(FAQS.filter((faq) => `${faq.q} ${faq.a}`.includes(query)));
 });
-window.addEventListener("hashchange", () => { state.article = null; state.sidebar = false; render(); if (currentPath() !== "/stats") recordVisit(); narrateOpenedService(); });
+window.addEventListener("hashchange", () => { state.article = null; state.sidebar = false; render(); recordVisit(); });
 window.addEventListener("scroll", () => document.querySelector(".back-top")?.classList.toggle("visible", window.scrollY > 300));
 
 async function bootSite() {
@@ -432,10 +444,8 @@ async function bootSite() {
   if (!hasInitialHash) location.hash = "/";
   else {
     render();
-    if (currentPath() !== "/stats") recordVisit();
-    narrateOpenedService();
+    recordVisit();
   }
-  greetVisitor();
 }
 
 void bootSite();

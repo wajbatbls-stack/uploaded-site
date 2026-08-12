@@ -161,11 +161,18 @@ function copyAdminAssets(): Plugin {
       });
     },
     closeBundle() {
-      const source = path.resolve(import.meta.dirname, "client", "public", "assets");
-      const destination = path.resolve(import.meta.dirname, "dist", "public", "assets");
+      const source = path.resolve(import.meta.dirname, "client", "public");
+      const destination = path.resolve(import.meta.dirname, "dist", "public");
       const files = [
-        { source: "js/admin-login-fix-v2.js", destination: "js/admin-login-fix-v2.js" },
-        { source: "css/admin.css", destination: "css/admin.css" },
+        { source: "admin.html", destination: "admin.html" },
+        { source: "assets/js/admin-login-fix-v2.js", destination: "assets/js/admin-login-fix-v2.js" },
+        { source: "assets/js/admin-media-binding-core.js", destination: "assets/js/admin-media-binding-core.js" },
+        { source: "assets/js/admin-structured-editor.js", destination: "assets/js/admin-structured-editor.js" },
+        { source: "assets/js/admin-owner-login-security.js", destination: "assets/js/admin-owner-login-security.js" },
+        { source: "assets/js/admin-security-controls.js", destination: "assets/js/admin-security-controls.js" },
+        { source: "assets/js/admin-list-controls-core.js", destination: "assets/js/admin-list-controls-core.js" },
+        { source: "assets/js/admin-list-controls.js", destination: "assets/js/admin-list-controls.js" },
+        { source: "assets/css/admin.css", destination: "assets/css/admin.css" },
       ];
       for (const file of files) {
         const target = path.join(destination, file.destination);
@@ -228,7 +235,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         site: path.resolve(import.meta.dirname, "client/public/index.html"),
-        admin: path.resolve(import.meta.dirname, "client/public/admin.html"),
       },
     },
   },

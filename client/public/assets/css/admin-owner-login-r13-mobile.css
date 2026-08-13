@@ -1,0 +1,36 @@
+/* r13: responsive owner-login workspace only; the visitor interface is untouched. */
+.three-col { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.owner-login-editor-head-toggle { display: none; }
+.owner-login-upload-note { display: block; margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.7; }
+@media (max-width: 900px) {
+  .owner-login-layout { grid-template-columns: minmax(0, 1fr); }
+  .owner-login-preview-panel { position: static; width: 100%; }
+  .owner-login-preview { min-height: 390px; }
+  .three-col { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .field-wide { grid-column: span 2; }
+  .owner-login-security-panel .two-col { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .owner-login-workspace .workspace-body { padding: 12px; }
+  .owner-login-layout { gap: 12px; }
+  .owner-login-form, .owner-login-preview-panel { min-width: 0; }
+  .owner-login-workspace .editor { padding: 14px; margin-bottom: 12px; }
+  .owner-login-workspace .editor-head { align-items: center; }
+  .owner-login-workspace .editor-head h3 { font-size: 13px; }
+  .owner-login-workspace .editor-head small { line-height: 1.75; }
+  .three-col { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .field-wide { grid-column: span 1; }
+  .owner-login-workspace .field { margin: 12px 0; }
+  .owner-login-workspace .field input, .owner-login-workspace .field select { min-height: 44px; }
+  .owner-login-preview { min-height: 350px; }
+  .owner-login-preview .login-view { min-height: 350px; }
+  .owner-login-preview .login-card { width: 100%; max-width: 360px; transform: scale(.86); }
+  .owner-login-editor[data-owner-login-collapsible] > .editor-head { cursor: pointer; }
+  .owner-login-editor-head-toggle { display: inline-flex; align-items: center; color: var(--blue-deep); font-size: 10px; font-weight: 800; white-space: nowrap; }
+  .owner-login-editor.is-collapsed > .three-col,
+  .owner-login-editor.is-collapsed > .editor-actions { display: none; }
+  .owner-login-editor.is-collapsed { padding-bottom: 11px; }
+  .owner-login-security-panel .field-actions .btn { width: 100%; white-space: normal; }
+  .owner-passkey-list li { align-items: stretch; flex-direction: column; }
+  .owner-passkey-list li .btn { width: 100%; }
+}

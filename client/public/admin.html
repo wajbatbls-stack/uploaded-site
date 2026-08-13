@@ -6,14 +6,15 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>لوحة المالك | واجبات بلس</title>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
-    <link rel="stylesheet" href="/assets/css/admin-r12.css" />
+    <link rel="stylesheet" href="/assets/css/admin-r13.css" />
+    <link rel="stylesheet" href="/assets/css/admin-owner-login-r13-mobile.css" />
   </head>
   <body>
     <div id="admin-root"></div>
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r12.js";
+      adminModule.src = "/assets/js/admin-app-r13.js";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -31,7 +32,7 @@
         };
         document.body.append(mediaBinding);
         const ownerLoginSecurity = document.createElement("script");
-        ownerLoginSecurity.src = "/assets/js/admin-owner-login-security-r3.js";
+        ownerLoginSecurity.src = "/assets/js/admin-owner-login-security-r4.js";
         ownerLoginSecurity.defer = true;
         document.body.append(ownerLoginSecurity);
         const securityControls = document.createElement("script");

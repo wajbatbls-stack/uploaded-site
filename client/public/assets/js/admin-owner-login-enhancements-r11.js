@@ -187,7 +187,10 @@
     }, true);
   }
 
-  const observer = new MutationObserver(() => queueMicrotask(refreshDecorations));
+  const observer = new MutationObserver(() => {
+    const form = document.querySelector("[data-owner-login-settings]");
+    if (form && !form.querySelector("[data-owner-login-clock-editor]")) injectClockEditor();
+  });
   observer.observe(document.documentElement, { childList: true, subtree: true });
   setInterval(() => {
     const current = state().loginSettings || state().ownerLoginSettings || {};

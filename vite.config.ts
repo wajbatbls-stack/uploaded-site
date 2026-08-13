@@ -174,12 +174,14 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-owner-login-enhancements-r9.js", destination: "assets/js/admin-owner-login-enhancements-r9.js" },
         { source: "assets/js/admin-owner-login-enhancements-r10.js", destination: "assets/js/admin-owner-login-enhancements-r10.js" },
         { source: "assets/js/admin-owner-login-enhancements-r11.js", destination: "assets/js/admin-owner-login-enhancements-r11.js" },
+        { source: "assets/js/admin-owner-login-enhancements-r12.js", destination: "assets/js/admin-owner-login-enhancements-r12.js" },
         { source: "assets/js/admin-security-controls.js", destination: "assets/js/admin-security-controls.js" },
         { source: "assets/js/admin-list-controls-core.js", destination: "assets/js/admin-list-controls-core.js" },
         { source: "assets/js/admin-list-controls.js", destination: "assets/js/admin-list-controls.js" },
         { source: "assets/css/admin.css", destination: "assets/css/admin.css" },
         { source: "assets/css/admin-r10.css", destination: "assets/css/admin-r10.css" },
         { source: "assets/css/admin-r11.css", destination: "assets/css/admin-r11.css" },
+        { source: "assets/css/admin-r12.css", destination: "assets/css/admin-r12.css" },
       ];
       for (const file of files) {
         const target = path.join(destination, file.destination);
@@ -198,7 +200,7 @@ function publishVersionedEntryAssets(): Plugin {
   const sourceRoot = path.resolve(import.meta.dirname, "client", "public", "assets");
   const entries = [
     { source: "js/app.js", destination: "js/site-app-r6.js" },
-    { source: "js/admin-login-fix-v2.js", destination: "js/admin-app-r11.js" },
+    { source: "js/admin-login-fix-v2.js", destination: "js/admin-app-r12.js" },
   ];
 
   return {

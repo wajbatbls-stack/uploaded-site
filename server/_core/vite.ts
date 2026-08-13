@@ -24,6 +24,9 @@ export async function setupVite(app: Express, server: Server) {
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
+    // صفحة الإدارة لها نقطة دخول مستقلة ولا يجوز أن يرثها fallback الخاص بواجهة الزائر.
+    if (url === "/admin" || url.startsWith("/admin/?")) return next();
+
     try {
       const clientTemplate = path.resolve(
         import.meta.dirname,

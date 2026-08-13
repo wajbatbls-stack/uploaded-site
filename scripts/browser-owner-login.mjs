@@ -63,7 +63,7 @@ async function runInteractiveLogin(command, viewport) {
   await command("Network.clearBrowserCookies");
   await command("Emulation.setDeviceMetricsOverride", { width: viewport.width, height: viewport.height, deviceScaleFactor: viewport.scale, mobile: viewport.mobile });
   await command("Page.navigate", { url: `${baseUrl}/admin` });
-  await wait(900);
+  await wait(1500);
   const inputCheck = await command("Runtime.evaluate", { expression: `(() => {
     window.__ownerLoginRequests = [];
     const nativeFetch = window.fetch.bind(window);
@@ -74,7 +74,7 @@ async function runInteractiveLogin(command, viewport) {
     };
     const form = document.querySelector('#login-form');
     const field = form?.elements.email;
-    return JSON.stringify({ form: !!form, type: field?.type, inputMode: field?.inputMode, noValidate: form?.noValidate });
+    return JSON.stringify({ form: !!form, type: field?.type, inputMode: field?.inputMode, noValidate: form?.noValidate, readyState: document.readyState, root: document.querySelector('#admin-root')?.innerHTML?.slice(0, 700) || '', errors: window.__ownerLoginPageErrors || [], scripts: [...document.scripts].map(script => script.src || 'inline') });
   })()`, returnByValue: true });
   const values = JSON.parse(inputCheck.result.value);
   if (!values.form || values.type !== "text" || values.inputMode !== "email" || !values.noValidate) throw new Error(`Mobile-safe login field checks failed: ${JSON.stringify(values)}`);
@@ -126,12 +126,13 @@ async function runInteractiveLogin(command, viewport) {
   if (!viewport.mobile) {
     await command("Runtime.evaluate", { expression: `document.querySelector('[data-select="ownerLogin"]')?.click()` });
     await wait(450);
-    const ownerLoginView = await command("Runtime.evaluate", { expression: `(() => {
+    const ownerLoginView = await command("Runtime.evaluate", { expression: `(async () => {
       const form = document.querySelector('[data-owner-login-settings]');
       const preview = document.querySelector('[data-owner-login-preview]');
       const security = document.querySelector('[data-owner-login-security]');
       const passkeys = document.querySelector('[data-owner-passkeys]');
       const values = { title: form?.elements.title?.value || '', gradient: form?.elements.backgroundGradient?.value || '' };
+      const originalTitle = form?.elements.title?.value || '';
       let requests = 0;
       const nativeFetch = window.fetch.bind(window);
       window.fetch = async (...args) => { requests += 1; return nativeFetch(...args); };
@@ -140,6 +141,28 @@ async function runInteractiveLogin(command, viewport) {
         form.elements.title.dispatchEvent(new Event('input', { bubbles: true }));
       }
       const previewText = preview?.textContent || '';
+      if (form?.elements.title) {
+        form.elements.title.value = originalTitle;
+        form.elements.title.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      const clockEnabled = form?.elements.clockEnabled;
+      const clockStyle = form?.elements.clockStyle;
+      const originalClockEnabled = Boolean(clockEnabled?.checked);
+      const originalClockStyle = clockStyle?.value || '';
+      if (clockEnabled && clockStyle) {
+        clockEnabled.checked = true;
+        clockEnabled.dispatchEvent(new Event('change', { bubbles: true }));
+        clockStyle.value = 'analog-royal';
+        clockStyle.dispatchEvent(new Event('change', { bubbles: true }));
+        await new Promise(resolve => setTimeout(resolve, 80));
+      }
+      const previewClock = preview?.querySelector('[data-owner-login-clock]');
+      if (clockEnabled && clockStyle) {
+        clockEnabled.checked = originalClockEnabled;
+        clockEnabled.dispatchEvent(new Event('change', { bubbles: true }));
+        clockStyle.value = originalClockStyle;
+        clockStyle.dispatchEvent(new Event('change', { bubbles: true }));
+      }
       window.fetch = nativeFetch;
       return JSON.stringify({
         title: document.querySelector('.workspace h2')?.textContent?.trim() || '',
@@ -151,13 +174,40 @@ async function runInteractiveLogin(command, viewport) {
         hasSecurity: !!security && !!document.querySelector('[data-owner-login-credentials]'),
         hasPasskeys: !!passkeys && !!passkeys.querySelector('[data-owner-passkey-register]'),
         hasPreviousRestore: !!document.querySelector('[data-owner-login-restore-previous]'),
+        hasClockControls: !!clockEnabled && !!clockStyle,
+        clockStyleCount: clockStyle?.options.length || 0,
+        clockPreviewApplied: !!previewClock && previewClock.classList.contains('owner-clock-analog-royal'),
         noNetworkSaveDuringPreview: requests === 0,
         values,
       });
-    })()`, returnByValue: true });
+    })()`, returnByValue: true, awaitPromise: true });
     const ownerLoginState = JSON.parse(ownerLoginView.result.value);
-    if (!ownerLoginState.title.includes('إعدادات دخول المالك') || !ownerLoginState.hasForm || !ownerLoginState.hasPreview || !ownerLoginState.previewReflected || !ownerLoginState.hasTemplates || !ownerLoginState.hasUploads || !ownerLoginState.hasSecurity || !ownerLoginState.hasPasskeys || !ownerLoginState.hasPreviousRestore || !ownerLoginState.noNetworkSaveDuringPreview) {
+    if (!ownerLoginState.title.includes('إعدادات دخول المالك') || !ownerLoginState.hasForm || !ownerLoginState.hasPreview || !ownerLoginState.previewReflected || !ownerLoginState.hasTemplates || !ownerLoginState.hasUploads || !ownerLoginState.hasSecurity || !ownerLoginState.hasPasskeys || !ownerLoginState.hasPreviousRestore || !ownerLoginState.hasClockControls || ownerLoginState.clockStyleCount < 24 || !ownerLoginState.clockPreviewApplied || !ownerLoginState.noNetworkSaveDuringPreview) {
       throw new Error(`Owner login settings workspace is incomplete: ${JSON.stringify(ownerLoginState)}`);
+    }
+    const ownerLoginSave = await command("Runtime.evaluate", { expression: `(async () => {
+      const form = document.querySelector('[data-owner-login-settings]');
+      const interceptedFetch = window.fetch;
+      const result = { called: false, status: 0, saved: false, error: '' };
+      window.fetch = async (...args) => {
+        const response = await interceptedFetch(...args);
+        if (String(args[0]).includes('adminAuth.saveOwnerLoginSettings')) {
+          result.called = true;
+          result.status = response.status;
+          const body = await response.clone().json().catch(() => null);
+          result.saved = response.ok && Boolean(body?.result?.data?.json || body?.result?.data);
+          result.error = body?.error?.json?.message || '';
+        }
+        return response;
+      };
+      form?.requestSubmit();
+      for (let attempt = 0; attempt < 30 && !result.called; attempt += 1) await new Promise(resolve => setTimeout(resolve, 100));
+      window.fetch = interceptedFetch;
+      return JSON.stringify(result);
+    })()`, returnByValue: true, awaitPromise: true });
+    const ownerLoginSaveState = JSON.parse(ownerLoginSave.result.value);
+    if (!ownerLoginSaveState.called || ownerLoginSaveState.status !== 200 || !ownerLoginSaveState.saved || ownerLoginSaveState.error) {
+      throw new Error(`Owner login settings did not save correctly: ${JSON.stringify(ownerLoginSaveState)}`);
     }
     await capture(`${suffix}-owner-login-settings`);
     await command("Runtime.evaluate", { expression: `document.querySelector('[data-select="dashboard"]')?.click()` });

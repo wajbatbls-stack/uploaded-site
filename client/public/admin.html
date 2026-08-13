@@ -5,17 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
     <title>لوحة المالك | واجبات بلس</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/assets/css/admin.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="/assets/css/admin-r10.css" />
   </head>
   <body>
     <div id="admin-root"></div>
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r9.js";
+      adminModule.src = "/assets/js/admin-app-r10.js";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -33,7 +31,7 @@
         };
         document.body.append(mediaBinding);
         const ownerLoginSecurity = document.createElement("script");
-        ownerLoginSecurity.src = "/assets/js/admin-owner-login-security.js";
+        ownerLoginSecurity.src = "/assets/js/admin-owner-login-security-r2.js";
         ownerLoginSecurity.defer = true;
         document.body.append(ownerLoginSecurity);
         const securityControls = document.createElement("script");
@@ -55,7 +53,7 @@
         };
         document.body.append(listCore);
         const ownerLoginEnhancements = document.createElement("script");
-        ownerLoginEnhancements.src = "/assets/js/admin-owner-login-enhancements-r9.js";
+        ownerLoginEnhancements.src = "/assets/js/admin-owner-login-enhancements-r10.js";
         ownerLoginEnhancements.async = false;
         document.body.append(ownerLoginEnhancements);
       };

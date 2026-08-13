@@ -45,7 +45,7 @@ async function startServer() {
       createContext,
     })
   );
-  app.get("/admin", (_req, res) => {
+  app.get(["/admin", "/admin/"], (_req, res) => {
     const adminFile = process.env.NODE_ENV === "development"
       ? path.resolve(process.cwd(), "client/public/admin.html")
       : path.resolve(import.meta.dirname, "public/admin.html");
@@ -55,7 +55,7 @@ async function startServer() {
       Pragma: "no-cache",
       Expires: "0",
     });
-    res.sendFile(adminFile);
+    return res.sendFile(adminFile);
   });
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {

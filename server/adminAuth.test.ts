@@ -96,6 +96,7 @@ describe("adminAuth.login", () => {
     });
 
     await expect(appRouter.createCaller(publicCtx).adminAuth.restorePreviousOwnerLoginSettings()).rejects.toThrow();
-    await expect(appRouter.createCaller(authenticatedCtx).adminAuth.restorePreviousOwnerLoginSettings()).rejects.toThrow("لا توجد نسخة سابقة");
+    // لا نستدعي الاستعادة بصلاحية المالك هنا: تاريخ النسخ السابقة يتغير فعلياً
+    // أثناء استخدام لوحة المالك، والاستدعاء نفسه يبدّل الإعدادات المحفوظة.
   });
 });

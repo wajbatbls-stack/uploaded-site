@@ -29,6 +29,14 @@ const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": 
 const wa = (message = "") => `https://wa.me/${SITE_CONFIG.whatsapp}?text=${encodeURIComponent(message)}`;
 const link = (path, label, className = "") => `<a class="${className}" href="#${path}">${label}</a>`;
 const icon = (emoji) => `<span aria-hidden="true">${emoji}</span>`;
+const safeCss = (value = "") => String(value).replace(/[;{}<>]/g, "");
+const safeHref = (value, fallback = "#/") => {
+  const raw = String(value || "").trim();
+  if (raw === "whatsapp") return wa("أريد طلب خدمة");
+  if (raw.startsWith("/")) return `#${raw}`;
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return fallback;
+};
 
 function isoDay(date = new Date()) { return date.toISOString().slice(0, 10); }
 function recordVisit() {
@@ -354,14 +362,6 @@ function homePage() {
     <div class="hero-actions"><a class="btn btn-green" href="${wa("أريد طلب خدمة")}" target="_blank" rel="noopener">🚀 اطلب خدمتك الآن</a>${link("/services", "📚 تصفح الخدمات", "btn btn-outline")}</div>
     <div class="hero-badge">⭐ ضمان الجودة 100% · سرية تامة · دعم 24/7 ⭐</div>
   </div></section>`;
-  const safeCss = value => String(value || "").replace(/[;{}<>]/g, "");
-  const safeHref = (value, fallback = "#/") => {
-    const raw = String(value || "").trim();
-    if (raw === "whatsapp") return wa("أريد طلب خدمة");
-    if (raw.startsWith("/")) return `#${raw}`;
-    if (/^https?:\/\//i.test(raw)) return raw;
-    return fallback;
-  };
   const hero = home.hero || {};
   const bg = home.background || {};
   const sections = Array.isArray(home.sections) ? home.sections : [];

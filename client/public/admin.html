@@ -15,7 +15,7 @@
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r8.js";
+      adminModule.src = "/assets/js/admin-app-r9.js";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -54,6 +54,10 @@
           document.body.append(listControls);
         };
         document.body.append(listCore);
+        const ownerLoginEnhancements = document.createElement("script");
+        ownerLoginEnhancements.src = "/assets/js/admin-owner-login-enhancements-r9.js";
+        ownerLoginEnhancements.async = false;
+        document.body.append(ownerLoginEnhancements);
       };
       document.body.append(adminModule);
     </script>

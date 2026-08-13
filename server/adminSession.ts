@@ -201,7 +201,11 @@ export async function startOwnerPasskeyRegistration(context: WebAuthnContext) {
     attestationType: "none",
     timeout: 60_000,
     excludeCredentials: registered.map(passkey => ({ id: passkey.credentialId })),
-    authenticatorSelection: { residentKey: "preferred", userVerification: "required" },
+    authenticatorSelection: {
+      authenticatorAttachment: "platform",
+      residentKey: "required",
+      userVerification: "required",
+    },
   });
   await createOwnerWebAuthnChallenge({
     ownerAccountId: account.id,

@@ -70,12 +70,17 @@ describe("owner login settings", () => {
     );
     expect(DEFAULT_OWNER_LOGIN_SETTINGS.loginButtonText).toBeTruthy();
     expect(DEFAULT_OWNER_LOGIN_SETTINGS.footerText).toBeTruthy();
+    expect(DEFAULT_OWNER_LOGIN_SETTINGS.clockEnabled).toBe(true);
+    expect(DEFAULT_OWNER_LOGIN_SETTINGS.clockStyle).toBe("digital-clean");
+    expect(DEFAULT_OWNER_LOGIN_SETTINGS.clockPosition).toBe("above_card");
+    expect(DEFAULT_OWNER_LOGIN_SETTINGS.clockSize).toBeGreaterThanOrEqual(24);
   });
 
   it("returns defaults when nothing was saved yet", async () => {
     const settings = await getOwnerLoginSettings(42);
     expect(settings?.template).toBe("professional");
     expect(settings?.cardRadius).toBe(28);
+    expect(settings?.clockFormat).toBe("24");
   });
 
   it("zod rejects malformed content order values", () => {

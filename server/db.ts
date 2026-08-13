@@ -398,6 +398,14 @@ export const DEFAULT_OWNER_LOGIN_SETTINGS = {
   passkeyButtonText: "تسجيل الدخول بالبصمة أو Passkey",
   footerText: "دخول خاص ومؤمّن لإدارة الموقع وطلبات العملاء.",
   invalidCredentialsText: "بيانات الدخول غير صحيحة",
+  clockEnabled: true,
+  clockStyle: "digital-clean",
+  clockPosition: "above_card",
+  clockFormat: "24",
+  clockColor: "#15213d",
+  clockAccentColor: "#4966d6",
+  clockSize: 52,
+  clockShowSeconds: true,
 } as const;
 
 export type OwnerLoginSettingsPatch = Partial<Omit<typeof ownerLoginSettings.$inferInsert, "id" | "ownerAccountId" | "updatedAt">>;

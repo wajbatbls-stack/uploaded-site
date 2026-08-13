@@ -110,6 +110,14 @@ const ownerLoginSettingsInput = z.object({
   passkeyButtonText: z.string().min(1).max(160),
   footerText: z.string().min(1).max(500),
   invalidCredentialsText: z.string().min(1).max(300),
+  clockEnabled: z.boolean(),
+  clockStyle: z.enum(["digital-clean", "digital-outline", "digital-glow", "digital-terminal", "digital-glass", "digital-neon", "digital-led", "digital-bold", "analog-classic", "analog-minimal", "analog-royal", "analog-modern", "analog-dark", "analog-soft", "analog-gold", "analog-blue", "flip-clean", "flip-dark", "flip-royal", "flip-neon", "pill", "badge", "ribbon", "compact"]),
+  clockPosition: z.enum(["above_card", "inside_top", "inside_bottom", "below_card"]),
+  clockFormat: z.enum(["12", "24"]),
+  clockColor: hexColor,
+  clockAccentColor: hexColor,
+  clockSize: z.number().int().min(24).max(140),
+  clockShowSeconds: z.boolean(),
 });
 
 function getWebAuthnContext(headers: Record<string, string | string[] | undefined>) {

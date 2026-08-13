@@ -1,4 +1,4 @@
-import { bigint, index, int, longtext, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
+import { bigint, boolean, index, int, longtext, mysqlEnum, mysqlTable, text, timestamp, uniqueIndex, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -139,6 +139,14 @@ export const ownerLoginSettings = mysqlTable("owner_login_settings", {
   passkeyButtonText: varchar("passkeyButtonText", { length: 160 }).default("تسجيل الدخول بالبصمة أو Passkey").notNull(),
   footerText: varchar("footerText", { length: 500 }).default("دخول خاص ومؤمّن لإدارة الموقع وطلبات العملاء.").notNull(),
   invalidCredentialsText: varchar("invalidCredentialsText", { length: 300 }).default("بيانات الدخول غير صحيحة").notNull(),
+  clockEnabled: boolean("clockEnabled").default(true).notNull(),
+  clockStyle: varchar("clockStyle", { length: 40 }).default("digital-clean").notNull(),
+  clockPosition: varchar("clockPosition", { length: 32 }).default("above_card").notNull(),
+  clockFormat: varchar("clockFormat", { length: 8 }).default("24").notNull(),
+  clockColor: varchar("clockColor", { length: 32 }).default("#15213d").notNull(),
+  clockAccentColor: varchar("clockAccentColor", { length: 32 }).default("#4966d6").notNull(),
+  clockSize: int("clockSize").default(52).notNull(),
+  clockShowSeconds: boolean("clockShowSeconds").default(true).notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, table => ({
   ownerLoginSettingsOwnerUnique: uniqueIndex("owner_login_settings_owner_unique").on(table.ownerAccountId),

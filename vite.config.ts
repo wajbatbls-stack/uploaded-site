@@ -170,6 +170,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-structured-editor.js", destination: "assets/js/admin-structured-editor.js" },
         { source: "assets/js/admin-homepage-manager-r1.js", destination: "assets/js/admin-homepage-manager-r1.js" },
         { source: "assets/js/admin-services-manager-r1.js", destination: "assets/js/admin-services-manager-r1.js" },
+        { source: "assets/js/admin-visitor-links-manager-r1.js", destination: "assets/js/admin-visitor-links-manager-r1.js" },
         { source: "assets/js/admin-owner-login-security.js", destination: "assets/js/admin-owner-login-security.js" },
         { source: "assets/js/admin-owner-login-security-r2.js", destination: "assets/js/admin-owner-login-security-r2.js" },
         { source: "assets/js/admin-owner-login-security-r3.js", destination: "assets/js/admin-owner-login-security-r3.js" },
@@ -195,6 +196,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/css/site-design-r2.css", destination: "assets/css/site-design-r2.css" },
         { source: "assets/css/homepage-manager-r1.css", destination: "assets/css/homepage-manager-r1.css" },
         { source: "assets/css/services-manager-r1.css", destination: "assets/css/services-manager-r1.css" },
+        { source: "assets/css/visitor-links-r1.css", destination: "assets/css/visitor-links-r1.css" },
       ];
       for (const file of files) {
         const target = path.join(destination, file.destination);

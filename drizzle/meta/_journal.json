@@ -64,6 +64,13 @@
       "when": 1786643082124,
       "tag": "0008_strange_the_watchers",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1786652443483,
+      "tag": "0009_magenta_thunderball",
+      "breakpoints": true
     }
   ]
 }

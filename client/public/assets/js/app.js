@@ -57,6 +57,34 @@ function queryParams() {
 }
 function go(path) { location.hash = path; }
 
+function visitorLinkTokenFromLocation() {
+  const queryToken = new URLSearchParams(location.search).get("link");
+  if (queryToken) return queryToken;
+  const match = location.hash.match(/^#\/?visit\/([a-zA-Z0-9_-]{16,80})$/);
+  return match?.[1] || null;
+}
+
+function showVisitorLinkUnavailable(reason) {
+  const message = reason === "expired" ? "انتهت صلاحية هذا الرابط." : reason === "disabled" ? "هذا الرابط غير متاح حاليًا." : "رابط الزائر غير صحيح أو لم يعد موجودًا.";
+  document.querySelector("#app").innerHTML = `<main class="container section"><section class="card card-pad text-center" style="max-width:640px;margin:4rem auto"><div class="round-icon" aria-hidden="true">🔗</div><h1 class="page-title">الرابط غير متاح</h1><p class="page-intro">${esc(message)}</p><a class="btn btn-primary" href="#/">العودة للصفحة الرئيسية</a></section></main>`;
+  document.title = "الرابط غير متاح | واجبات بلس";
+}
+
+async function resolveVisitorLinkAtEntry() {
+  const token = visitorLinkTokenFromLocation();
+  if (!token) return true;
+  try {
+    const result = await rpcQuery("site.resolveVisitorLink", { token });
+    if (!result?.active) { showVisitorLinkUnavailable(result?.reason); return false; }
+    const cleanPath = result.targetPath.startsWith("/") ? result.targetPath : "/";
+    history.replaceState(null, "", `${location.pathname}#${cleanPath}`);
+    return true;
+  } catch {
+    showVisitorLinkUnavailable("not_found");
+    return false;
+  }
+}
+
 async function rpcQuery(procedure, input = null) {
   const query = encodeURIComponent(JSON.stringify({ json: input }));
   const response = await fetch(`/api/trpc/${procedure}?input=${query}`, { credentials: "same-origin" });
@@ -599,6 +627,7 @@ function managedAboutPage() {
 async function bootSite() {
   try { applyManagedContent(await rpcQuery("site.publicContent")); } catch { /* تُستخدم البيانات الأصلية المرفقة إذا تعذر الاتصال. */ }
   if (localStorage.getItem("wajbat-theme") === "dark") document.body.classList.add("dark");
+  if (!(await resolveVisitorLinkAtEntry())) return;
   const hasInitialHash = Boolean(location.hash);
   if (!hasInitialHash) location.hash = "/";
   else {

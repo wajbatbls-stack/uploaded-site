@@ -294,5 +294,22 @@ export const adminAuditEvents = mysqlTable("admin_audit_events", {
   auditCreatedAtIndex: index("admin_audit_events_created_at_index").on(table.createdAt),
 }));
 
+/** روابط دخول عامة ينشئها المالك، مستقلة عن رابط الموقع الافتراضي. */
+export const visitorLinks = mysqlTable("visitor_links", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  token: varchar("token", { length: 80 }).notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  targetPath: varchar("targetPath", { length: 255 }).default("/").notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  expiresAt: timestamp("expiresAt"),
+  visitCount: int("visitCount").default(0).notNull(),
+  lastVisitedAt: timestamp("lastVisitedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  visitorLinkTokenUnique: uniqueIndex("visitor_links_token_unique").on(table.token),
+  visitorLinkActiveIndex: index("visitor_links_active_index").on(table.isActive, table.createdAt),
+}));
+
 export type ContentCollection = typeof contentCollections.$inferSelect;
 export type InsertContentCollection = typeof contentCollections.$inferInsert;

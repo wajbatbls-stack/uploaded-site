@@ -17,6 +17,7 @@ import {
   siteVisits,
   submittedReviews,
   users,
+  visitorLinks,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { SITE_SEED } from "./siteSeed";
@@ -57,6 +58,63 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result[0];
+}
+
+export type VisitorLinkInput = {
+  token: string;
+  name: string;
+  targetPath: string;
+  isActive?: boolean;
+  expiresAt?: Date | null;
+};
+
+export async function listVisitorLinks() {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  return db.select().from(visitorLinks).orderBy(desc(visitorLinks.createdAt));
+}
+
+export async function createVisitorLink(input: VisitorLinkInput) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const result = await db.insert(visitorLinks).values({
+    token: input.token,
+    name: input.name,
+    targetPath: input.targetPath,
+    isActive: input.isActive ?? true,
+    expiresAt: input.expiresAt ?? null,
+  });
+  return { id: Number(result[0].insertId) };
+}
+
+export async function updateVisitorLink(id: number, input: Partial<Pick<VisitorLinkInput, "name" | "targetPath" | "isActive" | "expiresAt">>) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.update(visitorLinks).set(input).where(eq(visitorLinks.id, id));
+  return { success: true } as const;
+}
+
+export async function deleteVisitorLink(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.delete(visitorLinks).where(eq(visitorLinks.id, id));
+  return { success: true } as const;
+}
+
+export async function resolveVisitorLink(token: string, recordVisit = true) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const row = (await db.select().from(visitorLinks).where(eq(visitorLinks.token, token)).limit(1))[0];
+  if (!row) return { active: false as const, reason: "not_found" as const };
+  const expired = Boolean(row.expiresAt && row.expiresAt.getTime() <= Date.now());
+  if (!row.isActive || expired) return { active: false as const, reason: expired ? "expired" as const : "disabled" as const };
+  if (recordVisit) {
+    await db.update(visitorLinks).set({
+      visitCount: sql`${visitorLinks.visitCount} + 1`,
+      lastVisitedAt: new Date(),
+    }).where(eq(visitorLinks.id, row.id));
+  }
+  return { active: true as const, targetPath: row.targetPath, name: row.name };
 }
 
 const collectionLabels: Record<string, string> = {

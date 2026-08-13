@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/assets/css/admin-owner-login-r13-mobile.css" />
     <link rel="stylesheet" href="/assets/css/admin-homepage-r1.css" />
     <link rel="stylesheet" href="/assets/css/admin-services-r1.css" />
+    <link rel="stylesheet" href="/assets/css/visitor-links-r1.css" />
   </head>
   <body>
     <div id="admin-root"></div>
@@ -33,6 +34,12 @@
               const servicesManager = document.createElement("script");
               servicesManager.src = "/assets/js/admin-services-manager-r1.js";
               servicesManager.async = false;
+              servicesManager.onload = () => {
+                const visitorLinksManager = document.createElement("script");
+                visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r1.js";
+                visitorLinksManager.async = false;
+                document.body.append(visitorLinksManager);
+              };
               document.body.append(servicesManager);
             };
             document.body.append(homepageManager);
@@ -48,6 +55,12 @@
             homepageManager.onload = () => {
               const servicesManager = document.createElement("script");
               servicesManager.src = "/assets/js/admin-services-manager-r1.js";
+              servicesManager.onload = () => {
+                const visitorLinksManager = document.createElement("script");
+                visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r1.js";
+                visitorLinksManager.async = false;
+                document.body.append(visitorLinksManager);
+              };
               document.body.append(servicesManager);
             };
             document.body.append(homepageManager);

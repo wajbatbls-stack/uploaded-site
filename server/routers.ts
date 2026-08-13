@@ -26,6 +26,8 @@ import { uploadAndRegisterAdminMedia } from "./adminMediaUpload";
 import {
   createAssignmentRequest,
   createContactMessage,
+  createVisitorLink,
+  deleteVisitorLink,
   createSubmittedReview,
   deleteSubmittedReview,
   exportSiteBackup,
@@ -38,6 +40,7 @@ import {
   listAssignmentRequests,
   listContactMessages,
   listMedia,
+  listVisitorLinks,
   listSubmittedReviews,
   recordAdminAudit,
   recordSiteOrder,
@@ -46,11 +49,13 @@ import {
   removeMedia,
   restoreContentBackup,
   restoreSiteDesignSnapshot,
+  resolveVisitorLink,
   restorePreviousOwnerLoginSettings,
   saveOwnerLoginSettings,
   saveCollection,
   updateAssignmentRequest,
   updateContactMessage,
+  updateVisitorLink,
   updateSubmittedReview,
 } from "./db";
 import { ownerProcedure, publicProcedure, router } from "./_core/trpc";
@@ -61,6 +66,12 @@ const messageStatus = z.enum(["new", "read", "replied", "archived"]);
 const reviewStatus = z.enum(["pending", "published", "hidden"]);
 const hexColor = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
 const mediaUrl = z.string().max(2_000).refine(value => value.startsWith("/") || /^https?:\/\//i.test(value), "رابط الوسيط غير صالح").nullable();
+const visitorLinkInput = z.object({
+  name: z.string().trim().min(2).max(160),
+  targetPath: z.string().trim().min(1).max(255).regex(/^\/(?!\/)/, "المسار يجب أن يبدأ بشرطة مائلة واحدة"),
+  isActive: z.boolean().optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+});
 const ownerLoginSettingsInput = z.object({
   template: z.enum(["professional", "glass", "minimal", "royal"]),
   backgroundStyle: z.enum(["gradient", "solid", "image"]),
@@ -291,6 +302,7 @@ export const appRouter = router({
 
   site: router({
     publicContent: publicProcedure.query(() => getPublicSiteContent()),
+    resolveVisitorLink: publicProcedure.input(z.object({ token: z.string().regex(/^[a-zA-Z0-9_-]{16,80}$/), recordVisit: z.boolean().optional() })).query(({ input }) => resolveVisitorLink(input.token, input.recordVisit !== false)),
     trackVisit: publicProcedure.input(z.object({ path: z.string().min(1).max(255) })).mutation(({ ctx, input }) => {
       const referrer = typeof ctx.req.headers.referer === "string" ? ctx.req.headers.referer : undefined;
       const userAgent = typeof ctx.req.headers["user-agent"] === "string" ? ctx.req.headers["user-agent"] : undefined;
@@ -325,6 +337,24 @@ export const appRouter = router({
 
   admin: router({
     collections: ownerProcedure.query(() => getAdminCollections()),
+    visitorLinks: ownerProcedure.query(() => listVisitorLinks()),
+    createVisitorLink: ownerProcedure.input(visitorLinkInput).mutation(async ({ input }) => {
+      const token = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
+      const result = await createVisitorLink({ ...input, token, expiresAt: input.expiresAt ? new Date(input.expiresAt) : null });
+      await recordAdminAudit("visitor_link_created", "visitor_link", String(result.id), { name: input.name });
+      return { ...result, token };
+    }),
+    updateVisitorLink: ownerProcedure.input(visitorLinkInput.partial().extend({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+      const { id, expiresAt, ...updates } = input;
+      const result = await updateVisitorLink(id, { ...updates, expiresAt: expiresAt === undefined ? undefined : expiresAt ? new Date(expiresAt) : null });
+      await recordAdminAudit("visitor_link_updated", "visitor_link", String(id), updates);
+      return result;
+    }),
+    deleteVisitorLink: ownerProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+      const result = await deleteVisitorLink(input.id);
+      await recordAdminAudit("visitor_link_deleted", "visitor_link", String(input.id));
+      return result;
+    }),
     designHistory: ownerProcedure.input(z.object({ limit: z.number().int().min(1).max(40).optional() }).optional()).query(({ input }) => getSiteDesignHistory(input?.limit)),
     restoreDesignSnapshot: ownerProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
       const result = await restoreSiteDesignSnapshot(input.id);

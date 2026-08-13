@@ -15,7 +15,7 @@
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r8.js";
+      adminModule.src = "/assets/js/admin-app-r6.js";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -32,10 +32,6 @@
           document.body.append(structuredEditor);
         };
         document.body.append(mediaBinding);
-        const ownerLoginSecurity = document.createElement("script");
-        ownerLoginSecurity.src = "/assets/js/admin-owner-login-security.js";
-        ownerLoginSecurity.defer = true;
-        document.body.append(ownerLoginSecurity);
         const securityControls = document.createElement("script");
         securityControls.src = "/assets/js/admin-security-controls.js";
         securityControls.defer = true;

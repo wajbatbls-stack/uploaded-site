@@ -4,19 +4,12 @@ import { z } from "zod";
 import {
   ADMIN_SESSION_COOKIE,
   createAdminSession,
-  finishOwnerPasskeyAuthentication,
-  finishOwnerPasskeyRegistration,
   getAdminAccount,
-  getVerifiedAdminSession,
   hasConfiguredAdminCredentials,
-  removeOwnerPasskey,
   revokeCurrentAdminSession,
   revokeOtherAdminSessions,
-  startOwnerPasskeyAuthentication,
-  startOwnerPasskeyRegistration,
   updateAdminCredentials,
   validateAdminCredentials,
-  verifyAdminCurrentPassword,
 } from "./adminSession";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
@@ -29,10 +22,8 @@ import {
   deleteSubmittedReview,
   exportSiteBackup,
   getAdminCollections,
-  getOwnerLoginSettings,
   getAdminStats,
   getPublicSiteContent,
-  listOwnerPasskeys,
   listAssignmentRequests,
   listContactMessages,
   listMedia,
@@ -43,8 +34,6 @@ import {
   registerMedia,
   removeMedia,
   restoreContentBackup,
-  restorePreviousOwnerLoginSettings,
-  saveOwnerLoginSettings,
   saveCollection,
   updateAssignmentRequest,
   updateContactMessage,
@@ -56,70 +45,6 @@ import { storagePut } from "./storage";
 const assignmentStatus = z.enum(["new", "reviewing", "in_progress", "completed", "cancelled"]);
 const messageStatus = z.enum(["new", "read", "replied", "archived"]);
 const reviewStatus = z.enum(["pending", "published", "hidden"]);
-const hexColor = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
-const mediaUrl = z.string().max(2_000).refine(value => value.startsWith("/") || /^https?:\/\//i.test(value), "رابط الوسيط غير صالح").nullable();
-const ownerLoginSettingsInput = z.object({
-  template: z.enum(["professional", "glass", "minimal", "royal"]),
-  backgroundStyle: z.enum(["gradient", "solid", "image"]),
-  backgroundColor: hexColor,
-  backgroundGradient: z.string().max(600).regex(/^(linear-gradient|radial-gradient)\(/).nullable(),
-  backgroundImageUrl: mediaUrl,
-  backgroundImageMediaId: z.number().int().positive().nullable(),
-  logoUrl: mediaUrl,
-  logoMediaId: z.number().int().positive().nullable(),
-  logoSize: z.number().int().min(32).max(180),
-  logoPosition: z.enum(["top", "inline", "side"]),
-  logoShape: z.enum(["rounded", "circle", "square"]),
-  logoBorderColor: hexColor,
-  logoBorderWidth: z.number().int().min(0).max(12),
-  logoGlow: z.number().int().min(0).max(60),
-  logoAnimation: z.enum(["none", "pulse", "float"]),
-  ownerPhotoUrl: mediaUrl,
-  ownerPhotoMediaId: z.number().int().positive().nullable(),
-  ownerPhotoSize: z.number().int().min(0).max(180),
-  ownerPhotoShape: z.enum(["circle", "rounded", "square"]),
-  cardStyle: z.enum(["standard", "glass", "outline", "soft", "dark"]),
-  cardColor: hexColor,
-  cardOpacity: z.number().int().min(20).max(100),
-  cardBorderColor: hexColor,
-  cardBorderWidth: z.number().int().min(0).max(8),
-  cardRadius: z.number().int().min(0).max(56),
-  cardBlur: z.number().int().min(0).max(40),
-  cardWidth: z.number().int().min(320).max(640),
-  fieldStyle: z.enum(["modern", "underline", "filled", "outline"]),
-  fieldColor: hexColor,
-  fieldTextColor: hexColor,
-  fieldPlaceholderColor: hexColor,
-  fieldBorderColor: hexColor,
-  fieldBorderWidth: z.number().int().min(0).max(6),
-  fieldRadius: z.number().int().min(0).max(32),
-  fieldFontSize: z.number().int().min(12).max(24),
-  fontFamily: z.enum(["Cairo", "Tajawal", "IBM Plex Sans Arabic", "Arial"]),
-  contentOrder: z.string().min(20).max(300).regex(/^(?:logo|title|description|email|password|passkey|submit|footer)(?:,(?:logo|title|description|email|password|passkey|submit|footer)){7}$/),
-  buttonStyle: z.enum(["solid", "gradient", "outline", "soft"]),
-  buttonColor: hexColor,
-  buttonTextColor: hexColor,
-  buttonRadius: z.number().int().min(0).max(32),
-  buttonGlow: z.number().int().min(0).max(60),
-  buttonAnimation: z.enum(["none", "pulse", "lift"]),
-  entranceAnimation: z.enum(["none", "fade", "slide", "scale"]),
-  animationDuration: z.number().int().min(0).max(900),
-  title: z.string().min(1).max(320),
-  description: z.string().min(1).max(2_000),
-  loginButtonText: z.string().min(1).max(120),
-  passkeyButtonText: z.string().min(1).max(160),
-  footerText: z.string().min(1).max(500),
-  invalidCredentialsText: z.string().min(1).max(300),
-});
-
-function getWebAuthnContext(headers: Record<string, string | string[] | undefined>) {
-  const rawOrigin = typeof headers.origin === "string" ? headers.origin : undefined;
-  if (!rawOrigin) throw new TRPCError({ code: "BAD_REQUEST", message: "تعذر التحقق من مصدر طلب Passkey" });
-  let origin: URL;
-  try { origin = new URL(rawOrigin); } catch { throw new TRPCError({ code: "BAD_REQUEST", message: "مصدر طلب Passkey غير صالح" }); }
-  if (origin.protocol !== "https:" && origin.hostname !== "localhost") throw new TRPCError({ code: "BAD_REQUEST", message: "يتطلب Passkey اتصالاً آمناً" });
-  return { origin: origin.origin, rpId: origin.hostname };
-}
 
 function classifyVisitSource(referrer?: string) {
   if (!referrer) return "direct";
@@ -158,11 +83,6 @@ export const appRouter = router({
 
   adminAuth: router({
     configured: publicProcedure.query(() => ({ configured: hasConfiguredAdminCredentials() })),
-    loginSettings: publicProcedure.query(async () => {
-      const account = await getAdminAccount();
-      if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "تعذر تحميل إعدادات الدخول" });
-      return getOwnerLoginSettings(account.id);
-    }),
     login: publicProcedure
       .input(z.object({ email: z.string().min(1).max(320), password: z.string().min(1) }))
       .mutation(async ({ ctx, input }) => {
@@ -205,86 +125,6 @@ export const appRouter = router({
         await recordAdminAudit("other_sessions_revoked", "owner_account", String(result.accountId));
         return { success: true } as const;
       }),
-    ownerLoginSettings: ownerProcedure.query(async () => {
-      const account = await getAdminAccount();
-      if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "تعذر تحميل حساب المالك" });
-      return getOwnerLoginSettings(account.id);
-    }),
-    saveOwnerLoginSettings: ownerProcedure.input(ownerLoginSettingsInput).mutation(async ({ input }) => {
-      const account = await getAdminAccount();
-      if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "تعذر تحميل حساب المالك" });
-      const result = await saveOwnerLoginSettings(account.id, input);
-      await recordAdminAudit("owner_login_settings_saved", "owner_login_settings", String(account.id));
-      return result;
-    }),
-    restoreDefaultOwnerLoginSettings: ownerProcedure.mutation(async () => {
-      const account = await getAdminAccount();
-      if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "تعذر تحميل حساب المالك" });
-      const { DEFAULT_OWNER_LOGIN_SETTINGS } = await import("./db");
-      const result = await saveOwnerLoginSettings(account.id, {
-        ...DEFAULT_OWNER_LOGIN_SETTINGS,
-        backgroundGradient: DEFAULT_OWNER_LOGIN_SETTINGS.backgroundGradient,
-        backgroundImageUrl: null, backgroundImageMediaId: null, logoUrl: null, logoMediaId: null, ownerPhotoUrl: null, ownerPhotoMediaId: null,
-      });
-      await recordAdminAudit("owner_login_settings_restored", "owner_login_settings", String(account.id));
-      return result;
-    }),
-    // Compatibility endpoint used by the owner-login editor. It intentionally
-    // performs the same authenticated reset and keeps the audit trail intact.
-    restoreOwnerLoginSettings: ownerProcedure.mutation(async () => {
-      const account = await getAdminAccount();
-      if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "تعذر تحميل حساب المالك" });
-      const { DEFAULT_OWNER_LOGIN_SETTINGS } = await import("./db");
-      const result = await saveOwnerLoginSettings(account.id, {
-        ...DEFAULT_OWNER_LOGIN_SETTINGS,
-        backgroundGradient: DEFAULT_OWNER_LOGIN_SETTINGS.backgroundGradient,
-        backgroundImageUrl: null, backgroundImageMediaId: null, logoUrl: null, logoMediaId: null, ownerPhotoUrl: null, ownerPhotoMediaId: null,
-      });
-      await recordAdminAudit("owner_login_settings_restored", "owner_login_settings", String(account.id));
-      return result;
-    }),
-    restorePreviousOwnerLoginSettings: ownerProcedure.mutation(async () => {
-      const account = await getAdminAccount();
-      if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "تعذر تحميل حساب المالك" });
-      try {
-        const result = await restorePreviousOwnerLoginSettings(account.id);
-        await recordAdminAudit("owner_login_settings_previous_restored", "owner_login_settings", String(account.id));
-        return result;
-      } catch (error) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "تعذر استعادة النسخة السابقة" });
-      }
-    }),
-    passkeys: ownerProcedure.query(async () => {
-      const account = await getAdminAccount();
-      if (!account) throw new TRPCError({ code: "NOT_FOUND", message: "تعذر تحميل حساب المالك" });
-      return listOwnerPasskeys(account.id);
-    }),
-    passkeyRegistrationOptions: ownerProcedure.query(({ ctx }) => startOwnerPasskeyRegistration(getWebAuthnContext(ctx.req.headers))),
-    verifyPasskeyRegistration: ownerProcedure.input(z.object({
-      challenge: z.string().min(20).max(1_024), response: z.unknown(), label: z.string().max(120).optional(), currentPassword: z.string().min(8).max(256),
-    })).mutation(async ({ ctx, input }) => {
-      const session = await getVerifiedAdminSession(ctx.req.headers.cookie);
-      if (!session) throw new TRPCError({ code: "FORBIDDEN", message: "انتهت جلسة المالك" });
-      if (!(await verifyAdminCurrentPassword(input.currentPassword))) throw new TRPCError({ code: "UNAUTHORIZED", message: "تحقق من كلمة المرور الحالية قبل تسجيل Passkey" });
-      const result = await finishOwnerPasskeyRegistration({ challenge: input.challenge, response: input.response, label: input.label || "Passkey المالك", ownerAccountId: session.accountId });
-      await recordAdminAudit("owner_passkey_registered", "owner_passkey", String(session.accountId));
-      return result;
-    }),
-    passkeyAuthenticationOptions: publicProcedure.query(({ ctx }) => startOwnerPasskeyAuthentication(getWebAuthnContext(ctx.req.headers))),
-    verifyPasskeyAuthentication: publicProcedure.input(z.object({ challenge: z.string().min(20).max(1_024), response: z.unknown() })).mutation(async ({ ctx, input }) => {
-      const userAgent = typeof ctx.req.headers["user-agent"] === "string" ? ctx.req.headers["user-agent"] : undefined;
-      const forwarded = typeof ctx.req.headers["x-forwarded-for"] === "string" ? ctx.req.headers["x-forwarded-for"].split(",")[0]?.trim() : undefined;
-      const token = await finishOwnerPasskeyAuthentication({ challenge: input.challenge, response: input.response, metadata: { userAgent, ipAddress: forwarded } });
-      ctx.res.cookie(ADMIN_SESSION_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 12 * 60 * 60 * 1000 });
-      return { success: true } as const;
-    }),
-    removePasskey: ownerProcedure.input(z.object({ id: z.number().int().positive(), currentPassword: z.string().min(8).max(256) })).mutation(async ({ ctx, input }) => {
-      const session = await getVerifiedAdminSession(ctx.req.headers.cookie);
-      if (!session) throw new TRPCError({ code: "FORBIDDEN", message: "انتهت جلسة المالك" });
-      if (!(await removeOwnerPasskey(session.accountId, input.id, input.currentPassword))) throw new TRPCError({ code: "UNAUTHORIZED", message: "تعذر حذف Passkey: تحقق من كلمة المرور الحالية" });
-      await recordAdminAudit("owner_passkey_removed", "owner_passkey", String(input.id));
-      return { success: true } as const;
-    }),
   }),
 
   site: router({

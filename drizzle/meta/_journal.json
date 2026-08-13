@@ -29,27 +29,6 @@
       "when": 1786561004382,
       "tag": "0003_even_valkyrie",
       "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "5",
-      "when": 1786576294977,
-      "tag": "0004_chubby_exodus",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "5",
-      "when": 1786576604478,
-      "tag": "0005_broad_bulldozer",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "5",
-      "when": 1786577828648,
-      "tag": "0006_melted_lionheart",
-      "breakpoints": true
     }
   ]
 }

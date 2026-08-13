@@ -1,2 +1,0 @@
-ALTER TABLE `owner_login_settings` ADD `fontFamily` varchar(80) DEFAULT 'Cairo' NOT NULL;--> statement-breakpoint
-ALTER TABLE `owner_login_settings` ADD `contentOrder` varchar(300) DEFAULT 'logo,title,description,email,password,passkey,submit,footer' NOT NULL;

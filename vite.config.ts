@@ -161,18 +161,11 @@ function copyAdminAssets(): Plugin {
       });
     },
     closeBundle() {
-      const source = path.resolve(import.meta.dirname, "client", "public");
-      const destination = path.resolve(import.meta.dirname, "dist", "public");
+      const source = path.resolve(import.meta.dirname, "client", "public", "assets");
+      const destination = path.resolve(import.meta.dirname, "dist", "public", "assets");
       const files = [
-        { source: "admin.html", destination: "admin.html" },
-        { source: "assets/js/admin-login-fix-v2.js", destination: "assets/js/admin-login-fix-v2.js" },
-        { source: "assets/js/admin-media-binding-core.js", destination: "assets/js/admin-media-binding-core.js" },
-        { source: "assets/js/admin-structured-editor.js", destination: "assets/js/admin-structured-editor.js" },
-        { source: "assets/js/admin-owner-login-security.js", destination: "assets/js/admin-owner-login-security.js" },
-        { source: "assets/js/admin-security-controls.js", destination: "assets/js/admin-security-controls.js" },
-        { source: "assets/js/admin-list-controls-core.js", destination: "assets/js/admin-list-controls-core.js" },
-        { source: "assets/js/admin-list-controls.js", destination: "assets/js/admin-list-controls.js" },
-        { source: "assets/css/admin.css", destination: "assets/css/admin.css" },
+        { source: "js/admin-login-fix-v2.js", destination: "js/admin-login-fix-v2.js" },
+        { source: "css/admin.css", destination: "css/admin.css" },
       ];
       for (const file of files) {
         const target = path.join(destination, file.destination);
@@ -191,7 +184,7 @@ function publishVersionedEntryAssets(): Plugin {
   const sourceRoot = path.resolve(import.meta.dirname, "client", "public", "assets");
   const entries = [
     { source: "js/app.js", destination: "js/site-app-r6.js" },
-    { source: "js/admin-login-fix-v2.js", destination: "js/admin-app-r8.js" },
+    { source: "js/admin-login-fix-v2.js", destination: "js/admin-app-r6.js" },
   ];
 
   return {
@@ -235,6 +228,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         site: path.resolve(import.meta.dirname, "client/public/index.html"),
+        admin: path.resolve(import.meta.dirname, "client/public/admin.html"),
       },
     },
   },

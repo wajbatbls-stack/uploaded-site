@@ -9,8 +9,10 @@ describe("owner login current assets", () => {
     const adminHtml = projectFile("client/public/admin.html");
     expect(adminHtml).toContain("admin-r14.css");
     expect(adminHtml).toContain("admin-owner-login-r13-mobile.css");
-    expect(adminHtml).toContain("admin-app-r16.js");
+    expect(adminHtml).toContain("admin-app-r17.js");
     expect(adminHtml).toContain("admin-design-studio-r2.js");
+    expect(adminHtml).toContain("admin-services-manager-r1.js");
+    expect(adminHtml).toContain("admin-services-r1.css");
     expect(adminHtml).toContain("admin-owner-login-security-r6.js");
     expect(adminHtml).toContain("admin-owner-login-enhancements-r14.js");
   });
@@ -40,7 +42,8 @@ describe("owner login current assets", () => {
     const site = projectFile("client/public/index.html");
     const css = projectFile("client/public/assets/css/site-design-r2.css");
     expect(site).toContain("site-design-r2.css");
-    expect(site).toContain("site-app-r8.js");
+    expect(site).toContain("site-app-r9.js");
+    expect(site).toContain("services-manager-r1.css");
     expect(css).toContain("#site-design-clock");
   });
 });

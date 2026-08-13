@@ -9,13 +9,14 @@
     <link rel="stylesheet" href="/assets/css/admin-r14.css" />
     <link rel="stylesheet" href="/assets/css/admin-owner-login-r13-mobile.css" />
     <link rel="stylesheet" href="/assets/css/admin-homepage-r1.css" />
+    <link rel="stylesheet" href="/assets/css/admin-services-r1.css" />
   </head>
   <body>
     <div id="admin-root"></div>
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r16.js";
+      adminModule.src = "/assets/js/admin-app-r17.js";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -28,6 +29,12 @@
             const homepageManager = document.createElement("script");
             homepageManager.src = "/assets/js/admin-homepage-manager-r1.js";
             homepageManager.async = false;
+            homepageManager.onload = () => {
+              const servicesManager = document.createElement("script");
+              servicesManager.src = "/assets/js/admin-services-manager-r1.js";
+              servicesManager.async = false;
+              document.body.append(servicesManager);
+            };
             document.body.append(homepageManager);
           };
           document.body.append(structuredEditor);
@@ -38,6 +45,11 @@
           structuredEditor.onload = () => {
             const homepageManager = document.createElement("script");
             homepageManager.src = "/assets/js/admin-homepage-manager-r1.js";
+            homepageManager.onload = () => {
+              const servicesManager = document.createElement("script");
+              servicesManager.src = "/assets/js/admin-services-manager-r1.js";
+              document.body.append(servicesManager);
+            };
             document.body.append(homepageManager);
           };
           document.body.append(structuredEditor);

@@ -5,13 +5,23 @@ import { describe, expect, it } from "vitest";
 const readProject = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("مدير الخدمات الهرمي", () => {
-  it("يحفظ الشجرة عبر إجراء الإدارة المحمي ويحافظ على مفاتيح الترتيب والإظهار", () => {
-    const manager = readProject("client/public/assets/js/admin-services-manager-r2.js");
-    expect(manager).toContain('api.saveCollection("services", services)');
+	it("يحفظ الشجرة عبر إجراء الإدارة المحمي ويحافظ على مفاتيح الترتيب والإظهار", () => {
+		const manager = readProject("client/public/assets/js/admin-services-manager-r2.js");
+		expect(manager).toContain('api.saveCollection("services", services)');
     expect(manager).toContain("sortOrder:i");
     expect(manager).toContain("sortOrder:x");
-    expect(manager).toContain("isVisible");
-  });
+		expect(manager).toContain("isVisible");
+	});
+
+	it("يتوافق مع استدعاء workspace في تطبيق الإدارة ثم يركّب المدير بعد إدراج الحاوية", () => {
+		const manager = readProject("client/public/assets/js/admin-services-manager-r2.js");
+		const app = readProject("client/public/assets/js/admin-app-r18.js");
+		expect(app).toContain("WajbatServicesManager.workspace(data)");
+		expect(manager).toContain("workspace(data)");
+		expect(manager).toContain('data-services-manager');
+		expect(manager).toContain("queueMicrotask(mountAfterDashboard)");
+		expect(manager).toContain("this.mount({ ...context, root })");
+	});
 
   it("يوفر الرفع المباشر والحذف المؤكد وترتيب السحب للخدمات والخدمات الفرعية", () => {
     const manager = readProject("client/public/assets/js/admin-services-manager-r2.js");

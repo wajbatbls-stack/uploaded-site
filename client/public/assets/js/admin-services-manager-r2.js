@@ -80,5 +80,18 @@
     root.querySelectorAll("[data-drag-service]").forEach(el=>{el.addEventListener("dragstart",e=>{e.dataTransfer.setData("service",el.dataset.dragService);el.classList.add("is-dragging")});el.addEventListener("dragend",()=>el.classList.remove("is-dragging"));el.addEventListener("dragover",e=>e.preventDefault());el.addEventListener("drop",e=>{e.preventDefault();reorder(e.dataTransfer.getData("service"),el.dataset.dragService)});});
     root.querySelectorAll("[data-drag-sub]").forEach(el=>{el.addEventListener("dragstart",e=>{e.dataTransfer.setData("sub",el.dataset.dragSub);e.dataTransfer.setData("parent",el.dataset.parentId);el.classList.add("is-dragging")});el.addEventListener("dragend",()=>el.classList.remove("is-dragging"));el.addEventListener("dragover",e=>e.preventDefault());el.addEventListener("drop",e=>{e.preventDefault();if(e.dataTransfer.getData("parent")===el.dataset.parentId)reorderSub(el.dataset.parentId,e.dataTransfer.getData("sub"),el.dataset.dragSub)});});
   }
-  window.WajbatServicesManager = { mount(context) { api = context; lastRoot = context.root; services = normalData(context.content?.() || []); render(); }, refresh() { if (api && lastRoot) { services = normalData(api.content?.() || services); render(); } } };
+  window.WajbatServicesManager = {
+    mount(context) { api = context; lastRoot = context.root; services = normalData(context.content?.() || []); render(); },
+    workspace(data) {
+      const context = { ...(window.WajbatAdmin || {}), content: () => data };
+      const mountAfterDashboard = () => {
+        const root = document.querySelector("[data-services-manager]");
+        if (root) this.mount({ ...context, root });
+      };
+      if (typeof queueMicrotask === "function") queueMicrotask(mountAfterDashboard);
+      else setTimeout(mountAfterDashboard, 0);
+      return `<div data-services-manager></div>`;
+    },
+    refresh() { if (api && lastRoot) { services = normalData(api.content?.() || services); render(); } }
+  };
 })();

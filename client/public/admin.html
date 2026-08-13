@@ -14,7 +14,7 @@
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r15.js";
+      adminModule.src = "/assets/js/admin-app-r16.js";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -31,6 +31,10 @@
           document.body.append(structuredEditor);
         };
         document.body.append(mediaBinding);
+        const designStudio = document.createElement("script");
+        designStudio.src = "/assets/js/admin-design-studio-r2.js";
+        designStudio.defer = true;
+        document.body.append(designStudio);
         const ownerLoginSecurity = document.createElement("script");
         ownerLoginSecurity.src = "/assets/js/admin-owner-login-security-r6.js";
         ownerLoginSecurity.defer = true;

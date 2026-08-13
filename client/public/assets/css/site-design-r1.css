@@ -1,0 +1,18 @@
+:root { --site-radius: 16px; }
+body { font-family: var(--site-font, inherit); }
+body[data-site-header="glass"] .header { background: color-mix(in srgb, var(--surface, #fff) 82%, transparent); backdrop-filter: blur(14px); }
+body[data-site-header="minimal"] .header { box-shadow: none; border-bottom: 1px solid color-mix(in srgb, var(--primary) 18%, transparent); }
+body[data-site-header="bold"] .header { border-bottom: 4px solid var(--accent, #f0b429); }
+body[data-site-cards="outline"] .card, .site-card-outline { box-shadow: none !important; border: 2px solid color-mix(in srgb, var(--primary) 35%, #fff) !important; }
+body[data-site-cards="flat"] .card, .site-card-flat { box-shadow: none !important; border: 0 !important; }
+body[data-site-frame="soft"] #app { outline: 1px solid color-mix(in srgb, var(--primary) 14%, transparent); outline-offset: -14px; }
+body[data-site-frame="double"] #app { outline: 3px double color-mix(in srgb, var(--primary) 32%, transparent); outline-offset: -18px; }
+body.site-design-compact .section { padding-block: 2rem !important; }
+body.site-design-spacious .section { padding-block: 5rem !important; }
+body.site-design-no-motion *, body.site-design-no-motion *::before, body.site-design-no-motion *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+#site-design-clock { position: fixed; z-index: 80; padding: .55rem .8rem; border-radius: 999px; background: color-mix(in srgb, var(--primary, #163a70) 90%, #000); color: #fff; font: 700 .8rem/1.1 var(--site-font, inherit); box-shadow: 0 9px 25px rgba(0,0,0,.18); direction: rtl; }
+#site-design-clock[data-position="bottom-left"] { bottom: 1rem; left: 1rem; }
+#site-design-clock[data-position="bottom-right"] { bottom: 1rem; right: 1rem; }
+#site-design-clock[data-position="top-left"] { top: 5rem; left: 1rem; }
+#site-design-clock[data-position="top-right"] { top: 5rem; right: 1rem; }
+@media (max-width: 640px) { #site-design-clock { font-size: .72rem; bottom: .75rem; left: .75rem; } }

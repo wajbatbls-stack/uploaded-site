@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, isNull, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   adminAuditEvents,
@@ -12,6 +12,7 @@ import {
   ownerLoginSettingsHistory,
   ownerPasskeys,
   ownerWebAuthnChallenges,
+  siteDesignHistory,
   siteOrders,
   siteVisits,
   submittedReviews,
@@ -102,7 +103,32 @@ export async function getAdminCollections() {
 export async function saveCollection(collectionKey: string, content: unknown) {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  if (collectionKey === "siteSettings") {
+    const current = await db.select({ content: contentCollections.content }).from(contentCollections).where(eq(contentCollections.collectionKey, collectionKey)).limit(1);
+    if (current[0]?.content && current[0].content !== JSON.stringify(content)) {
+      await db.insert(siteDesignHistory).values({ settingsSnapshot: current[0].content });
+      const oldSnapshots = await db.select({ id: siteDesignHistory.id }).from(siteDesignHistory).orderBy(desc(siteDesignHistory.createdAt)).limit(41);
+      if (oldSnapshots.length > 40) {
+        await db.delete(siteDesignHistory).where(inArray(siteDesignHistory.id, oldSnapshots.slice(40).map(row => row.id)));
+      }
+    }
+  }
   await db.update(contentCollections).set({ content: JSON.stringify(content) }).where(eq(contentCollections.collectionKey, collectionKey));
+  return { success: true } as const;
+}
+
+export async function getSiteDesignHistory(limit = 12) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  return db.select().from(siteDesignHistory).orderBy(desc(siteDesignHistory.createdAt)).limit(Math.min(Math.max(limit, 1), 40));
+}
+
+export async function restoreSiteDesignSnapshot(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const snapshot = await db.select().from(siteDesignHistory).where(eq(siteDesignHistory.id, id)).limit(1);
+  if (!snapshot[0]) throw new Error("نسخة التصميم المطلوبة لم تعد متاحة");
+  await saveCollection("siteSettings", JSON.parse(snapshot[0].settingsSnapshot));
   return { success: true } as const;
 }
 

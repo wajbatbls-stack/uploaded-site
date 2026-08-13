@@ -19,6 +19,7 @@ let SERVICE_SUBS = INITIAL_SERVICE_SUBS;
 let UNIVERSITIES = INITIAL_UNIVERSITIES;
 let logoUrl = "https://d2xsxph8kpxj0f.cloudfront.net/310519663266205125/c9haZQXaJt4uRTkEadgd4A/photo_AQAD7w1rG_fAmFJ-_4841a962.jpg";
 let siteSettings = {};
+let activeDesign = {};
 let socialLinks = { facebook: "", instagram: "", twitter: "", youtube: "" };
 let managedAboutContent = null;
 let managedTeamMembers = null;
@@ -76,6 +77,131 @@ async function rpcMutation(procedure, input) {
   return payload?.result?.data?.json ?? payload?.result?.data;
 }
 
+function applySiteDesign(config = {}) {
+  activeDesign = config && typeof config === "object" ? config : {};
+  const root = document.documentElement;
+  const set = (name, value) => { if (typeof value === "string" && value.trim()) root.style.setProperty(name, value.trim()); };
+  const px = (name, value, fallback) => root.style.setProperty(name, `${Number.isFinite(Number(value)) ? Number(value) : fallback}px`);
+  const alpha = (hex, amount) => {
+    const value = String(hex || "").replace("#", "");
+    if (!/^[0-9a-f]{6}$/i.test(value)) return `rgba(255,255,255,${amount})`;
+    return `rgba(${parseInt(value.slice(0, 2), 16)},${parseInt(value.slice(2, 4), 16)},${parseInt(value.slice(4, 6), 16)},${amount})`;
+  };
+  set("--primary", activeDesign.primaryColor);
+  set("--secondary", activeDesign.secondaryColor);
+  set("--accent", activeDesign.accentColor);
+  set("--site-background", activeDesign.backgroundColor);
+  set("--site-text", activeDesign.textColor);
+  set("--site-heading", activeDesign.headingColor);
+  set("--site-button", activeDesign.buttonColor);
+  set("--site-button-hover", activeDesign.buttonHoverColor);
+  set("--site-button-text", activeDesign.buttonTextColor);
+  set("--site-link", activeDesign.linkColor);
+  set("--site-card", activeDesign.cardColor);
+  set("--site-border", activeDesign.borderColor);
+  set("--site-header", activeDesign.headerColor);
+  set("--site-footer", activeDesign.footerColor);
+  set("--site-frame-color", activeDesign.frameColor);
+  set("--site-radius", activeDesign.radius ? `${Number(activeDesign.radius)}px` : "");
+  set("--site-font", activeDesign.fontFamily);
+  set("--site-heading-font", activeDesign.headingFont || activeDesign.fontFamily);
+  set("--site-body-font", activeDesign.bodyFont || activeDesign.fontFamily);
+  set("--site-line-height", String(activeDesign.lineHeight || ""));
+  set("--site-font-weight", String(activeDesign.fontWeight || ""));
+  px("--site-heading-size", activeDesign.headingSize, 32);
+  px("--site-body-size", activeDesign.bodySize, 16);
+  px("--site-header-height", activeDesign.headerHeight, 68);
+  px("--site-logo-width", activeDesign.logoWidth, 40);
+  px("--site-logo-height", activeDesign.logoHeight, 40);
+  px("--site-logo-radius", activeDesign.logoRadius, 10);
+  px("--site-frame-width", activeDesign.frameWidth, 1);
+  px("--site-motion-speed", activeDesign.motionSpeed, 220);
+  px("--site-motion-delay", activeDesign.motionDelay, 0);
+  document.body.classList.toggle("site-design-compact", activeDesign.spacing === "compact");
+  document.body.classList.toggle("site-design-spacious", activeDesign.spacing === "spacious");
+  document.body.classList.toggle("site-design-no-motion", activeDesign.motion === "off" || activeDesign.reveal === false);
+  document.body.classList.toggle("site-design-high-contrast", Boolean(activeDesign.highContrast));
+  document.body.dataset.siteHeader = activeDesign.headerStyle || "standard";
+  document.body.dataset.siteCards = activeDesign.cardStyle || "soft";
+  document.body.dataset.siteFrame = activeDesign.frameStyle || "none";
+  document.body.dataset.siteButtons = activeDesign.buttonStyle || "rounded";
+  document.body.dataset.siteButtonSize = activeDesign.buttonSize || "medium";
+  document.body.dataset.siteCardTarget = activeDesign.cardTarget || "all";
+  document.body.dataset.siteCardShadow = activeDesign.cardShadow || "soft";
+  document.body.dataset.siteFrameHover = activeDesign.frameHover || "none";
+  document.body.dataset.siteHeaderShadow = activeDesign.headerShadow || "soft";
+  document.body.dataset.siteLogoPosition = activeDesign.logoPosition || "right";
+  document.body.dataset.siteLogoBorder = activeDesign.logoBorder || "none";
+  document.body.dataset.siteLogoShadow = activeDesign.logoShadow || "none";
+  document.body.dataset.siteClockStyle = activeDesign.clockStyle || "digital";
+  document.body.dataset.siteClockMotion = activeDesign.clockMotion || "none";
+  document.body.dataset.siteMotionType = activeDesign.motionType || "fade-up";
+  document.body.dataset.siteMotionLevel = activeDesign.motionLevel || "subtle";
+  document.body.style.fontFamily = activeDesign.fontFamily || "";
+  const backgroundType = activeDesign.backgroundType || (activeDesign.backgroundImageUrl ? "image" : "color");
+  const overlay = alpha(activeDesign.backgroundOverlay || "#ffffff", Math.max(0, Math.min(100, Number(activeDesign.backgroundOpacity ?? 92))) / 100);
+  const imageUrl = String(activeDesign.backgroundImageUrl || "").replace(/["\\]/g, "");
+  document.body.style.backgroundColor = backgroundType === "none" ? "transparent" : (activeDesign.backgroundColor || "");
+  document.body.style.backgroundImage = backgroundType === "image" && imageUrl ? `linear-gradient(${overlay}, ${overlay}), url("${imageUrl}")` : backgroundType === "gradient" ? `linear-gradient(${activeDesign.backgroundGradientDirection || "135deg"}, ${activeDesign.backgroundGradientStart || activeDesign.backgroundColor || "#f7fafc"}, ${activeDesign.backgroundGradientEnd || "#e8f1ff"})` : "";
+  document.body.style.backgroundPosition = backgroundType === "image" ? (activeDesign.backgroundPosition || "center") : "";
+  document.body.style.backgroundSize = backgroundType === "image" ? (activeDesign.backgroundSize || "cover") : "";
+  document.body.style.backgroundRepeat = backgroundType === "image" ? (activeDesign.backgroundRepeat || "no-repeat") : "";
+  document.body.style.backgroundAttachment = backgroundType === "image" && activeDesign.backgroundFixed ? "fixed" : "";
+  if (activeDesign.logoUrl) logoUrl = activeDesign.logoUrl;
+}
+
+function applyRenderedDesign() {
+  const config = activeDesign || {};
+  const app = document.querySelector("#app");
+  if (!app) return;
+  app.querySelectorAll(".card, .service-card, .price-card").forEach((item) => {
+    item.style.borderRadius = config.radius ? `${Number(config.radius)}px` : "";
+    item.classList.toggle("site-card-outline", config.cardStyle === "outline");
+    item.classList.toggle("site-card-flat", config.cardStyle === "flat");
+  });
+  app.querySelectorAll(".site-header").forEach((header) => {
+    header.style.minHeight = config.headerHeight ? `${Number(config.headerHeight)}px` : "";
+    header.style.backgroundColor = config.headerColor || "";
+    header.style.opacity = config.headerOpacity ? `${Math.max(.25, Math.min(1, Number(config.headerOpacity) / 100))}` : "";
+    header.style.backgroundImage = config.headerImageUrl ? `linear-gradient(rgba(255,255,255,.1),rgba(255,255,255,.1)),url("${String(config.headerImageUrl).replace(/["\\]/g, "")}")` : "";
+    header.style.backgroundSize = config.headerImageUrl ? "cover" : "";
+    header.style.backgroundPosition = config.headerImageUrl ? "center" : "";
+    header.classList.toggle("site-header-sticky", config.headerSticky !== false);
+  });
+  app.querySelectorAll(".brand-mark, .hero-logo").forEach((logo) => {
+    logo.style.width = config.logoWidth ? `${Number(config.logoWidth)}px` : "";
+    logo.style.height = config.logoHeight ? `${Number(config.logoHeight)}px` : "";
+    logo.style.borderRadius = config.logoRadius !== undefined ? `${Number(config.logoRadius)}px` : "";
+  });
+  const hidden = Array.isArray(config.hiddenSections) ? config.hiddenSections : [];
+  app.querySelectorAll(".sidebar-nav a, .footer a, .page-content").forEach((item) => { item.hidden = false; });
+  const activeRoute = (location.hash.replace(/^#/, "").split("?")[0] || "/");
+  hidden.filter((entry) => String(entry).startsWith("/")).forEach((path) => {
+    app.querySelectorAll(`a[href="#${path}"]`).forEach((item) => { item.hidden = true; });
+    if (path === activeRoute) app.querySelectorAll(".page-content").forEach((item) => { item.hidden = true; });
+  });
+  hidden.filter((entry) => !String(entry).startsWith("/")).forEach((selector) => app.querySelectorAll(selector).forEach((item) => { item.hidden = true; }));
+  const requestedOrder = Array.isArray(config.sectionOrder) ? config.sectionOrder : [];
+  const nav = app.querySelector(".sidebar-nav");
+  if (nav && requestedOrder.length) {
+    const groups = [...nav.children];
+    const findGroup = (path) => groups.find((group) => group.querySelector(`a[href="#${path}"]`));
+    requestedOrder.map(findGroup).filter(Boolean).forEach((group) => nav.append(group));
+  }
+  if (config.showClock) {
+    let clock = document.querySelector("#site-design-clock");
+    if (!clock) { clock = document.createElement("div"); clock.id = "site-design-clock"; clock.setAttribute("aria-label", "الوقت الحالي"); document.body.append(clock); }
+    const update = () => { clock.textContent = new Date().toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", second: config.clockSeconds ? "2-digit" : undefined }); };
+    update(); clearInterval(window.__siteDesignClock); window.__siteDesignClock = setInterval(update, 1000);
+    clock.dataset.position = config.clockPosition || "bottom-left";
+    clock.dataset.style = config.clockStyle || "digital";
+    clock.dataset.motion = config.clockMotion || "none";
+    clock.style.color = config.clockColor || "";
+    clock.style.background = config.clockBackground || "";
+    clock.style.fontSize = config.clockSize ? `${Number(config.clockSize)}px` : "";
+  } else document.querySelector("#site-design-clock")?.remove();
+}
+
 function applyManagedContent(content) {
   if (!content || typeof content !== "object") return;
   const visible = (items) => Array.isArray(items) ? items.filter((item) => item?.isVisible !== false) : [];
@@ -102,6 +228,7 @@ function applyManagedContent(content) {
   if (content.aboutContent && typeof content.aboutContent === "object") managedAboutContent = content.aboutContent;
   if (Array.isArray(content.teamMembers)) managedTeamMembers = visible(content.teamMembers).sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   siteSettings = content.siteSettings || {};
+  applySiteDesign(siteSettings.designConfig || {});
   socialLinks = { facebook: siteSettings.facebook || "", instagram: siteSettings.instagram || "", twitter: siteSettings.twitter || "", youtube: siteSettings.youtube || "" };
   logoUrl = siteSettings.logoUrl || logoUrl;
   fileBase = siteSettings.fileBaseUrl || fileBase;
@@ -298,6 +425,7 @@ function render() {
   if (path === "/") syncSeoMetadata();
   else document.title = ({ "/services": "الخدمات الأكاديمية | واجبات بلس", "/subscriptions": "باقات الاشتراك | واجبات بلس", "/downloads": "مركز التحميلات | واجبات بلس", "/blog": "المدونة الأكاديمية | واجبات بلس", "/contact": "اتصل بنا | واجبات بلس" }[path] || "واجبات بلس");
   document.querySelector("#app").innerHTML = layout(pageContent());
+  applyRenderedDesign();
   if (currentPath() === "/contact") {
     const managedSocial = { "فيسبوك": socialLinks.facebook, "إنستغرام": socialLinks.instagram, "تويتر": socialLinks.twitter, "يوتيوب": socialLinks.youtube };
     Object.entries(managedSocial).forEach(([label, href]) => {

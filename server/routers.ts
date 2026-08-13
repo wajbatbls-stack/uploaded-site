@@ -30,6 +30,7 @@ import {
   deleteSubmittedReview,
   exportSiteBackup,
   getAdminCollections,
+  getSiteDesignHistory,
   getOwnerLoginSettings,
   getAdminStats,
   getPublicSiteContent,
@@ -44,6 +45,7 @@ import {
   registerMedia,
   removeMedia,
   restoreContentBackup,
+  restoreSiteDesignSnapshot,
   restorePreviousOwnerLoginSettings,
   saveOwnerLoginSettings,
   saveCollection,
@@ -323,6 +325,12 @@ export const appRouter = router({
 
   admin: router({
     collections: ownerProcedure.query(() => getAdminCollections()),
+    designHistory: ownerProcedure.input(z.object({ limit: z.number().int().min(1).max(40).optional() }).optional()).query(({ input }) => getSiteDesignHistory(input?.limit)),
+    restoreDesignSnapshot: ownerProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
+      const result = await restoreSiteDesignSnapshot(input.id);
+      await recordAdminAudit("design_snapshot_restored", "site_design_history", String(input.id));
+      return result;
+    }),
     saveCollection: ownerProcedure.input(z.object({ collectionKey: z.string().min(1).max(80), content: z.unknown() })).mutation(async ({ input }) => {
       const result = await saveCollection(input.collectionKey, input.content);
       await recordAdminAudit("collection_saved", "content_collection", input.collectionKey);

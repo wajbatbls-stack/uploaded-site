@@ -178,10 +178,17 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-security-controls.js", destination: "assets/js/admin-security-controls.js" },
         { source: "assets/js/admin-list-controls-core.js", destination: "assets/js/admin-list-controls-core.js" },
         { source: "assets/js/admin-list-controls.js", destination: "assets/js/admin-list-controls.js" },
+        { source: "assets/js/admin-app-r16.js", destination: "assets/js/admin-app-r16.js" },
+        { source: "assets/js/admin-design-studio-r2.js", destination: "assets/js/admin-design-studio-r2.js" },
+        { source: "assets/js/admin-owner-login-security-r6.js", destination: "assets/js/admin-owner-login-security-r6.js" },
+        { source: "assets/js/admin-owner-login-enhancements-r14.js", destination: "assets/js/admin-owner-login-enhancements-r14.js" },
         { source: "assets/css/admin.css", destination: "assets/css/admin.css" },
         { source: "assets/css/admin-r10.css", destination: "assets/css/admin-r10.css" },
         { source: "assets/css/admin-r11.css", destination: "assets/css/admin-r11.css" },
         { source: "assets/css/admin-r12.css", destination: "assets/css/admin-r12.css" },
+        { source: "assets/css/admin-r14.css", destination: "assets/css/admin-r14.css" },
+        { source: "assets/css/admin-owner-login-r13-mobile.css", destination: "assets/css/admin-owner-login-r13-mobile.css" },
+        { source: "assets/css/site-design-r2.css", destination: "assets/css/site-design-r2.css" },
       ];
       for (const file of files) {
         const target = path.join(destination, file.destination);
@@ -199,8 +206,8 @@ function copyAdminAssets(): Plugin {
 function publishVersionedEntryAssets(): Plugin {
   const sourceRoot = path.resolve(import.meta.dirname, "client", "public", "assets");
   const entries = [
-    { source: "js/app.js", destination: "js/site-app-r6.js" },
-    { source: "js/admin-login-fix-v2.js", destination: "js/admin-app-r12.js" },
+    { source: "js/app.js", destination: "js/site-app-r8.js" },
+    { source: "js/admin-app-r16.js", destination: "js/admin-app-r16.js" },
   ];
 
   return {

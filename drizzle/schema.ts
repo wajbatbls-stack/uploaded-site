@@ -37,6 +37,15 @@ export const contentCollections = mysqlTable("content_collections", {
   collectionKeyUnique: uniqueIndex("content_collections_key_unique").on(table.collectionKey),
 }));
 
+/** Immutable owner-facing snapshots of visual settings, retained before each design change. */
+export const siteDesignHistory = mysqlTable("site_design_history", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  settingsSnapshot: longtext("settingsSnapshot").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, table => ({
+  siteDesignHistoryCreatedIndex: index("site_design_history_created_index").on(table.createdAt),
+}));
+
 export const siteVisits = mysqlTable("site_visits", {
   id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
   path: varchar("path", { length: 255 }).notNull(),

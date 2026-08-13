@@ -18,6 +18,7 @@ import {
   validateAdminCredentials,
   verifyAdminCurrentPassword,
 } from "./adminSession";
+import { getWebAuthnContext } from "./webAuthnContext";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { decodeAdminImage, decodeUpload } from "./adminUpload";
@@ -119,15 +120,6 @@ const ownerLoginSettingsInput = z.object({
   clockSize: z.number().int().min(24).max(140),
   clockShowSeconds: z.boolean(),
 });
-
-function getWebAuthnContext(headers: Record<string, string | string[] | undefined>) {
-  const rawOrigin = typeof headers.origin === "string" ? headers.origin : undefined;
-  if (!rawOrigin) throw new TRPCError({ code: "BAD_REQUEST", message: "تعذر التحقق من مصدر طلب Passkey" });
-  let origin: URL;
-  try { origin = new URL(rawOrigin); } catch { throw new TRPCError({ code: "BAD_REQUEST", message: "مصدر طلب Passkey غير صالح" }); }
-  if (origin.protocol !== "https:" && origin.hostname !== "localhost") throw new TRPCError({ code: "BAD_REQUEST", message: "يتطلب Passkey اتصالاً آمناً" });
-  return { origin: origin.origin, rpId: origin.hostname };
-}
 
 function classifyVisitSource(referrer?: string) {
   if (!referrer) return "direct";

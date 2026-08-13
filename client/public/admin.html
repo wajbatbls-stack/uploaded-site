@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
     <link rel="stylesheet" href="/assets/css/admin-r14.css" />
     <link rel="stylesheet" href="/assets/css/admin-owner-login-r13-mobile.css" />
+    <link rel="stylesheet" href="/assets/css/admin-homepage-r1.css" />
   </head>
   <body>
     <div id="admin-root"></div>
@@ -23,11 +24,22 @@
           const structuredEditor = document.createElement("script");
           structuredEditor.src = "/assets/js/admin-structured-editor.js";
           structuredEditor.async = false;
+          structuredEditor.onload = () => {
+            const homepageManager = document.createElement("script");
+            homepageManager.src = "/assets/js/admin-homepage-manager-r1.js";
+            homepageManager.async = false;
+            document.body.append(homepageManager);
+          };
           document.body.append(structuredEditor);
         };
         mediaBinding.onerror = () => {
           const structuredEditor = document.createElement("script");
           structuredEditor.src = "/assets/js/admin-structured-editor.js";
+          structuredEditor.onload = () => {
+            const homepageManager = document.createElement("script");
+            homepageManager.src = "/assets/js/admin-homepage-manager-r1.js";
+            document.body.append(homepageManager);
+          };
           document.body.append(structuredEditor);
         };
         document.body.append(mediaBinding);

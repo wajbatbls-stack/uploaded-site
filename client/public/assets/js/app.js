@@ -317,14 +317,60 @@ function layout(content) {
 }
 
 function homePage() {
+  const home = siteSettings.homePageConfig && typeof siteSettings.homePageConfig === "object" ? siteSettings.homePageConfig : null;
   const particles = Array.from({ length: 18 }, (_, i) => `<i class="particle" style="width:${40 + (i * 37) % 100}px;height:${40 + (i * 37) % 100}px;left:${(i * 29) % 100}%;top:${(i * 43) % 100}%;animation-delay:${i * -.6}s"></i>`).join("");
-  return `<section class="hero"><div class="particles">${particles}</div><div class="hero-rings"></div><div class="hero-inner">
+  if (!home) return `<section class="hero"><div class="particles">${particles}</div><div class="hero-rings"></div><div class="hero-inner">
     <div class="clock"><p class="clock-date" id="clock-date"></p><div class="clock-time"><span class="clock-unit" id="clock-hour">00</span><b>:</b><span class="clock-unit" id="clock-minute">00</span><b>:</b><span class="clock-unit" id="clock-second">00</span><span class="clock-ampm" id="clock-ampm">ص</span></div><div class="clock-labels"><span>ساعة</span><span>دقيقة</span><span>ثانية</span></div></div>
     <img class="hero-logo" src="${logoUrl}" alt="واجبات بلس" onerror="this.style.display='none'" />
     <div><h1>واجبات بلس</h1><p class="typing"><span id="typing-text"></span><span class="typing-cursor">|</span></p></div>
     <div class="hero-actions"><a class="btn btn-green" href="${wa("أريد طلب خدمة")}" target="_blank" rel="noopener">🚀 اطلب خدمتك الآن</a>${link("/services", "📚 تصفح الخدمات", "btn btn-outline")}</div>
     <div class="hero-badge">⭐ ضمان الجودة 100% · سرية تامة · دعم 24/7 ⭐</div>
   </div></section>`;
+  const safeCss = value => String(value || "").replace(/[;{}<>]/g, "");
+  const safeHref = (value, fallback = "#/") => {
+    const raw = String(value || "").trim();
+    if (raw === "whatsapp") return wa("أريد طلب خدمة");
+    if (raw.startsWith("/")) return `#${raw}`;
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return fallback;
+  };
+  const hero = home.hero || {};
+  const bg = home.background || {};
+  const sections = Array.isArray(home.sections) ? home.sections : [];
+  const visible = id => sections.find(section => section.id === id)?.visible !== false;
+  const background = (bg.imageUrl && ["image", "overlay"].includes(bg.type))
+    ? `linear-gradient(rgba(4,20,44,${Math.max(0, Math.min(100, Number(bg.dim || 0))) / 100}),rgba(4,20,44,${Math.max(0, Math.min(100, Number(bg.dim || 0))) / 100})),url("${safeCss(bg.imageUrl)}")`
+    : ["gradient", "multi", "modern", "academic", "luxury", "animated"].includes(bg.type) ? `linear-gradient(${safeCss(bg.direction || "135deg")},${safeCss(bg.color1 || "#0f2a62")},${safeCss(bg.color2 || "#195a9e")},${safeCss(bg.color3 || bg.color2 || "#123b78")})` : "";
+  const buttonMarkup = (button, index) => {
+    if (button?.visible === false) return "";
+    const target = button.link === "whatsapp" || /^https?:\/\//i.test(button.customLink || "") ? `target="_blank" rel="noopener"` : "";
+    const href = button.link === "#custom" ? safeHref(button.customLink) : safeHref(button.link);
+    const style = `--home-button-bg:${safeCss(button.color || "#25D366")};--home-button-text:${safeCss(button.textColor || "#ffffff")};--home-button-radius:${Number(button.radius || 14)}px`;
+    return `<a class="home-hero-button home-button-${esc(button.style || "gradient")} home-button-${esc(button.size || "medium")} home-shadow-${esc(button.shadow || "none")} home-motion-${esc(button.animation || "none")}" style="${style}" href="${esc(href)}" ${target}>${esc(button.label || `زر ${index + 1}`)}</a>`;
+  };
+  const heroLogo = home.logo?.url || logoUrl;
+  const heroStyle = `--home-hero-text:${safeCss(hero.textColor || "#ffffff")};--home-hero-heading:${safeCss(hero.headingColor || "#ffffff")};--home-hero-font:${safeCss(hero.fontFamily || "Cairo")};--home-hero-weight:${Number(hero.fontWeight || 800)};--home-hero-title-size:${Number(hero.titleSize || 46)}px;--home-hero-description-size:${Number(hero.descriptionSize || 17)}px;--home-hero-gap:${Number(hero.spacing || 18)}px;${background ? `background-image:${background};background-size:${safeCss(bg.imageSize || "cover")};background-position:${safeCss(bg.imagePosition || "center")};background-repeat:${safeCss(bg.imageRepeat || "no-repeat")}` : ""}`;
+  const heroMarkup = `<section class="hero home-managed-hero home-hero-template-${esc(hero.template || "classic")} home-hero-align-${esc(hero.align || "center")}" data-home-animation="${esc(hero.animation || "fade-up")}" data-home-repeat="${esc(hero.animationRepeat || "once")}" style="${heroStyle}"><div class="particles">${particles}</div><div class="hero-rings"></div><div class="hero-inner">
+    <div class="clock"><p class="clock-date" id="clock-date"></p><div class="clock-time"><span class="clock-unit" id="clock-hour">00</span><b>:</b><span class="clock-unit" id="clock-minute">00</span><b>:</b><span class="clock-unit" id="clock-second">00</span><span class="clock-ampm" id="clock-ampm">ص</span></div><div class="clock-labels"><span>ساعة</span><span>دقيقة</span><span>ثانية</span></div></div>
+    ${home.logo?.visible === false ? "" : `<img class="hero-logo" src="${esc(heroLogo)}" alt="واجبات بلس" style="width:${Number(home.logo?.width || 94)}px;height:${Number(home.logo?.height || 94)}px" onerror="this.style.display='none'" />`}
+    ${hero.imageVisible && hero.imageUrl && hero.imagePosition !== "background" ? `<img class="home-hero-image image-${esc(hero.imagePosition || "side")}" src="${esc(hero.imageUrl)}" alt="صورة الواجهة الرئيسية" />` : ""}
+    <div class="home-hero-copy"><h1>${esc(hero.title || "واجبات بلس")}</h1>${hero.subtitle ? `<p class="typing home-hero-subtitle"><span>${esc(hero.subtitle)}</span></p>` : ""}${hero.description ? `<p class="home-hero-description">${esc(hero.description)}</p>` : ""}</div>
+    <div class="hero-actions home-hero-actions">${(Array.isArray(hero.buttons) ? hero.buttons : []).map(buttonMarkup).join("")}</div>
+    ${hero.additionalText ? `<div class="hero-badge">${esc(hero.additionalText)}</div>` : ""}
+  </div></section>`;
+  const stats = (Array.isArray(home.stats) ? home.stats : []).filter(item => item?.visible !== false);
+  const statsMarkup = visible("stats") && stats.length ? `<section class="home-managed-section home-stat-section"><div class="container"><div class="home-stat-grid">${stats.map(item => `<article class="home-stat-card" style="--home-stat-color:${safeCss(item.color || "#1d6cbd")}"><span>${esc(item.icon || "✦")}</span><b>${esc(item.number || "0")}</b><p>${esc(item.title || "إحصائية")}</p></article>`).join("")}</div></div></section>` : "";
+  const serviceConfig = home.services || {};
+  const selectedIds = new Set(Array.isArray(serviceConfig.selectedIds) ? serviceConfig.selectedIds : []);
+  const displayServices = SERVICES.filter(item => !selectedIds.size || selectedIds.has(String(item.title))).slice(0, Math.max(1, Number(serviceConfig.limit || 6)));
+  const servicesMarkup = visible("services") && serviceConfig.visible !== false ? `<section class="home-managed-section home-services-section" data-home-services-layout="${esc(serviceConfig.layout || "grid")}" data-home-card-style="${esc(serviceConfig.cardStyle || "soft")}" data-home-card-size="${esc(serviceConfig.size || "medium")}"><div class="container"><header class="home-section-heading"><h2 style="color:${safeCss(serviceConfig.titleColor || "#123b78")}">${esc(serviceConfig.title || "خدماتنا الأكاديمية")}</h2><p>${esc(serviceConfig.description || "")}</p></header><div class="home-services-grid">${displayServices.map(service => `<a class="home-service-card" href="#/services" style="--home-card-bg:${safeCss(serviceConfig.cardColor || "#fff")};--home-card-border:${safeCss(serviceConfig.borderColor || "#e6edf8")};"><span>${esc(service.emoji || "📚")}</span><h3>${esc(service.title)}</h3><p>${esc((service.items || []).slice(0, 2).join(" · "))}</p></a>`).join("")}</div></div></section>` : "";
+  const featureConfig = home.features || {};
+  const featuresMarkup = visible("features") && featureConfig.visible !== false ? `<section class="home-managed-section home-features-section"><div class="container"><header class="home-section-heading"><h2>${esc(featureConfig.title || "لماذا تختار واجبات بلس؟")}</h2><p>${esc(featureConfig.description || "")}</p></header><div class="home-features-grid">${(Array.isArray(featureConfig.items) ? featureConfig.items : []).map((item, index) => `<article><span>${["✓", "◈", "✦"][index % 3]}</span><b>${esc(item)}</b></article>`).join("")}</div></div></section>` : "";
+  const cta = home.cta || {};
+  const ctaMarkup = visible("cta") && cta.visible !== false ? `<section class="home-managed-section home-cta-section"><div class="container"><div><h2>${esc(cta.title || "هل تحتاج إلى مساعدة أكاديمية؟")}</h2><p>${esc(cta.description || "")}</p><a class="home-hero-button home-button-gradient" style="--home-button-bg:#25D366;--home-button-text:#fff;--home-button-radius:14px" href="${esc(safeHref(cta.buttonLink || "whatsapp"))}" target="_blank" rel="noopener">${esc(cta.buttonLabel || "تواصل عبر واتساب")}</a></div></div></section>` : "";
+  const rendered = { hero: visible("hero") ? heroMarkup : "", stats: statsMarkup, services: servicesMarkup, features: featuresMarkup, cta: ctaMarkup };
+  const order = sections.map(section => section.id).filter(id => id in rendered);
+  return `<div class="home-managed-stack">${[...order, ...Object.keys(rendered).filter(id => !order.includes(id))].map(id => rendered[id]).join("")}</div>`;
 }
 
 function servicesPage() {

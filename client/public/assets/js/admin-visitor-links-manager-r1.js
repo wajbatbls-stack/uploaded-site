@@ -27,13 +27,15 @@
     catch (error) { toast(error.message || "تعذر تحميل روابط الزوار"); }
     finally { state.loading = false; render(); }
   };
+  const isExpired = link => Boolean(link.expiresAt && new Date(link.expiresAt).getTime() <= Date.now());
+  const isAvailable = link => Boolean(link.isActive) && !isExpired(link);
   const current = () => state.links
     .filter(link => {
       const q = state.search.trim().toLowerCase();
       return !q || [link.name, link.token, link.targetPath].some(value => String(value || "").toLowerCase().includes(q));
     })
-    .filter(link => state.filter === "all" || (state.filter === "active" ? Boolean(link.isActive) : !link.isActive))
-    .sort((a, b) => state.sort === "oldest" ? new Date(a.createdAt) - new Date(b.createdAt) : new Date(b.createdAt) - new Date(a.createdAt));
+    .filter(link => state.filter === "all" || (state.filter === "active" ? isAvailable(link) : state.filter === "expired" ? isExpired(link) : !isAvailable(link)))
+    .sort((a, b) => state.sort === "oldest" ? new Date(a.createdAt) - new Date(b.createdAt) : state.sort === "visits" ? Number(b.visitCount || 0) - Number(a.visitCount || 0) : new Date(b.createdAt) - new Date(a.createdAt));
   const selectTargets = selected => targetOptions.map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`).join("");
   const status = link => {
     const expired = link.expiresAt && new Date(link.expiresAt).getTime() <= Date.now();
@@ -62,7 +64,7 @@
   };
   const workspace = () => {
     const links = current();
-    return `<section class="workspace visitor-links-workspace" data-visitor-links-workspace><div class="workspace-head"><div><p class="eyebrow">روابط عامة قابلة للمشاركة</p><h2>🔗 إنشاء رابط الزوار</h2><p>أنشئ رابطاً حقيقياً يفتح نسخة الزائر فقط، وتابع الزيارات والصلاحية وحالة الوصول من مكان واحد.</p></div><div class="head-actions"><button type="button" class="btn btn-outline" data-vl-action="refresh">↻ تحديث القائمة</button><button type="button" class="btn" data-vl-action="create">➕ إنشاء رابط زائر جديد</button></div></div><div class="workspace-body"><div class="vl-summary"><b>${state.links.length.toLocaleString("ar-SA")}</b><span>إجمالي الروابط المحفوظة</span><i></i><b>${state.links.filter(link => link.isActive).length.toLocaleString("ar-SA")}</b><span>روابط مفعّلة</span><i></i><b>${state.links.reduce((sum, link) => sum + Number(link.visitCount || 0), 0).toLocaleString("ar-SA")}</b><span>زيارات مسجّلة</span></div><div class="vl-toolbar"><label class="vl-search"><span>🔍</span><input data-vl-search value="${esc(state.search)}" placeholder="ابحث بالاسم أو الرابط أو الصفحة" /></label><select data-vl-filter aria-label="تصفية الروابط"><option value="all" ${state.filter === "all" ? "selected" : ""}>كل الحالات</option><option value="active" ${state.filter === "active" ? "selected" : ""}>النشطة</option><option value="disabled" ${state.filter === "disabled" ? "selected" : ""}>المعطلة</option></select><select data-vl-sort aria-label="ترتيب الروابط"><option value="newest" ${state.sort === "newest" ? "selected" : ""}>الأحدث أولاً</option><option value="oldest" ${state.sort === "oldest" ? "selected" : ""}>الأقدم أولاً</option></select></div>${state.loading ? `<div class="vl-empty">جارٍ تحميل الروابط المحفوظة…</div>` : links.length ? `<div class="vl-list">${links.map(row).join("")}</div>` : `<div class="vl-empty"><strong>لا توجد روابط مطابقة.</strong><span>أنشئ أول رابط زائر حقيقي، أو غيّر عبارة البحث والتصفية.</span><button type="button" class="btn" data-vl-action="create">إنشاء رابط زائر جديد</button></div>`}</div>${editor()}</section>`;
+    return `<section class="workspace visitor-links-workspace" data-visitor-links-workspace><div class="workspace-head"><div><p class="eyebrow">روابط عامة قابلة للمشاركة</p><h2>🔗 إنشاء رابط الزوار</h2><p>أنشئ رابطاً حقيقياً يفتح نسخة الزائر فقط، وتابع الزيارات والصلاحية وحالة الوصول من مكان واحد.</p></div><div class="head-actions"><button type="button" class="btn btn-outline" data-vl-action="refresh">↻ تحديث القائمة</button><button type="button" class="btn" data-vl-action="create">➕ إنشاء رابط زائر جديد</button></div></div><div class="workspace-body"><div class="vl-summary"><b>${state.links.length.toLocaleString("ar-SA")}</b><span>إجمالي الروابط المحفوظة</span><i></i><b>${state.links.filter(isAvailable).length.toLocaleString("ar-SA")}</b><span>روابط متاحة</span><i></i><b>${state.links.reduce((sum, link) => sum + Number(link.visitCount || 0), 0).toLocaleString("ar-SA")}</b><span>زيارات مسجّلة</span></div><div class="vl-toolbar"><label class="vl-search"><span>🔍</span><input data-vl-search value="${esc(state.search)}" placeholder="ابحث بالاسم أو الرابط أو الصفحة" /></label><select data-vl-filter aria-label="تصفية الروابط"><option value="all" ${state.filter === "all" ? "selected" : ""}>كل الحالات</option><option value="active" ${state.filter === "active" ? "selected" : ""}>المتاحة</option><option value="disabled" ${state.filter === "disabled" ? "selected" : ""}>المعطلة</option><option value="expired" ${state.filter === "expired" ? "selected" : ""}>المنتهية</option></select><select data-vl-sort aria-label="ترتيب الروابط"><option value="newest" ${state.sort === "newest" ? "selected" : ""}>الأحدث أولاً</option><option value="oldest" ${state.sort === "oldest" ? "selected" : ""}>الأقدم أولاً</option><option value="visits" ${state.sort === "visits" ? "selected" : ""}>الأكثر زيارة</option></select></div>${state.loading ? `<div class="vl-empty">جارٍ تحميل الروابط المحفوظة…</div>` : links.length ? `<div class="vl-list">${links.map(row).join("")}</div>` : `<div class="vl-empty"><strong>لا توجد روابط مطابقة.</strong><span>أنشئ أول رابط زائر حقيقي، أو غيّر عبارة البحث والتصفية.</span><button type="button" class="btn" data-vl-action="create">إنشاء رابط زائر جديد</button></div>`}</div>${editor()}</section>`;
   };
   const replaceWorkspace = () => {
     const root = document.querySelector(".workspace");
@@ -100,6 +102,13 @@
     modal.addEventListener("click", event => { if (event.target === modal) modal.remove(); });
     document.body.append(modal);
   };
+  const verifyAvailability = async (token, input) => {
+    if (!token) throw new Error("تعذر تحديد رمز الرابط للتحقق منه.");
+    const resolved = await request("site.resolveVisitorLink", { token, recordVisit: false }, "GET");
+    const shouldOpen = Boolean(input.isActive) && !(input.expiresAt && new Date(input.expiresAt).getTime() <= Date.now());
+    if (shouldOpen && (!resolved?.active || resolved.targetPath !== input.targetPath)) throw new Error("حُفظ الرابط لكن لم ينجح التحقق من وجهته. حدّث القائمة ثم أعد المحاولة.");
+    if (!shouldOpen && resolved?.active) throw new Error("حُفظت الحالة لكن الرابط ما زال متاحاً؛ حدّث القائمة ثم أعد المحاولة.");
+  };
   const save = async form => {
     const data = new FormData(form);
     const input = { name: String(data.get("name") || "").trim(), targetPath: String(data.get("targetPath") || ""), isActive: data.get("isActive") === "on", expiresAt: data.get("expiresAt") ? new Date(String(data.get("expiresAt"))).toISOString() : null };
@@ -107,10 +116,7 @@
     const old = state.editor;
     const result = old.id ? await request("admin.updateVisitorLink", { id: old.id, ...input }) : await request("admin.createVisitorLink", input);
     const token = old.token || result.token;
-    if (!old.id && token) {
-      const resolved = await request("site.resolveVisitorLink", { token, recordVisit: false }, "GET");
-      if (!resolved?.active) throw new Error("حُفظ الرابط لكن تعذر التحقق من فتحه. حدّث القائمة ثم حاول المعاينة.");
-    }
+    await verifyAvailability(token, input);
     state.editor = null;
     await list();
     toast(old.id ? "تم حفظ تعديل الرابط فعلياً." : "تم إنشاء الرابط والتحقق من فتحه بنجاح.");
@@ -132,7 +138,7 @@
       else if (action === "preview" && link) preview(link);
       else if (action === "visitor" && link) window.open(publicUrl(link.token), "_blank", "noopener");
       else if (action === "edit" && link) { state.editor = { ...link }; render(); }
-      else if (action === "toggle" && link) { await request("admin.updateVisitorLink", { id: link.id, isActive: !link.isActive }); await list(); toast(link.isActive ? "تم تعطيل الرابط؛ سيظهر للزائر أنه غير متاح." : "تم تفعيل الرابط مجدداً."); }
+      else if (action === "toggle" && link) { const input = { isActive: !link.isActive, targetPath: link.targetPath, expiresAt: link.expiresAt || null }; await request("admin.updateVisitorLink", { id: link.id, isActive: input.isActive }); await verifyAvailability(link.token, input); await list(); toast(link.isActive ? "تم تعطيل الرابط؛ سيظهر للزائر أنه غير متاح." : "تم تفعيل الرابط مجدداً."); }
       else if (action === "delete" && link) { if (!window.confirm("هل أنت متأكد من حذف رابط الزوار؟\nلا يمكن التراجع عن الحذف.")) return; await request("admin.deleteVisitorLink", { id: link.id }); await list(); toast("تم حذف رابط الزوار فعلياً."); }
     } catch (error) { toast(error.message || "تعذر إتمام العملية"); }
   }, true);

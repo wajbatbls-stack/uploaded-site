@@ -33,7 +33,20 @@ describe("أصول مدير روابط الزوار", () => {
     expect(manager).toContain("state.search");
     expect(manager).toContain("state.filter");
     expect(manager).toContain("state.sort");
+    expect(manager).toContain('value="expired"');
+    expect(manager).toContain('value="visits"');
+    expect(manager).toContain("const isExpired = link");
     expect(manager).toContain('if (!window.confirm("هل أنت متأكد من حذف رابط الزوار؟\\nلا يمكن التراجع عن الحذف.")) return;');
+  });
+
+  it("يتحقق من وجهة الرابط وحالته بعد الحفظ ويقيدها إلى صفحات الزائر العامة", () => {
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
+    const routers = projectFile("server/routers.ts");
+    expect(manager).toContain("const verifyAvailability = async");
+    expect(manager).toContain('recordVisit: false');
+    expect(manager).toContain("await verifyAvailability(token, input)");
+    expect(routers).toContain('z.enum(["/", "/services", "/assignment", "/downloads", "/blog", "/contact", "/about"])');
+    expect(routers).toContain("targetPath: visitorTargetPath");
   });
 
   it("يحل الرابط العام قبل التوجيه الاعتيادي ويحجب المعطل والمنتهي", () => {

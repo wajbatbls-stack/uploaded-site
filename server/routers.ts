@@ -66,9 +66,10 @@ const messageStatus = z.enum(["new", "read", "replied", "archived"]);
 const reviewStatus = z.enum(["pending", "published", "hidden"]);
 const hexColor = z.string().regex(/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
 const mediaUrl = z.string().max(2_000).refine(value => value.startsWith("/") || /^https?:\/\//i.test(value), "رابط الوسيط غير صالح").nullable();
+const visitorTargetPath = z.enum(["/", "/services", "/assignment", "/downloads", "/blog", "/contact", "/about"]);
 const visitorLinkInput = z.object({
   name: z.string().trim().min(2).max(160),
-  targetPath: z.string().trim().min(1).max(255).regex(/^\/(?!\/)/, "المسار يجب أن يبدأ بشرطة مائلة واحدة"),
+  targetPath: visitorTargetPath,
   isActive: z.boolean().optional(),
   expiresAt: z.string().datetime().nullable().optional(),
 });

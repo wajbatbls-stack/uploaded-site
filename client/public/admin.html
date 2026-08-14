@@ -19,7 +19,7 @@
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r21.js?v=contact-r3";
+      adminModule.src = "/assets/js/admin-app-r22.js?v=blog-r1";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -49,6 +49,11 @@
                     contactManager.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4";
                     contactManager.async = false;
                     document.body.append(contactManager);
+                  const blogManager = document.createElement("script");
+                  blogManager.src = "/assets/js/admin-blog-manager-r1.js?v=blog-r1";
+                  blogManager.async = false;
+                  blogManager.onload = () => {};
+                  document.body.append(blogManager);
                   };
                   document.body.append(downloadsManager);
                 };
@@ -82,6 +87,11 @@
                     contactManager.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4";
                     contactManager.async = false;
                     document.body.append(contactManager);
+                  const blogManager = document.createElement("script");
+                  blogManager.src = "/assets/js/admin-blog-manager-r1.js?v=blog-r1";
+                  blogManager.async = false;
+                  blogManager.onload = () => {};
+                  document.body.append(blogManager);
                   };
                   document.body.append(downloadsManager);
                 };
@@ -144,6 +154,12 @@
         retryContact.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4&reload=" + Date.now();
         retryContact.async = false;
         document.body.append(retryContact);
+      }
+      if (!window.WajbatBlogManager) {
+        const retryBlog = document.createElement("script");
+        retryBlog.src = "/assets/js/admin-blog-manager-r1.js?v=blog-r1&reload=" + Date.now();
+        retryBlog.async = false;
+        document.body.append(retryBlog);
       }
     }, 4000);
     </script>

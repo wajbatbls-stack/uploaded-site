@@ -450,3 +450,39 @@ export const contactSocials = mysqlTable("contact_socials", {
 }, table => ({
   contactSocialOrderIndex: index("contact_socials_order_index").on(table.sortOrder),
 }));
+
+/** تصنيفات المدونة الأكاديمية التي يديرها المالك من لوحة الإدارة. */
+export const blogCategories = mysqlTable("blog_categories", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  name: varchar("name", { length: 120 }).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  blogCategoryOrderIndex: index("blog_categories_order_index").on(table.sortOrder),
+}));
+
+/** مقالات المدونة الأكاديمية مع صورها المرفوعة وتفاصيلها الكاملة. */
+export const blogArticles = mysqlTable("blog_articles", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  title: varchar("title", { length: 300 }).notNull(),
+  slug: varchar("slug", { length: 320 }).notNull(),
+  summary: longtext("summary"),
+  body: longtext("body"),
+  author: varchar("author", { length: 160 }).default("فريق واجبات بلس").notNull(),
+  publishedText: varchar("publishedText", { length: 60 }),
+  categoryId: bigint("categoryId", { mode: "number" }),
+  categoryText: varchar("categoryText", { length: 120 }),
+  imageKey: varchar("imageKey", { length: 512 }),
+  imageUrl: longtext("imageUrl"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  blogArticleOrderIndex: index("blog_articles_order_index").on(table.sortOrder),
+  blogArticleCategoryIndex: index("blog_articles_category_index").on(table.categoryId),
+  blogArticleVisibilityIndex: index("blog_articles_visibility_index").on(table.isVisible),
+  blogArticleSlugIndex: index("blog_articles_slug_index").on(table.slug),
+}));

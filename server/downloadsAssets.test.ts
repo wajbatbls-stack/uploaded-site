@@ -7,17 +7,17 @@ describe("أصول قسم إدارة التحميلات الحديث", () => {
   it("يحمّل مدير التحميلات الحديث ومدير التطبيق المبصّم من صفحة الإدارة", () => {
     const adminHtml = projectFile("client/public/admin.html");
     expect(adminHtml).toContain("admin-downloads-manager-r2.js");
-    expect(adminHtml).toContain("admin-app-r21.js");
+    expect(adminHtml).toContain("admin-app-r22.js");
     expect(adminHtml).toContain("downloads-r2");
         expect(projectFile("client/public/assets/js/admin-downloads-manager-r2.js")).toContain("WajbatDownloadsManager");
     expect(projectFile("client/public/assets/js/admin-app-r21.js")).toContain("mountCompatibleDownloadsManager");
   });
 
-  it("يحمل تطبيق الزائر المبصّم site-app-r13 ويعيد رسم صفحة التحميلات بعد التحميل الديناميكي", () => {
+  it("يحمل تطبيق الزائر المبصّم site-app-r14 ويعيد رسم صفحة التحميلات بعد التحميل الديناميكي", () => {
     const indexHtml = projectFile("client/public/index.html");
-    expect(indexHtml).toContain("site-app-r13.js");
-    expect(projectFile("client/public/assets/js/site-app-r13.js")).toContain("Promise.all([loadSiteDownloads(), loadSiteContact()]).then(() => { if (location.hash.startsWith(\"#/downloads\")) render(); })");
-    expect(projectFile("client/public/assets/js/site-app-r13.js")).not.toContain("site-app-r11.js");
+    expect(indexHtml).toContain("site-app-r14.js");
+    expect(projectFile("client/public/assets/js/site-app-r14.js")).toContain("Promise.all([loadSiteDownloads(), loadSiteContact(), loadSiteBlog()]).then(() => { if (location.hash.startsWith(\"#/downloads\") || location.hash.startsWith(\"#/blog\")) render(); })");
+    expect(projectFile("client/public/assets/js/site-app-r14.js")).not.toContain("site-app-r11.js");
   });
 
   it("يركّب مدير التحميلات الحديث داخل مساحة عمل قسم التحميلات بعد اعتراض structured editor", () => {

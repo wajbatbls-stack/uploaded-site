@@ -21,6 +21,9 @@ import {
 import { getWebAuthnContext } from "./webAuthnContext";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { blogRouter } from "./blog";
+import { downloadsRouter } from "./downloads";
+import { contactRouter } from "./contact";
 import { notifyOwner } from "./_core/notification";
 import { decodeAdminImage, decodeUpload } from "./adminUpload";
 import { uploadAndRegisterAdminMedia } from "./adminMediaUpload";
@@ -344,10 +347,12 @@ export const appRouter = router({
       .mutation(async ({ input }) => ({ success: true, ...(await createSubmittedReview(input)) })),
     downloads: downloadsRouter,
     contact: contactRouter,
+    blog: blogRouter,
   }),
   admin: router({
     downloads: downloadsRouter,
     contact: contactRouter,
+    blog: blogRouter,
     collections: ownerProcedure.query(() => getAdminCollections()),
     visitorLinks: ownerProcedure.query(() => listVisitorLinks()),
     createVisitorLink: ownerProcedure.input(visitorLinkInput).mutation(async ({ input }) => {
@@ -426,6 +431,4 @@ export const appRouter = router({
 
 export type AppRouter = typeof appRouter;
 
-/* ---------- إدارة التحميلات v2 ---------- */
-import { downloadsRouter } from "./downloads";
-import { contactRouter } from "./contact";
+/* ---------- إدارة التحميلات v2 (أُعيد ترتيب الاستيرادات إلى أعلى الملف) ---------- */

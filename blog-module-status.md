@@ -916,3 +916,27 @@ API site.blog.publicList يرجع 5 مقالات (الرئيسية فقط من D
 - الاستنتاج: النشر التلقائي لا ينشر admin-blog-manager-r2.js لأن vite.config لا ينسخ سوى أسماء محددة (copyPublicPlugin)، أو النشر تأخر.
 - الحل: فحص vite.config copyPublicPlugin: يجب إضافة admin-blog-manager-r2.js إلى قائمة النسخ صراحة. نفس المشكلة التي واجهناها مع admin-dashboard.html.
 - بعدها: إعادة checkpoint، انتظار نشر، curl تحقق md5، ثم اختبار تفاعلي كامل للمدونة (إنشاء مقال + صورة + حفظ + publicList + حذف).
+
+## 19:40 — النجاح المؤكد في الإنتاج
+النسخة المنشورة في الإنتاج تعمل الآن: لوحة الإدارة فُتحت مباشرة دون فورم دخول (الجلسة محفوظة)، وتظهر كل الأقسام، والعدّادات: 702 زيارة، 15 خدمة رئيسية، 75 فرعية، 22 ملف تحميل، 7 مقالات، 6 آراء طلاب، 33 شريك. ملاحظة: sidebar يظهر زرًا زائدًا بعنوان "? blog" عند المدونة الأكاديمية — يجب إخفاؤه. الإنتاج يخدم الآن admin-blog-manager-r2.js الصحيح (md5 متطابق). المتبقي: اختبار إنشاء مقال بصورة + حذف بيانات الاختبار + إخفاء زر blog الزائد + إزالة سكريبت __loginTrace من admin.html وadmin-dashboard.html.
+
+## 19:41 — بعد نقر "حفظ" على المقال التجريبي: لم يُحفظ في DB
+- site.blog.articles يرجع 6 مقالات فقط، لا يوجد مقال "تجريبي". العدّاد في اللوحة أظهر 7 (يبدو optimistic فقط).
+- أسماء procedures: site.blog.publicList / bySlug / categories / articles / createArticle / updateArticle / deleteArticle / uploadArticleImage / setCategoryVisibility / moveCategory / createCategory / updateCategory / deleteCategory / moveArticle / setArticleVisibility.
+- فرضية: النقر على "حفظ" لم يستدعِ saveArticle أصلًا، أو saveArticle في r2 يحتاج فحصًا: ربما الشرط check يفشل بصمت (validation على title من state الذي ما زال فارغًا لأن المستمع الجديد لم يصل بعد؟ لا — تعبئة browser_fill تُطلق input event؟ نعم عادةً).
+- يجب: فحص console أثناء الحفظ، وفحص سطر saveArticle في r2 المنشور فعليًا.
+
+## 19:42 تشخيص أعمق — r2 يحتوي hook الربط بالفعل (input/change على data-blog-prop)
+- hook موجود في r2 المنشور (13986): يستمع input+change على data-blog-prop ويحدث state.editingArticle ✓
+- saveArticle يقرأ من state.editingArticle ويرسل admin.blog.createArticle (لاحظ: admin.blog وليس site.blog!) ✓
+- الخادم يعمل: أنشأت مقالًا مباشرًا id=30001 وحُفظ وحُذف (تجربة نظيفة).
+- السبب المرجح لعدم الحفظ في تجربتي: الحفظ يتطلب title.trim() && body.trim() غير فارغين — ربما body كان فارغًا عند النقر (تعبئة browser_fill قد لا تطلق input على textarea؟ تطلق عادة). أو أن النموذج أُغلق قبل النقر. أو أن زر الحفظ الذي نقرته كان [data-blog-confirm-ok] لنافذة تأكيد (حذف) وليس حفظ!
+- ملاحظة layout: نموذج المقال يُعرض داخل workspace (root.querySelectorAll يربطه) ✓.
+- الخطوة التالية: اختبار حقيقي متسلسل: فتح نموذج جديد، تعبئة عنوان + محتوى كبير + تصنيف + ملخص، النقر على [data-blog-save-article]، ثم فحص articles — والتقاط الـ toast عبر الاستماع لنص toast.
+
+## 19:43 بق قاتل جديد مكتشف
+- r24 يتحقق من `manager?.activate` و `manager?.container` (object) قبل إنشاء قسم المدونة.
+- لكن WajbatBlogManager في r2 لا يحتوي `activate` أصلًا! (-> -1) و`container` هو خاصية عادية على manager (undefined حتى يُعيَّن) — typeof undefined !== 'object'.
+- إذن mountCompatibleBlogManager يرجع null دائمًا، والمستخدم يرى المحتوى الافتراضي من content('blog') (قائمة غير تفاعلية من DB مباشرة) وليست الواجهة الكاملة بنموذج الإضافة! هذا يفسر كل شيء: زر + إضافة موجود لكن بلا [data-blog-add-article] — زر content الافتراضي.
+- الإصلاح المطلوب: r2 يجب أن يصدّر دوال متوافقة مع واجهة r24: `activate()` (تعيين container + load) و property `container` موجود. أو تعديل r24 لتقبل الواجهة القديمة. الحل: تعديل r2 نفسه (إضافة activate إلى manager) لأنه ملف الجلسة الحالية.
+- ملاحظة: المحتوى الحالي المعروض "8 مقالات" هو عرض قديم من content() في r24 يعمل (fetch مباشر) — الواجهة الكاملة (tabs، نموذج، رفع صور) غير ظاهرة.

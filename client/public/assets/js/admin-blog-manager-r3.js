@@ -26,7 +26,15 @@
     },
     container: null,
 
-    /* --------------------- الاتصال بالخادم --------------------- */
+
+
+    activate() {
+      const target = this.container || document.querySelector("[data-blog-workspace]");
+      if (!target) return;
+      this.container = target;
+      this.state.loaded = false;
+      void this.load();
+    }    /* --------------------- الاتصال بالخادم --------------------- */
     async request(procedure, input) {
       const suffix = input === undefined ? "" : `?input=${encodeURIComponent(JSON.stringify({ json: input }))}`;
       const response = await fetch(`${TRPC}/${procedure}${suffix}`, { credentials: "same-origin", cache: "no-store" });

@@ -81,8 +81,8 @@
   const activate = async () => {
     if (!admin()) return;
     const shellState = admin().getState?.();
-    if (shellState) shellState.selected = "dashboard";
-    admin().dashboard?.();
+    if (shellState) shellState.selected = "visitorLinks";
+    if (shellState) shellState.editing = null;
     replaceWorkspace();
     await list();
   };
@@ -92,6 +92,17 @@
     const group = [...nav.querySelectorAll(".nav-group")].find(item => item.querySelector(".nav-group-title")?.textContent?.includes("التواصل")) || nav.lastElementChild;
     group?.insertAdjacentHTML("afterbegin", `<button type="button" data-visitor-links-nav><span class="nav-item-icon">🔗</span><span>إنشاء رابط الزوار</span></button>`);
   };
+  const confirmDelete = link => new Promise(resolve => {
+    const modal = document.createElement("div");
+    modal.className = "vl-modal-backdrop";
+    modal.innerHTML = `<section class="vl-modal" role="dialog" aria-modal="true" aria-labelledby="vl-delete-title"><header><div><p>تأكيد الإجراء</p><h3 id="vl-delete-title">حذف رابط زائر</h3></div></header><p style="margin:1rem 0">هل أنت متأكد من حذف رابط الزوار؟</p><p style="color:#94a3b8;font-size:0.85em;margin:0 0 1.5rem"><span dir="ltr" style="font-family:monospace">${esc(link.name)} — ${esc(link.targetPath)}</span></p><div class="vl-form-actions"><button type="button" class="btn btn-outline" data-vl-delete-cancel>إلغاء</button><button type="button" class="btn danger" data-vl-delete-confirm>حذف الرابط</button></div></section>`;
+    document.body.append(modal);
+    const cleanup = result => { modal.remove(); resolve(result); };
+    modal.querySelector("[data-vl-delete-cancel]").addEventListener("click", () => cleanup(false));
+    modal.querySelector("[data-vl-delete-confirm]").addEventListener("click", () => cleanup(true));
+    modal.addEventListener("click", event => { if (event.target === modal) cleanup(false); });
+  });
+
   const copy = async link => {
     const value = publicUrl(link.token);
     try { await navigator.clipboard.writeText(value); }
@@ -164,8 +175,7 @@
       else if (action === "preview" && link) preview(link);
       else if (action === "visitor" && link) window.open(publicUrl(link.token), "_blank", "noopener");
       else if (action === "edit" && link) { state.editor = { ...link }; render(); }
-      else if (action === "toggle" && link) { const input = { isActive: !link.isActive, targetPath: link.targetPath, expiresAt: link.expiresAt || null }; await request("admin.updateVisitorLink", { id: link.id, isActive: input.isActive }); await verifyAvailability(link.token, input); await list(); toast(link.isActive ? "تم تعطيل الرابط؛ سيظهر للزائر أنه غير متاح." : "تم تفعيل الرابط مجدداً."); }
-      else if (action === "delete" && link) { if (!window.confirm("هل أنت متأكد من حذف رابط الزوار؟\nلا يمكن التراجع عن الحذف.")) return; await request("admin.deleteVisitorLink", { id: link.id }); await list(); toast("تم حذف رابط الزوار فعلياً."); }
+      else if (action === "delete" && link) { if (!(await confirmDelete(link))) return; await request("admin.deleteVisitorLink", { id: link.id }); await list(); toast("تم حذف رابط الزوار فعلياً."); }
     } catch (error) { toast(error.message || "تعذر إتمام العملية"); }
   }, true);
   document.addEventListener("input", event => { const input = event.target.closest?.("[data-vl-search]"); if (!input) return; state.search = input.value; render(); });

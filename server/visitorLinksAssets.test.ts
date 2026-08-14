@@ -9,13 +9,13 @@ describe("أصول مدير روابط الزوار", () => {
     const adminHtml = projectFile("client/public/admin.html");
     const vite = projectFile("vite.config.ts");
     expect(adminHtml).toContain("visitor-links-r1.css");
-    expect(adminHtml).toContain("admin-visitor-links-manager-r1.js");
-    expect(vite).toContain("assets/js/admin-visitor-links-manager-r1.js");
+    expect(adminHtml).toContain("admin-visitor-links-manager-r3.js");
+    expect(vite).toContain("assets/js/admin-visitor-links-manager-r3.js");
     expect(vite).toContain("assets/css/visitor-links-r1.css");
   });
 
   it("يوفّر عمليات الإنشاء والتعديل والنسخ والمعاينة والتفعيل والحذف الفعلية", () => {
-    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r3.js");
     expect(manager).toContain("admin.createVisitorLink");
     expect(manager).toContain("admin.updateVisitorLink");
     expect(manager).toContain("admin.deleteVisitorLink");
@@ -26,18 +26,18 @@ describe("أصول مدير روابط الزوار", () => {
   });
 
   it("يعرض زر نسخ الرابط فور إنشائه ويستخدم مسار النسخ الفعلي نفسه", () => {
-    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r3.js");
     const adminHtml = projectFile("client/public/admin.html");
     expect(manager).toContain("const createdNotice = () =>");
     expect(manager).toContain('data-vl-action="copy-created"');
     expect(manager).toContain("state.created = old.id ? null");
     expect(manager).toContain('action === "copy-created" && state.created');
     expect(manager).toContain("تم نسخ الرابط بنجاح.");
-    expect(adminHtml).toContain("visitor-links-telegram-r5");
+    expect(adminHtml).toContain("visitor-links-delete-modal-r6");
   });
 
   it("يوفّر مشاركة الرابط عبر واتساب من بطاقة الرابط ومن بطاقة النتيجة", () => {
-    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r3.js");
     const adminHtml = projectFile("client/public/admin.html");
     expect(manager).toContain("const shareWhatsApp = link =>");
     expect(manager).toContain("https://wa.me/?text=");
@@ -50,7 +50,7 @@ describe("أصول مدير روابط الزوار", () => {
   });
 
   it("يوفّر مشاركة الرابط عبر تيليجرام من بطاقة الرابط ومن بطاقة النتيجة", () => {
-    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r3.js");
     const adminHtml = projectFile("client/public/admin.html");
     expect(manager).toContain("const shareTelegram = link =>");
     expect(manager).toContain("https://t.me/share/url?url=");
@@ -59,12 +59,12 @@ describe("أصول مدير روابط الزوار", () => {
     expect(manager).toContain('action === "telegram" && link');
     expect(manager).toContain('action === "telegram-created" && state.created');
     expect(manager).toContain("مرحباً، هذا رابط الزائر:");
-    expect(adminHtml).toContain("visitor-links-telegram-r5");
+    expect(adminHtml).toContain("visitor-links-delete-modal-r6");
   });
 
   it("يثبت رابط الزوار قبل الصفحة الرئيسية في التنقل ويمنحه مسار فتح مباشر", () => {
     const app = projectFile("client/public/assets/js/admin-app-r18.js");
-    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r3.js");
     expect(app).toContain('visitorLinks: ["🔗", "إنشاء روابط الزوار"');
     expect(app).toContain('items: ["dashboard", "visitorLinks", "homePage", "design"]');
     expect(app).toContain('key === "visitorLinks" ? "data-visitor-links-nav"');
@@ -79,7 +79,7 @@ describe("أصول مدير روابط الزوار", () => {
   });
 
   it("يوفّر بحثاً وتصفية وفرزاً فعليين ولا يحذف الرابط قبل تأكيد المالك", () => {
-    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r3.js");
     expect(manager).toContain("data-vl-search");
     expect(manager).toContain("data-vl-filter");
     expect(manager).toContain("data-vl-sort");
@@ -89,11 +89,26 @@ describe("أصول مدير روابط الزوار", () => {
     expect(manager).toContain('value="expired"');
     expect(manager).toContain('value="visits"');
     expect(manager).toContain("const isExpired = link");
-    expect(manager).toContain('if (!window.confirm("هل أنت متأكد من حذف رابط الزوار؟\\nلا يمكن التراجع عن الحذف.")) return;');
+    expect(manager).toContain('data-vl-delete-cancel');
+    expect(manager).toContain('data-vl-delete-confirm');
+    expect(manager).toContain("const confirmDelete = link");
+    expect(manager).toContain("هل أنت متأكد من حذف رابط الزوار؟");
+    expect(manager).not.toContain("window.confirm(");
+  });
+
+  it("يركّب مدير روابط الزوار داخل مساحة عمل القسم عند اختياره", () => {
+    const app = projectFile("client/public/assets/js/admin-app-r18.js");
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r3.js");
+    expect(app).toContain("function mountCompatibleVisitorLinksManager()");
+    expect(app).toContain('key === "visitorLinks"');
+    expect(app).toContain('[data-visitor-links-workspace]');
+    expect(app).toContain("manager.activate()");
+    expect(manager).toContain('shellState.selected = "visitorLinks"');
+    expect(manager).toContain("await list()");
   });
 
   it("يتحقق من وجهة الرابط وحالته بعد الحفظ ويقيدها إلى صفحات الزائر العامة", () => {
-    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r3.js");
     const routers = projectFile("server/routers.ts");
     expect(manager).toContain("const verifyAvailability = async");
     expect(manager).toContain('recordVisit: false');

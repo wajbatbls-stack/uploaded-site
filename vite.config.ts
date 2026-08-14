@@ -171,7 +171,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-homepage-manager-r1.js", destination: "assets/js/admin-homepage-manager-r1.js" },
         { source: "assets/js/admin-services-manager-r1.js", destination: "assets/js/admin-services-manager-r1.js" },
         { source: "assets/js/admin-services-manager-r2.js", destination: "assets/js/admin-services-manager-r2.js" },
-        { source: "assets/js/admin-visitor-links-manager-r1.js", destination: "assets/js/admin-visitor-links-manager-r1.js" },
+        { source: "assets/js/admin-visitor-links-manager-r3.js", destination: "assets/js/admin-visitor-links-manager-r3.js" },
         { source: "assets/js/admin-owner-login-security.js", destination: "assets/js/admin-owner-login-security.js" },
         { source: "assets/js/admin-owner-login-security-r2.js", destination: "assets/js/admin-owner-login-security-r2.js" },
         { source: "assets/js/admin-owner-login-security-r3.js", destination: "assets/js/admin-owner-login-security-r3.js" },

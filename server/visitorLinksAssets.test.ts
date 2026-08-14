@@ -70,6 +70,7 @@ describe("أصول مدير روابط الزوار", () => {
     expect(app).toContain('key === "visitorLinks" ? "data-visitor-links-nav"');
     expect(manager).toContain("admin.createVisitorLink");
     expect(manager).toContain("await verifyAvailability(token, input)");
+    expect(projectFile("client/public/admin.html")).toContain("admin-app-r18.js?v=visitor-links-production-r6");
   });
 
   it("يوفّر بحثاً وتصفية وفرزاً فعليين ولا يحذف الرابط قبل تأكيد المالك", () => {

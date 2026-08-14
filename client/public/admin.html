@@ -19,7 +19,7 @@
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r18.js?v=visitor-links-mobile-fix-r8";
+      adminModule.src = "/assets/js/admin-app-r18.js?v=visitor-links-r4-cache-bust-r9";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -38,7 +38,7 @@
               servicesManager.async = false;
               servicesManager.onload = () => {
                 const visitorLinksManager = document.createElement("script");
-                visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r3.js?v=visitor-links-delete-modal-r6";
+                visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r4.js?v=visitor-links-r4-load";
                 visitorLinksManager.async = false;
                 document.body.append(visitorLinksManager);
               };
@@ -59,7 +59,7 @@
               servicesManager.src = "/assets/js/admin-services-manager-r2.js?v=services-nav-fix-r4";
               servicesManager.onload = () => {
                 const visitorLinksManager = document.createElement("script");
-                visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r3.js?v=visitor-links-delete-modal-r6";
+                visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r4.js?v=visitor-links-r4-load";
                 visitorLinksManager.async = false;
                 document.body.append(visitorLinksManager);
               };
@@ -102,6 +102,14 @@
         document.body.append(ownerLoginEnhancements);
       };
       document.body.append(adminModule);
+    const visitorLinksFallback = setTimeout(() => {
+      if (!window.WajbatVisitorLinksManager) {
+        const retry = document.createElement("script");
+        retry.src = "/assets/js/admin-visitor-links-manager-r4.js?v=visitor-links-r4-load&reload=" + Date.now();
+        retry.async = false;
+        document.body.append(retry);
+      }
+    }, 4000);
     </script>
   </body>
 </html>

@@ -366,3 +366,8 @@
 - [x] إضافة site-app-r15.js كمدخل ثانٍ في rollupOptions ليُمرَّره البناء ويظهر في dist/index.html
 - [x] التحقق: البناء يُنتج dist/public/index.html يحتوي div#app وdiv#root وbundle سكريبت site-app-r15.js، وsite-app-r15.js موجود في dist/public/assets/js
 - [x] اجتياز 85 اختبار وحدة وفحص TypeScript ثم حفظ checkpoint منشور
+
+## تصحيحات ما بعد النشر (2026-08-14)
+- [x] التحقق البرمجي من الإنتاج: bundle يحمل site-app-r15.js (200)، admin-dashboard.html يحمل مديري الفريق والشركاء
+- [x] التحقق البصري من الرئيسية ومن نحن والشركاء وشاشة الدخول
+- [x] تصحيح قيم photoUrl/LogoUrl النصية "NULL" إلى فارغة بعد الهجرة (البيانات الأصلية لم تكن تحمل صورًا)

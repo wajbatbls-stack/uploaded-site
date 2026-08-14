@@ -98,3 +98,9 @@
 - يجب: pnpm test، ثم checkpoint جديد (auto-publish)، ثم curl للإنتاج والتأكد أن / يعرض الموقع ("منصتك الذكية للتعلم وا")، ثم فحص صفحات #/services و#/about تعمل (site-app routing داخلي).
 - تذكير: assets موجودة في dist/public/assets/js/site-app-r15.js عبر copy-wajbat-admin-assets plugin (موجودة في build log).
 - رابط الإنتاج: https://uploadplus-47dkogbk.manus.space — لوحة الإدارة: /admin-dashboard.html (تعمل الآن).
+
+
+## تحقق نهائي 2026-08-14 بعد checkpoint 33b7789d
+الإنتاج نشط الآن: bundle assets/site-BlfSTIiT.js يحمل "/assets/js/site-app-r15.js" والملف site-app-r15.js يعيد HTTP 200 ويحتوي loadSiteTeamPartners. admin-dashboard.html في الإنتاج 200 ويحمّل admin-team-manager-r1.js وadmin-partners-manager-r1.js. لقطات dev: الرئيسية سليمة (Hero + فوتر)، صفحة من نحن تعرض فريق الإدارة بأعضائه الأربعة، صفحة الشركاء تعرض بطاقات الجامعات والمؤسسات من الجداول الجديدة. شاشة الدخول /admin و/admin-dashboard.html تعرض قالب الدخول المخصص بسليم.
+
+ملاحظة بصرية متبقية: صور أعضاء الفريق في صفحة من نحن تظهر أيقونة افتراضية بدل الصورة — فحص CSS .team-avatar img وphotoUrl في site-app-r15 (هل الصفوف القديمة من migration تحتوي photoUrl؟).

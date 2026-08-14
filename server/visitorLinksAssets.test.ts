@@ -25,6 +25,17 @@ describe("أصول مدير روابط الزوار", () => {
     expect(manager).toContain("إنشاء رابط زائر جديد");
   });
 
+  it("يعرض زر نسخ الرابط فور إنشائه ويستخدم مسار النسخ الفعلي نفسه", () => {
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
+    const adminHtml = projectFile("client/public/admin.html");
+    expect(manager).toContain("const createdNotice = () =>");
+    expect(manager).toContain('data-vl-action="copy-created"');
+    expect(manager).toContain("state.created = old.id ? null");
+    expect(manager).toContain('action === "copy-created" && state.created');
+    expect(manager).toContain("تم نسخ الرابط بنجاح.");
+    expect(adminHtml).toContain("visitor-links-copy-r3");
+  });
+
   it("يوفّر بحثاً وتصفية وفرزاً فعليين ولا يحذف الرابط قبل تأكيد المالك", () => {
     const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
     expect(manager).toContain("data-vl-search");

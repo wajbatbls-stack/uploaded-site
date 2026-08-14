@@ -37,7 +37,7 @@ describe("مدير الخدمات الهرمي", () => {
 
 	it("يحمّل مدير روابط الزوار ببصمة إصدار تمنع تنفيذ نسخة قديمة مخزنة مؤقتاً", () => {
 		const page = readProject("client/public/admin.html");
-		expect(page).toContain("admin-visitor-links-manager-r1.js?v=visitor-links-fix-r2");
+		expect(page).toContain("admin-visitor-links-manager-r1.js?v=visitor-links-copy-r3");
 	});
 
 	  it("يوفر الرفع المباشر والحذف المؤكد وترتيب السحب للخدمات والخدمات الفرعية", () => {

@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const state = { links: [], search: "", filter: "all", sort: "newest", editor: null, loading: false };
+  const state = { links: [], search: "", filter: "all", sort: "newest", editor: null, created: null, loading: false };
   const esc = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
   const targetOptions = [
     ["/", "الصفحة الرئيسية"], ["/services", "الخدمات"], ["/assignment", "تسليم الواجب"], ["/downloads", "التحميلات"], ["/blog", "المدونة"], ["/contact", "اتصل بنا"], ["/about", "من نحن"]
@@ -62,9 +62,14 @@
       <div class="vl-form-actions"><button type="button" class="btn btn-outline" data-vl-action="close-editor">إلغاء</button><button type="submit" class="btn">💾 ${entry.id ? "حفظ التعديل" : "إنشاء الرابط والتحقق منه"}</button></div>
     </form></section></div>`;
   };
+  const createdNotice = () => {
+    if (!state.created?.token) return "";
+    const url = publicUrl(state.created.token);
+    return `<aside class="vl-created-notice" role="status" aria-live="polite"><div><span class="vl-created-notice-mark">✓</span><div><strong>تم إنشاء الرابط والتحقق منه</strong><p>رابط «${esc(state.created.name || "الزائر")}» جاهز للمشاركة الآن.</p><code dir="ltr">${esc(url)}</code></div></div><div class="vl-created-notice-actions"><button type="button" class="btn" data-vl-action="copy-created">⧉ نسخ رابط الزائر</button><button type="button" class="vl-created-dismiss" data-vl-action="dismiss-created" aria-label="إغلاق رسالة الرابط المنشأ">×</button></div></aside>`;
+  };
   const workspace = () => {
     const links = current();
-    return `<section class="workspace visitor-links-workspace" data-visitor-links-workspace><div class="workspace-head"><div><p class="eyebrow">روابط عامة قابلة للمشاركة</p><h2>🔗 إنشاء رابط الزوار</h2><p>أنشئ رابطاً حقيقياً يفتح نسخة الزائر فقط، وتابع الزيارات والصلاحية وحالة الوصول من مكان واحد.</p></div><div class="head-actions"><button type="button" class="btn btn-outline" data-vl-action="refresh">↻ تحديث القائمة</button><button type="button" class="btn" data-vl-action="create">➕ إنشاء رابط زائر جديد</button></div></div><div class="workspace-body"><div class="vl-summary"><b>${state.links.length.toLocaleString("ar-SA")}</b><span>إجمالي الروابط المحفوظة</span><i></i><b>${state.links.filter(isAvailable).length.toLocaleString("ar-SA")}</b><span>روابط متاحة</span><i></i><b>${state.links.reduce((sum, link) => sum + Number(link.visitCount || 0), 0).toLocaleString("ar-SA")}</b><span>زيارات مسجّلة</span></div><div class="vl-toolbar"><label class="vl-search"><span>🔍</span><input data-vl-search value="${esc(state.search)}" placeholder="ابحث بالاسم أو الرابط أو الصفحة" /></label><select data-vl-filter aria-label="تصفية الروابط"><option value="all" ${state.filter === "all" ? "selected" : ""}>كل الحالات</option><option value="active" ${state.filter === "active" ? "selected" : ""}>المتاحة</option><option value="disabled" ${state.filter === "disabled" ? "selected" : ""}>المعطلة</option><option value="expired" ${state.filter === "expired" ? "selected" : ""}>المنتهية</option></select><select data-vl-sort aria-label="ترتيب الروابط"><option value="newest" ${state.sort === "newest" ? "selected" : ""}>الأحدث أولاً</option><option value="oldest" ${state.sort === "oldest" ? "selected" : ""}>الأقدم أولاً</option><option value="visits" ${state.sort === "visits" ? "selected" : ""}>الأكثر زيارة</option></select></div>${state.loading ? `<div class="vl-empty">جارٍ تحميل الروابط المحفوظة…</div>` : links.length ? `<div class="vl-list">${links.map(row).join("")}</div>` : `<div class="vl-empty"><strong>لا توجد روابط مطابقة.</strong><span>أنشئ أول رابط زائر حقيقي، أو غيّر عبارة البحث والتصفية.</span><button type="button" class="btn" data-vl-action="create">إنشاء رابط زائر جديد</button></div>`}</div>${editor()}</section>`;
+    return `<section class="workspace visitor-links-workspace" data-visitor-links-workspace><div class="workspace-head"><div><p class="eyebrow">روابط عامة قابلة للمشاركة</p><h2>🔗 إنشاء رابط الزوار</h2><p>أنشئ رابطاً حقيقياً يفتح نسخة الزائر فقط، وتابع الزيارات والصلاحية وحالة الوصول من مكان واحد.</p></div><div class="head-actions"><button type="button" class="btn btn-outline" data-vl-action="refresh">↻ تحديث القائمة</button><button type="button" class="btn" data-vl-action="create">➕ إنشاء رابط زائر جديد</button></div></div><div class="workspace-body">${createdNotice()}<div class="vl-summary"><b>${state.links.length.toLocaleString("ar-SA")}</b><span>إجمالي الروابط المحفوظة</span><i></i><b>${state.links.filter(isAvailable).length.toLocaleString("ar-SA")}</b><span>روابط متاحة</span><i></i><b>${state.links.reduce((sum, link) => sum + Number(link.visitCount || 0), 0).toLocaleString("ar-SA")}</b><span>زيارات مسجّلة</span></div><div class="vl-toolbar"><label class="vl-search"><span>🔍</span><input data-vl-search value="${esc(state.search)}" placeholder="ابحث بالاسم أو الرابط أو الصفحة" /></label><select data-vl-filter aria-label="تصفية الروابط"><option value="all" ${state.filter === "all" ? "selected" : ""}>كل الحالات</option><option value="active" ${state.filter === "active" ? "selected" : ""}>المتاحة</option><option value="disabled" ${state.filter === "disabled" ? "selected" : ""}>المعطلة</option><option value="expired" ${state.filter === "expired" ? "selected" : ""}>المنتهية</option></select><select data-vl-sort aria-label="ترتيب الروابط"><option value="newest" ${state.sort === "newest" ? "selected" : ""}>الأحدث أولاً</option><option value="oldest" ${state.sort === "oldest" ? "selected" : ""}>الأقدم أولاً</option><option value="visits" ${state.sort === "visits" ? "selected" : ""}>الأكثر زيارة</option></select></div>${state.loading ? `<div class="vl-empty">جارٍ تحميل الروابط المحفوظة…</div>` : links.length ? `<div class="vl-list">${links.map(row).join("")}</div>` : `<div class="vl-empty"><strong>لا توجد روابط مطابقة.</strong><span>أنشئ أول رابط زائر حقيقي، أو غيّر عبارة البحث والتصفية.</span><button type="button" class="btn" data-vl-action="create">إنشاء رابط زائر جديد</button></div>`}</div>${editor()}</section>`;
   };
   const replaceWorkspace = () => {
     const root = document.querySelector(".workspace");
@@ -117,6 +122,7 @@
     const result = old.id ? await request("admin.updateVisitorLink", { id: old.id, ...input }) : await request("admin.createVisitorLink", input);
     const token = old.token || result.token;
     await verifyAvailability(token, input);
+    state.created = old.id ? null : { id: result.id, token, name: input.name };
     state.editor = null;
     await list();
     toast(old.id ? "تم حفظ تعديل الرابط فعلياً." : "تم إنشاء الرابط والتحقق من فتحه بنجاح.");
@@ -135,6 +141,8 @@
       else if (action === "close-editor") { state.editor = null; render(); }
       else if (action === "refresh") await list();
       else if (action === "copy" && link) await copy(link);
+      else if (action === "copy-created" && state.created) await copy(state.created);
+      else if (action === "dismiss-created") { state.created = null; render(); }
       else if (action === "preview" && link) preview(link);
       else if (action === "visitor" && link) window.open(publicUrl(link.token), "_blank", "noopener");
       else if (action === "edit" && link) { state.editor = { ...link }; render(); }

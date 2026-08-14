@@ -21,6 +21,8 @@ import {
   siteOrders,
   siteVisits,
   submittedReviews,
+  teamMembers,
+  partners,
   users,
   visitorLinks,
 } from "../drizzle/schema";
@@ -1051,4 +1053,110 @@ export async function incrementDownloadCount(id: number) {
     lastDownloadedAt: new Date(),
   }).where(eq(downloadFiles.id, id));
   return { success: true } as const;
+}
+
+/* ===== Leadership team ===== */
+export async function listTeamMembers() {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  return db.select().from(teamMembers).orderBy(asc(teamMembers.sortOrder), desc(teamMembers.createdAt));
+}
+
+export async function createTeamMember(input: { name: string; role: string; description?: string; photoUrl?: string; photoMediaId?: number; isVisible?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const [last] = await db.select({ sortOrder: teamMembers.sortOrder }).from(teamMembers).orderBy(desc(teamMembers.sortOrder), desc(teamMembers.id)).limit(1);
+  const result = await db.insert(teamMembers).values({
+    name: input.name,
+    role: input.role,
+    description: input.description ?? null,
+    photoUrl: input.photoUrl ?? null,
+    photoMediaId: input.photoMediaId ?? null,
+    isVisible: input.isVisible ?? true,
+    sortOrder: last ? last.sortOrder + 1 : 0,
+  });
+  return { id: Number(result[0].insertId) };
+}
+
+export async function updateTeamMember(id: number, input: Partial<{ name: string; role: string; description: string; photoUrl: string; photoMediaId: number; isVisible: boolean }>) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.update(teamMembers).set(input).where(eq(teamMembers.id, id));
+  return { success: true } as const;
+}
+
+export async function deleteTeamMember(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.delete(teamMembers).where(eq(teamMembers.id, id));
+  return { success: true } as const;
+}
+
+export async function moveTeamMember(id: number, direction: 1 | -1) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const row = (await db.select().from(teamMembers).where(eq(teamMembers.id, id)).limit(1))[0];
+  if (!row) return { success: false as const };
+  const neighbors = await db.select().from(teamMembers).orderBy(asc(teamMembers.sortOrder), desc(teamMembers.createdAt));
+  const index = neighbors.findIndex(n => n.id === row.id);
+  const target = index + direction;
+  if (index === -1 || target < 0 || target >= neighbors.length) return { success: false as const };
+  const [current, other] = [neighbors[index], neighbors[target]];
+  await db.update(teamMembers).set({ sortOrder: other.sortOrder }).where(eq(teamMembers.id, current.id));
+  await db.update(teamMembers).set({ sortOrder: current.sortOrder }).where(eq(teamMembers.id, other.id));
+  return { success: true as const };
+}
+
+/* ===== Success partners ===== */
+export async function listPartners() {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  return db.select().from(partners).orderBy(asc(partners.sortOrder), desc(partners.createdAt));
+}
+
+export async function createPartner(input: { name: string; city?: string; description?: string; kind?: "جامعة" | "معهد" | "جهة تعليمية"; logoUrl?: string; logoMediaId?: number; link?: string; isVisible?: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const [last] = await db.select({ sortOrder: partners.sortOrder }).from(partners).orderBy(desc(partners.sortOrder), desc(partners.id)).limit(1);
+  const result = await db.insert(partners).values({
+    name: input.name,
+    city: input.city ?? null,
+    description: input.description ?? null,
+    kind: input.kind ?? "جامعة",
+    logoUrl: input.logoUrl ?? null,
+    logoMediaId: input.logoMediaId ?? null,
+    link: input.link ?? null,
+    isVisible: input.isVisible ?? true,
+    sortOrder: last ? last.sortOrder + 1 : 0,
+  });
+  return { id: Number(result[0].insertId) };
+}
+
+export async function updatePartner(id: number, input: Partial<{ name: string; city: string; description: string; kind: "جامعة" | "معهد" | "جهة تعليمية"; logoUrl: string; logoMediaId: number; link: string; isVisible: boolean }>) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.update(partners).set(input).where(eq(partners.id, id));
+  return { success: true } as const;
+}
+
+export async function deletePartner(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.delete(partners).where(eq(partners.id, id));
+  return { success: true } as const;
+}
+
+export async function movePartner(id: number, direction: 1 | -1) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const row = (await db.select().from(partners).where(eq(partners.id, id)).limit(1))[0];
+  if (!row) return { success: false as const };
+  const neighbors = await db.select().from(partners).orderBy(asc(partners.sortOrder), desc(partners.createdAt));
+  const index = neighbors.findIndex(n => n.id === row.id);
+  const target = index + direction;
+  if (index === -1 || target < 0 || target >= neighbors.length) return { success: false as const };
+  const [current, other] = [neighbors[index], neighbors[target]];
+  await db.update(partners).set({ sortOrder: other.sortOrder }).where(eq(partners.id, current.id));
+  await db.update(partners).set({ sortOrder: current.sortOrder }).where(eq(partners.id, other.id));
+  return { success: true as const };
 }

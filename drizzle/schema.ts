@@ -37,6 +37,47 @@ export const contentCollections = mysqlTable("content_collections", {
   collectionKeyUnique: uniqueIndex("content_collections_key_unique").on(table.collectionKey),
 }));
 
+/** Owner-managed leadership team displayed on the About page, stored in its own table for direct CRUD. */
+export const teamMembers = mysqlTable("team_members", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 180 }).notNull(),
+  role: varchar("role", { length: 120 }).notNull(),
+  description: varchar("description", { length: 1200 }),
+  photoUrl: longtext("photoUrl"),
+  photoMediaId: bigint("photoMediaId", { mode: "number" }),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  teamSortIndex: index("team_members_sort_index").on(table.sortOrder),
+}));
+
+export type TeamMember = typeof teamMembers.$inferSelect;
+export type InsertTeamMember = typeof teamMembers.$inferInsert;
+
+/** Owner-managed success partners displayed on the Partners page, stored in its own table for direct CRUD. */
+export const partners = mysqlTable("partners", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  city: varchar("city", { length: 120 }),
+  description: varchar("description", { length: 1200 }),
+  kind: mysqlEnum("kind", ["جامعة", "معهد", "جهة تعليمية"]).default("جامعة").notNull(),
+  logoUrl: longtext("logoUrl"),
+  logoMediaId: bigint("logoMediaId", { mode: "number" }),
+  link: varchar("link", { length: 512 }),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  partnerSortIndex: index("partners_sort_index").on(table.sortOrder),
+  partnerKindIndex: index("partners_kind_index").on(table.kind),
+}));
+
+export type Partner = typeof partners.$inferSelect;
+export type InsertPartner = typeof partners.$inferInsert;
+
 /** Immutable owner-facing snapshots of visual settings, retained before each design change. */
 export const siteDesignHistory = mysqlTable("site_design_history", {
   id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),

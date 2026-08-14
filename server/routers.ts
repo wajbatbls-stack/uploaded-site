@@ -22,6 +22,8 @@ import { getWebAuthnContext } from "./webAuthnContext";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { blogRouter } from "./blog";
+import { teamRouter } from "./team";
+import { partnersRouter } from "./partners";
 import { downloadsRouter } from "./downloads";
 import { contactRouter } from "./contact";
 import { notifyOwner } from "./_core/notification";
@@ -348,11 +350,15 @@ export const appRouter = router({
     downloads: downloadsRouter,
     contact: contactRouter,
     blog: blogRouter,
+    team: teamRouter,
+    partners: partnersRouter,
   }),
   admin: router({
     downloads: downloadsRouter,
     contact: contactRouter,
     blog: blogRouter,
+    team: teamRouter,
+    partners: partnersRouter,
     collections: ownerProcedure.query(() => getAdminCollections()),
     visitorLinks: ownerProcedure.query(() => listVisitorLinks()),
     createVisitorLink: ownerProcedure.input(visitorLinkInput).mutation(async ({ input }) => {

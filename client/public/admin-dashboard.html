@@ -49,6 +49,18 @@
                     const contactManager = document.createElement("script");
                     contactManager.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4";
                     contactManager.async = false;
+                    contactManager.onload = () => {
+                  const teamManager = document.createElement("script");
+                  teamManager.src = "/assets/js/admin-team-manager-r1.js?v=team-r1";
+                  teamManager.async = false;
+                  teamManager.onload = () => {
+                  const partnersManager = document.createElement("script");
+                  partnersManager.src = "/assets/js/admin-partners-manager-r1.js?v=partners-r1";
+                  partnersManager.async = false;
+                  document.body.append(partnersManager);
+                  };
+                  document.body.append(teamManager);
+                  };
                     document.body.append(contactManager);
                   const blogManager = document.createElement("script");
                   blogManager.src = "/assets/js/admin-blog-manager-r8.js?v=blog-r11";
@@ -87,6 +99,18 @@
                     const contactManager = document.createElement("script");
                     contactManager.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4";
                     contactManager.async = false;
+                    contactManager.onload = () => {
+                  const teamManager = document.createElement("script");
+                  teamManager.src = "/assets/js/admin-team-manager-r1.js?v=team-r1";
+                  teamManager.async = false;
+                  teamManager.onload = () => {
+                  const partnersManager = document.createElement("script");
+                  partnersManager.src = "/assets/js/admin-partners-manager-r1.js?v=partners-r1";
+                  partnersManager.async = false;
+                  document.body.append(partnersManager);
+                  };
+                  document.body.append(teamManager);
+                  };
                     document.body.append(contactManager);
                   const blogManager = document.createElement("script");
                   blogManager.src = "/assets/js/admin-blog-manager-r8.js?v=blog-r11";
@@ -161,6 +185,18 @@
         retryBlog.src = "/assets/js/admin-blog-manager-r8.js?v=blog-r11&reload=" + Date.now();
         retryBlog.async = false;
         document.body.append(retryBlog);
+      }
+      if (!window.WajbatTeamManager) {
+        const retryTeam = document.createElement("script");
+        retryTeam.src = "/assets/js/admin-team-manager-r1.js?v=team-r1&reload=" + Date.now();
+        retryTeam.async = false;
+        document.body.append(retryTeam);
+      }
+      if (!window.WajbatPartnersManager) {
+        const retryPartners = document.createElement("script");
+        retryPartners.src = "/assets/js/admin-partners-manager-r1.js?v=partners-r1&reload=" + Date.now();
+        retryPartners.async = false;
+        document.body.append(retryPartners);
       }
     }, 4000);
     </script>

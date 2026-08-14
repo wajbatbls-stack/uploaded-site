@@ -35,7 +35,12 @@ describe("مدير الخدمات الهرمي", () => {
 			expect(page).toContain("services-nav-fix-r4");
 	});
 
-  it("يوفر الرفع المباشر والحذف المؤكد وترتيب السحب للخدمات والخدمات الفرعية", () => {
+	it("يحمّل مدير روابط الزوار ببصمة إصدار تمنع تنفيذ نسخة قديمة مخزنة مؤقتاً", () => {
+		const page = readProject("client/public/admin.html");
+		expect(page).toContain("admin-visitor-links-manager-r1.js?v=visitor-links-fix-r2");
+	});
+
+	  it("يوفر الرفع المباشر والحذف المؤكد وترتيب السحب للخدمات والخدمات الفرعية", () => {
     const manager = readProject("client/public/assets/js/admin-services-manager-r2.js");
     expect(manager).toContain("api.uploadMedia(file)");
     expect(manager).toContain("confirm(`هل أنت متأكد من حذف");

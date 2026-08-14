@@ -57,7 +57,19 @@ function dashboard() { document.querySelector("#admin-root").innerHTML = `<div c
 async function refresh() { const [collections, stats, requests, messages, submittedReviews, media, account, ownerLoginSettings, passkeys] = await Promise.all([query("admin.collections"), query("admin.stats"), query("admin.requests"), query("admin.messages"), query("admin.submittedReviews"), query("admin.media"), query("adminAuth.account"), query("adminAuth.ownerLoginSettings"), query("adminAuth.passkeys")]); state.collections = collections; state.stats = stats; state.requests = requests; state.messages = messages; state.submittedReviews = submittedReviews; state.media = media; state.account = account; state.ownerLoginSettings = ownerLoginSettings; state.loginSettings = ownerLoginSettings; state.passkeys = passkeys; dashboard(); }
 async function saveCurrent(next) { await mutate("admin.saveCollection", { collectionKey: state.selected, content: next }); state.editing = null; await refresh(); toast("تم الحفظ في قاعدة البيانات"); }
 const legacyContentWorkspace = contentWorkspace;
+function mountCompatibleServicesManager() {
+  const manager = window.WajbatServicesManager;
+  if (state.selected !== "services" || typeof manager?.workspace === "function" || typeof manager?.mount !== "function") return null;
+  queueMicrotask(() => {
+    const root = document.querySelector("[data-services-manager]");
+    if (!root || state.selected !== "services") return;
+    manager.mount({ ...window.WajbatAdmin, root, content: () => content("services") });
+  });
+  return `<div data-services-manager></div>`;
+}
 contentWorkspace = function structuredContentWorkspace() {
+  const compatibleServicesWorkspace = mountCompatibleServicesManager();
+  if (compatibleServicesWorkspace) return compatibleServicesWorkspace;
   if (window.WajbatStructuredEditor?.supports?.(state.selected)) return window.WajbatStructuredEditor.workspace(state.selected);
   return legacyContentWorkspace();
 };

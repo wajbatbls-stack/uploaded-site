@@ -17,10 +17,13 @@ describe("مدير الخدمات الهرمي", () => {
 		const manager = readProject("client/public/assets/js/admin-services-manager-r2.js");
 		const app = readProject("client/public/assets/js/admin-app-r18.js");
 		expect(app).toContain("WajbatServicesManager.workspace(data)");
-		expect(manager).toContain("workspace(data)");
-		expect(manager).toContain('data-services-manager');
-		expect(manager).toContain("queueMicrotask(mountAfterDashboard)");
-		expect(manager).toContain("this.mount({ ...context, root })");
+			expect(manager).toContain("workspace(data)");
+			expect(manager).toContain('data-services-manager');
+			expect(manager).toContain("queueMicrotask(mountAfterDashboard)");
+			expect(manager).toContain("this.mount({ ...context, root })");
+			expect(app).toContain("function mountCompatibleServicesManager()");
+			expect(app).toContain('typeof manager?.workspace === "function"');
+			expect(app).toContain('manager.mount({ ...window.WajbatAdmin, root, content: () => content("services") })');
 	});
 
 	it("يربط زر الخدمات في القائمة الجانبية مباشرةً حتى لا يعتمد على تفويض النقر العام وحده", () => {
@@ -29,7 +32,7 @@ describe("مدير الخدمات الهرمي", () => {
 		expect(app).toContain("function bindSidebarNavigation()");
 		expect(app).toContain('document.querySelectorAll(".side-menu [data-select]")');
 		expect(app).toContain("bindSidebarNavigation();");
-		expect(page).toContain("services-nav-fix-r3");
+			expect(page).toContain("services-nav-fix-r4");
 	});
 
   it("يوفر الرفع المباشر والحذف المؤكد وترتيب السحب للخدمات والخدمات الفرعية", () => {

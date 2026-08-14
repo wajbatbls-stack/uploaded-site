@@ -819,3 +819,14 @@ refresh لا يرمي بعد Promise.all الناجح. catch الوحيد الذ
 انتظر: fetch النص = 77310، لكن المحلي = 84389! الحجم مختلف! هل المحلي بعد patch أكبر من المنشور؟ نعم: 84389 (محلي) vs 84389 prod سابقًا (نفس) والآن 77310 من الذاكرة. الفرق = الكاش داخل المتصفح لـ script tag. السكربت المحمّل في الصفحة = نسخة أصغر من المحلي!! هل النسخة المنشورة prod هي الأحدث لكن كُتبت 77310؟ الحجم المتناقص: 84389 (بعد patch) ← لكن هذا الحجم بعد إضافة patch. الإنتاج كان 83912 ثم بعد إعادة النشر...
 فكرة: 77310 < 84389. هل الذاكرة cache تعيد نسخة أقدم (blog-r1 = 77310 تقريباً)؟ نعم! size 77310 = حجم blog-r1 (قبل patch LOGIN-CATCH). رغم cache-buster على الـ script src... الذاكرة cache لا يهتم بالـ query.
 الحل: meta no-cache في admin.html غير ممكن لأن HTML itself cached. يجب تغيير اسم الملف (admin-app-r23.js) بدل الاعتماد على query.
+
+## 19:20 اكتشاف جذري نهائي ✅
+الـ trace كشف البق الحقيقي: TypeError "undefined is not iterable (cannot read property Symbol(Symbol.iterator))" في:
+- admin-app-r22.js?v=blog-r2:38:437 → Array.map ← map داخلي ← sidebar() ← dashboard() ← refresh() ← submitLogin:143
+ملاحظة مهمة: stack يشير إلى v=blog-r2 وليس blog-r3! لكن هذا من console.error — الخطأ رمي قبل تحميل r23 أو أن الرمز داخل الملف r22 ما زال؟ لا — الصفحة حملت r23 (نرى dashboard رمى). stack من sourcemap؟ لا يوجد. الأرجح: الصفحة عرضت نسخة r22 من الذاكرة cache للملف رغم src=r23... لكن errText كتب الآن من patch الجديد ([LOGIN-CATCH]) — لذا الكود المُنفَّذ هو الج... انتظر: stack قال "v=blog-r2"! كيف؟
+الحقيقة: الكاش الخبيث للملف نفسه. لكن الأهم: البق = sidebar() داخل refresh() — map على شيء undefined. يجب إصلاح sidebar() أو state الذي يرمي: refresh يرمي الآن بعد login → dashboard يرمي → خطأ.
+الحل: في refresh()، تغليف dashboard() في try/catch مع console.error، أو التحقق من undefined قبل map في sidebar().
+أيضًا: إصلاح ملف الاسم r23 — يجب أن يكون stack يشير لـ r23 بعد التحميل الفعلي. لكن أولًا إصلاح البق الأساسي في sidebar/map.
+
+## 19:22 تحليل بق sidebar
+الخطأ في char 437 من سطر 38 = const [icon,title] = labels[key] داخل map — key غير موجود في labels أو labels[key] undefined. labels يحتوي كل مفاتيح navSections الثابتة. إذن key غريب يأتي من تعديل ديناميكي (settings تنقل أو ownerLogin settings تضيف section) أو labels[key] undefined. الحل: حماية destructuring: const lbl = labels[key] || ["?", key]; const [icon, title] = lbl; أيضًا حماية section.items بـ Array.isArray.

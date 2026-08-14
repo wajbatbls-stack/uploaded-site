@@ -23,6 +23,15 @@ describe("مدير الخدمات الهرمي", () => {
 		expect(manager).toContain("this.mount({ ...context, root })");
 	});
 
+	it("يربط زر الخدمات في القائمة الجانبية مباشرةً حتى لا يعتمد على تفويض النقر العام وحده", () => {
+		const app = readProject("client/public/assets/js/admin-app-r18.js");
+		const page = readProject("client/public/admin.html");
+		expect(app).toContain("function bindSidebarNavigation()");
+		expect(app).toContain('document.querySelectorAll(".side-menu [data-select]")');
+		expect(app).toContain("bindSidebarNavigation();");
+		expect(page).toContain("services-nav-fix-r3");
+	});
+
   it("يوفر الرفع المباشر والحذف المؤكد وترتيب السحب للخدمات والخدمات الفرعية", () => {
     const manager = readProject("client/public/assets/js/admin-services-manager-r2.js");
     expect(manager).toContain("api.uploadMedia(file)");

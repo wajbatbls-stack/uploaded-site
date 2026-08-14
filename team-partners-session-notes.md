@@ -104,3 +104,6 @@
 الإنتاج نشط الآن: bundle assets/site-BlfSTIiT.js يحمل "/assets/js/site-app-r15.js" والملف site-app-r15.js يعيد HTTP 200 ويحتوي loadSiteTeamPartners. admin-dashboard.html في الإنتاج 200 ويحمّل admin-team-manager-r1.js وadmin-partners-manager-r1.js. لقطات dev: الرئيسية سليمة (Hero + فوتر)، صفحة من نحن تعرض فريق الإدارة بأعضائه الأربعة، صفحة الشركاء تعرض بطاقات الجامعات والمؤسسات من الجداول الجديدة. شاشة الدخول /admin و/admin-dashboard.html تعرض قالب الدخول المخصص بسليم.
 
 ملاحظة بصرية متبقية: صور أعضاء الفريق في صفحة من نحن تظهر أيقونة افتراضية بدل الصورة — فحص CSS .team-avatar img وphotoUrl في site-app-r15 (هل الصفوف القديمة من migration تحتوي photoUrl؟).
+
+## التحقق النهائي (بعد تصحيح NULL — checkpoint 350d66cd)
+صفحة "من نحن" تعرض الرؤيا والرسالة والأهداف الاستراتيجية وسجل الفريق من قاعدة البيانات (أيقونة افتراضية لأن البيانات الأصلية لم تكن تحمل صورًا). صفحة "شركاء النجاح" تعرض الجامعات من جدول partners عبر publicList مع المدن. شاشة دخول الإدارة تعمل (Passkey ظاهر). جميع بنود todo.md مكتملة، 85/85 اختبار. checkpoint منشور تلقائيًا: https://uploadplus-47dkogbk.manus.space

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>لوحة المالك | واجبات بلس</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'" />
+    <link rel="stylesheet" href="/assets/css/admin-r14.css" />
+    <link rel="stylesheet" href="/assets/css/admin-owner-login-r13-mobile.css" />
+    <link rel="stylesheet" href="/assets/css/admin-homepage-r1.css" />
+    <link rel="stylesheet" href="/assets/css/admin-services-r1.css" />
+    <link rel="stylesheet" href="/assets/css/admin-services-r2.css" />
+    <link rel="stylesheet" href="/assets/css/visitor-links-r1.css" />
+    <link rel="stylesheet" href="/assets/css/visitor-links-whatsapp-r1.css?v=visitor-links-telegram-r5" />
+  </head>
+  <body>
+    <div id="admin-root"></div>
+    
+    <script type="module">
+      const adminModule = document.createElement("script");
+      adminModule.type = "module";
+      adminModule.src = "/assets/js/admin-app-r24.js?v=blog-r5";
+      adminModule.onload = () => {
+        const mediaBinding = document.createElement("script");
+        mediaBinding.src = "/assets/js/admin-media-binding-core.js";
+        mediaBinding.async = false;
+        mediaBinding.onload = () => {
+          const structuredEditor = document.createElement("script");
+          structuredEditor.src = "/assets/js/admin-structured-editor.js";
+          structuredEditor.async = false;
+          structuredEditor.onload = () => {
+            const homepageManager = document.createElement("script");
+            homepageManager.src = "/assets/js/admin-homepage-manager-r1.js";
+            homepageManager.async = false;
+            homepageManager.onload = () => {
+              const servicesManager = document.createElement("script");
+              servicesManager.src = "/assets/js/admin-services-manager-r2.js?v=services-nav-fix-r4";
+              servicesManager.async = false;
+              servicesManager.onload = () => {
+                const visitorLinksManager = document.createElement("script");
+                visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r4.js?v=visitor-links-r4-load";
+                visitorLinksManager.async = false;
+                visitorLinksManager.onload = () => {
+                  const downloadsManager = document.createElement("script");
+                  downloadsManager.src = "/assets/js/admin-downloads-manager-r2.js?v=downloads-r2";
+                  downloadsManager.async = false;
+                  downloadsManager.onload = () => {
+                    const contactManager = document.createElement("script");
+                    contactManager.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4";
+                    contactManager.async = false;
+                    document.body.append(contactManager);
+                  const blogManager = document.createElement("script");
+                  blogManager.src = "/assets/js/admin-blog-manager-r1.js?v=blog-r1";
+                  blogManager.async = false;
+                  blogManager.onload = () => {};
+                  document.body.append(blogManager);
+                  };
+                  document.body.append(downloadsManager);
+                };
+                document.body.append(visitorLinksManager);
+              };
+              document.body.append(servicesManager);
+            };
+            document.body.append(homepageManager);
+          };
+          document.body.append(structuredEditor);
+        };
+        mediaBinding.onerror = () => {
+          const structuredEditor = document.createElement("script");
+          structuredEditor.src = "/assets/js/admin-structured-editor.js";
+          structuredEditor.onload = () => {
+            const homepageManager = document.createElement("script");
+            homepageManager.src = "/assets/js/admin-homepage-manager-r1.js";
+            homepageManager.onload = () => {
+              const servicesManager = document.createElement("script");
+              servicesManager.src = "/assets/js/admin-services-manager-r2.js?v=services-nav-fix-r4";
+              servicesManager.onload = () => {
+                const visitorLinksManager = document.createElement("script");
+                visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r4.js?v=visitor-links-r4-load";
+                visitorLinksManager.async = false;
+                visitorLinksManager.onload = () => {
+                  const downloadsManager = document.createElement("script");
+                  downloadsManager.src = "/assets/js/admin-downloads-manager-r2.js?v=downloads-r2";
+                  downloadsManager.async = false;
+                  downloadsManager.onload = () => {
+                    const contactManager = document.createElement("script");
+                    contactManager.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4";
+                    contactManager.async = false;
+                    document.body.append(contactManager);
+                  const blogManager = document.createElement("script");
+                  blogManager.src = "/assets/js/admin-blog-manager-r1.js?v=blog-r1";
+                  blogManager.async = false;
+                  blogManager.onload = () => {};
+                  document.body.append(blogManager);
+                  };
+                  document.body.append(downloadsManager);
+                };
+                document.body.append(visitorLinksManager);
+              };
+              document.body.append(servicesManager);
+            };
+            document.body.append(homepageManager);
+          };
+          document.body.append(structuredEditor);
+        };
+        document.body.append(mediaBinding);
+        const designStudio = document.createElement("script");
+        designStudio.src = "/assets/js/admin-design-studio-r2.js";
+        designStudio.defer = true;
+        document.body.append(designStudio);
+        const ownerLoginSecurity = document.createElement("script");
+        ownerLoginSecurity.src = "/assets/js/admin-owner-login-security-r6.js";
+        ownerLoginSecurity.defer = true;
+        document.body.append(ownerLoginSecurity);
+        const securityControls = document.createElement("script");
+        securityControls.src = "/assets/js/admin-security-controls.js";
+        securityControls.defer = true;
+        document.body.append(securityControls);
+        const listControls = document.createElement("script");
+        const listCore = document.createElement("script");
+        listCore.src = "/assets/js/admin-list-controls-core.js";
+        listCore.async = false;
+        listCore.onload = () => {
+          listControls.src = "/assets/js/admin-list-controls.js";
+          listControls.async = false;
+          document.body.append(listControls);
+        };
+        listCore.onerror = () => {
+          listControls.src = "/assets/js/admin-list-controls.js";
+          document.body.append(listControls);
+        };
+        document.body.append(listCore);
+        const ownerLoginEnhancements = document.createElement("script");
+        ownerLoginEnhancements.src = "/assets/js/admin-owner-login-enhancements-r14.js";
+        ownerLoginEnhancements.async = false;
+        document.body.append(ownerLoginEnhancements);
+      };
+      document.body.append(adminModule);
+    const visitorLinksFallback = setTimeout(() => {
+      if (!window.WajbatVisitorLinksManager) {
+        const retry = document.createElement("script");
+        retry.src = "/assets/js/admin-visitor-links-manager-r4.js?v=visitor-links-r4-load&reload=" + Date.now();
+        retry.async = false;
+        document.body.append(retry);
+      }
+      if (!window.WajbatDownloadsManager) {
+        const retryDownloads = document.createElement("script");
+        retryDownloads.src = "/assets/js/admin-downloads-manager-r2.js?v=downloads-r2&reload=" + Date.now();
+        retryDownloads.async = false;
+        document.body.append(retryDownloads);
+      }
+      if (!window.WajbatContactManager) {
+        const retryContact = document.createElement("script");
+        retryContact.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4&reload=" + Date.now();
+        retryContact.async = false;
+        document.body.append(retryContact);
+      }
+      if (!window.WajbatBlogManager) {
+        const retryBlog = document.createElement("script");
+        retryBlog.src = "/assets/js/admin-blog-manager-r1.js?v=blog-r1&reload=" + Date.now();
+        retryBlog.async = false;
+        document.body.append(retryBlog);
+      }
+    }, 4000);
+    </script>
+  </body>
+</html>

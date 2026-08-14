@@ -840,3 +840,15 @@ refresh لا يرمي بعد Promise.all الناجح. catch الوحيد الذ
 
 ## 19:26 صفحة admin.html نفسها cached
 الصفحة المنشورة حمّلت script v=blog-r3 رغم أن admin.html المحلي يشير blog-r4 — CDN يحتفظ بنسخة admin.html القديمة. الحل: إضافة cache buster إلى admin.html نفسه (?tr=17 لا يغير الكاش لأن HTML يُكاش حسب المسار فقط، يجب استخدام مسار مختلف). الحل الأبسط: تغيير سطر src في admin.html إلى اسم بلا cache نهائيًا؟ لا — استخدم ملف محلي جديد admin-app-r24.js (اسم جديد كليًا) فلا يوجد cache له أصلًا. هذا يحسم المشكلة نهائيًا.
+
+## 19:27 الحالة الحالية (مهم جدًا)
+- root bug مكتشف: sidebar() كان يرمي `undefined is not iterable` عند دمارج labels[key] حيث key مفقود — بعد إصلاحه أصبح الخطأ يرمي في مكان آخر (38:437) لكن الإنتاج كان يخدم نسخة قديمة cached.
+- تم إنشاء admin-app-r24.js (84486 بايت، نفس r23 المصحح) + admin.html يشير admin-app-r24.js?v=blog-r5.
+- checkpoint eabd99ed حُفظ — بانتظار النشر ثم اختبار: فتح https://uploadplus-47dkogbk.manus.space/admin.html?tr=17، تعبئة bdalslamanwralajsh@gmail.com / abd77312، النقر تسجيل الدخول، والتحقق من ظهور admin-dashboard وعدم ظهور "بيانات الدخول غير صحيحة".
+- إذا فشل مجددهًا: stack الجديد سيشير لموضع أحدث — تابع نفس المنهجية (grep للموضع في الملف المحلي).
+- بعد نجاح الدخول: إزالة سكريبت __loginTrace من admin.html (debug)، pnpm build + pnpm test (77/77)، تحديث todo.md، checkpoint نهائي.
+- الإنتاج: https://uploadplus-47dkogbk.manus.space — الموقع العام يعمل سليمًا (صفحة الزائر ممتازة).
+- curl يتحقق من النسخة المنشورة: curl -s -H "Cache-Control: no-store" "https://uploadplus-47dkogbk.manus.space/assets/js/admin-app-r24.js?v=blog-r5"
+
+## 19:27 كاش CDN عنيد على admin.html
+رغم النشر (Deployment successful) الصفحة المنشورة ما زالت تعرض سطر script指向 admin-app-r23.js?v=blog-r3. CDN يحتفظ بنسخة HTML قديمة. الحل الحاسم: استخدام مسار HTML مختلف كليًا admin2.html أو admin-dashboard.html يشير إلى r24 — مسار جديد لا cache له مطلقًا.

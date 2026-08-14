@@ -21,6 +21,7 @@ import {
 import { getWebAuthnContext } from "./webAuthnContext";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
+import { notifyOwner } from "./_core/notification";
 import { decodeAdminImage, decodeUpload } from "./adminUpload";
 import { uploadAndRegisterAdminMedia } from "./adminMediaUpload";
 import {
@@ -331,14 +332,22 @@ export const appRouter = router({
     }),
     submitContact: publicProcedure.input(z.object({
       name: z.string().min(2).max(180), phone: z.string().min(7).max(32), email: z.string().email().max(320).optional(), subject: z.string().min(2).max(255), message: z.string().min(5).max(10000),
-    })).mutation(async ({ input }) => ({ success: true, ...(await createContactMessage(input)) })),
+    })).mutation(async ({ input }) => {
+      const result = await createContactMessage(input);
+      void notifyOwner({
+        title: `رسالة جديدة من ${input.name}`,
+        content: `الاسم: ${input.name}\nالجوال: ${input.phone}${input.email ? `\nالبريد: ${input.email}` : ""}\nالموضوع: ${input.subject}\n\n${input.message}`,
+      }).catch(() => {});
+      return { success: true, ...result };
+    }),
     submitReview: publicProcedure.input(z.object({ name: z.string().min(2).max(180), university: z.string().min(2).max(200), review: z.string().min(10).max(2000), rating: z.number().int().min(1).max(5) }))
       .mutation(async ({ input }) => ({ success: true, ...(await createSubmittedReview(input)) })),
     downloads: downloadsRouter,
+    contact: contactRouter,
   }),
-
   admin: router({
     downloads: downloadsRouter,
+    contact: contactRouter,
     collections: ownerProcedure.query(() => getAdminCollections()),
     visitorLinks: ownerProcedure.query(() => listVisitorLinks()),
     createVisitorLink: ownerProcedure.input(visitorLinkInput).mutation(async ({ input }) => {
@@ -419,3 +428,4 @@ export type AppRouter = typeof appRouter;
 
 /* ---------- إدارة التحميلات v2 ---------- */
 import { downloadsRouter } from "./downloads";
+import { contactRouter } from "./contact";

@@ -407,3 +407,119 @@ dev server توقف — سيعاد تشغيله تلقائيًا عند أي ت�
 
 ## التحقق البصري النهائي (14:38 UTC)
 قسم «إدارة التحميلات» في لوحة المالك يفتح بالمدير الحديث admin-downloads-manager-r2.js: 8 أقسام، 22 ملفًا ظاهرًا، إحصاءات (قسم/ملف/ملف ظاهر/قسم مخفي/تحميل)، بحث وفرز، «+ قسم جديد»، وفي كل قسم: تعديل ✎ وإخفاء 👁 وحذف 🗑 و«+ ملف» و«⬆ رفع ملفات متعددة»، وبطاقات ملفات كاملة (اسم/حجم/تحميل/تاريخ/حالة/نسخ/واتساب/تيليجرام/تجربة ▶/تعديل/إخفاء/ترتيب/حذف). لم يعد structured editor القديم يعرض لقسم downloads. حُذفت ملفات الاختبار التجريبية من قاعدة البيانات وبقي 22 ملفًا و8 أقسام أصلية نظيفة.
+
+
+# تدقيق «إدارة اتصل بنا» (pasted_content_14.txt) — 2026-08-14
+
+## الحالة الحالية المكتشفة
+- قناة الاتصال في واجهة الزائر (client/public/assets/js/app.js س508): مصفوفة ثابتة `contactItems` (واتساب/جوال/بريد/ساعات عمل/عنوان) تُعاد تعيينها في applyManagedContent من siteSettings (س268-278): whatsapp/phone/email/businessHours/address — القيم الحالية تستفيد من siteSettings لكن الأيقونات ثابتة ولا توجد إدارة مستقلة لكل قناة ولا رفع صور ولا أرقام متعددة.
+- وسائل التواصل في الزائر (س23 وس551-554): socialLinks {facebook, instagram, twitter, youtube} من siteSettings.* — قيم فارغة حاليًا في الـseed.
+- النموذج: data-form="contact" + site.submitContact (routers.ts س332) يحفظ في جدول contactMessages (db.ts س254-275) — موجود وشغال، يجب إبقاؤه + رسائل نجاح/خطأ موجودة.
+- البيانات الأساسية: siteSettings (siteSeed.ts س816): whatsapp "966567680470"، phone "+966 56 768 0470"، email "wajbatbls@gmail.com"، address "الرياض، المملكة العربية السعودية"، businessHours "متواجدون 24/7" — لا facebook/instagram/twitter/youtube في الـseed.
+- التخزين: contentCollections (key longtext) — نمط مجموعات المحتوى (saveCollection مع سجلات siteDesignHistory لـsiteSettings). التحميل العام: site.publicContent.
+- لوحة الإدارة: admin-app-r20.js — تنقل `{ title: "التواصل", items: ["requests", "contact", "messages", "submittedReviews"] }`؛ قسم contact حاليًا هو محرر structured editor لمجموعة contact (admin-structured-editor.js).
+- نمط المدير الحديث: admin-downloads-manager-r2.js (WajbatDownloadsManager على window، mountCompatibleDownloadsManager في admin-app، اعتراض نقر sidebar بنمط data-*-nav، بصمة مستقلة لكل JS، آلية تحميل احتياطية بعد 4 ثوانٍ، data-*-workspace).
+- admin.html: admin-app-r20.js?v=downloads-r11 (س22) — تحتاج بصمة جديدة r21 مع v=contact.
+- رفع الملفات: multipart عبر POST /api/downloads/upload (formidable، جلسة مالك، storagePut في wajbat-plus/downloads/، يرجع {success,mediaId,fileName,originalName,fileUrl,fileKey,mimeType,sizeBytes}) — يمكن إعادة استخدامه لرفع صور قنوات الاتصال (PNG/JPG/JPEG/WEBP/SVG).
+- الصلاحيات: ownerProcedure محمية، recordAdminAudit موجود.
+
+## قرار التصميم
+- جداول MySQL/Drizzle جديدة: contact_whatsapp_numbers, contact_mobile_numbers, contact_emails, contact_addresses, contact_socials (جميعها: name/description/imageKey/imageUrl/sortOrder/isVisible + number/address/email + isPrimary لواتساب والعناوين + platformName/link/username/phone/color/shape لوسائل التواصل).
+- بريد استقبال الرسائل: حقل جديد receptionEmail داخل مجموعة siteSettings (update عبر admin.saveCollection) — الموقع يستخدمه في submitContact.
+- رسائل النموذج تبقى في contactMessages (لا تغيير).
+- مدير جديد admin-contact-manager-r1.js (WajbatContactManager) + ربطه في admin-app-r21.js: 5 بطاقات أقسام (واتساب/جوال/بريد/عناوين/تواصل اجتماعي) داخل contact-workspace، رفع صور ضمن كل عنصر، معاينة كزائر داخل نافذة.
+- واجهة الزائر: site.contactChannels وsite.socialChannels من publicContent تغلب contactItems/socialLinks الثابتة؛ wa()/tel:/mailto: والصور والشكل واللون المطبقان فعليًا (أشكال: circle/square/rectangle/card/icon/card-large).
+- هجرة: قراءة siteSettings (whatsapp/phone/email/businessHours/address) → إدراج صفوف أولية isVisible=true، ولا يُفقد شيء (المجموعة القديمة تبقى).
+- اختبار vitest: contactChannelsAssets.test.ts (بصمات + نصوص واجهة + إجراءات admin.contact.*) + تحديث ownerLoginR13Assets وvisitorLinksAssets وdownloadsAssets للبصمة r21.
+
+
+# «إدارة اتصل بنا» — حالة العمل (14 أغسطس 2026)
+
+## المهمة المطلوبة (من pasted_content_14.txt):
+بناء نظام إدارة «اتصل بنا» كامل:
+1. إدارة قنوات الاتصال الخمسة: واتساب / جوال / بريد / عناوين / وسائل تواصل (أشكال وألوان متعددة + رفع صور لكل قناة من الجهاز).
+2. زر رفع صورة لكل قناة من جهاز المالك مباشرة (بدون أكواد).
+3. تسجيل رسائل الزوار الواردة من نموذج «تواصل معنا» في قاعدة البيانات مع إشعار للمالك.
+4. إدارة الرسائل في لوحة المالك (حالة، ملاحظات، بحث، تصفية، أرشفة، حذف).
+5. عرض القنوات ديناميكيًا في موقع الزائر مع الحفاظ على التصميم الحالي.
+6. لا حذف لأي خدمة/محتوى، بدون أكواد للمالك، اختبارات، checkpoint.
+
+## ما أنجز:
+- جداول SQL الخمسة أُنشئت في DB (drizzle/schema.ts سطور ~361-450): contact_whatsapp_numbers, contact_mobile_numbers, contact_emails, contact_addresses, contact_socials
+  - كل جدول: id, label, description(لا في socials), number/email/address حسب النوع, isPrimary, imageKey, imageUrl, sortOrder, isVisible, createdAt, updatedAt
+  - contact_socials: platform, platformName, link, username, displayMode(icon/card), shape(circle/rounded/square/pill), accentColor, textColor, backgroundColor, borderColor, icon
+- server/contact.ts مكتوب: contactRouter (list/updateChannel/createChannel/deleteChannel/setVisibility/move) + contactChannelInput (z.union من 5 متغيرات + baseChannelInput.and(...))
+- server/db.ts: listContactChannels, listContactChannelsPublic, createContactChannel, updateContactChannel, deleteContactChannel, setContactChannelVisibility, moveContactChannel + دوال مساعدة contactTableFor/inferChannelTypeById (سطور ~823+)
+- الاستيرادات من drizzle/schema أضيفت في db.ts
+
+## المتبقي:
+1. تسجيل contactRouter في server/routers.ts: إضافة `contact: contactRouter` داخل site router (سطر ~337 بجانب downloads) وداخل admin router (سطر ~341)، import في نهاية الملف (سطر ~421)
+2. إضافة site.contact.publicList كـ publicProcedure داخل contactRouter (مهم لموقع الزائر!)
+3. بريد الاستقبال: submitContact موجود في routers.ts (createContactMessage + upsertCustomer) — المطلوب إشعار للمالك: استيراد sendOwnerNotification من ./_core/notification وإرسال إشعار عند كل رسالة جديدة
+4. مدير الإدارة: client/public/assets/js/admin-contact-manager-r1.js (فئات/بطاقات، بصمات، رفع صور لكل قناة عبر POST /api/downloads/upload أو نفس نمط التحميلات) + تحميله في admin.html وتحديث admin-app-r20.js → r21 مع mountCompatibleContactManager قبل structuredContentWorkspace (نفس نمط mountCompatibleDownloadsManager)
+5. موقع الزائر app.js: تحميل القنوات الديناميكية (site.contact.publicList) وعرضها في قسم اتصل بنا مع الحفاظ على التصميم الحالي — بصمة site-app-r12 + آلية تحميل احتياطية
+6. اختبارات: contactAssets.test.ts + تحديث ownerLoginR13Assets/visitorLinksAssets للبصمات الجديدة (r21 للتطبيق، r12 للموقع)
+7. التحقق التفاعلي: رفع صور حقيقية للقنوات، إرسال رسالة من الزائر، ظهورها في الإدارة، إشعار المالك
+8. حذف بيانات الاختبار ثم pnpm test + build + checkpoint
+
+## نقاط معمارية حرجة:
+- admin-app-r20.js: structuredContentWorkspace يلتقط أي collectionKey غير معالج؛ يجب إضافة شرط downloads/contact مبكرًا
+- بصمات CDN 90 يومًا: أسماء ملفات جديدة (r21 للتطبيق، r12 للموقع، r1 لمدير الاتصال) + آلية تحميل احتياطية setTimeout 4s
+- tsc clean بعد التعديلات؛ pnpm test ~68 اختبار؛ prod build: pnpm build
+- النشر تلقائي (auto-publish)
+- ownerProcedure للإدارة؛ publicProcedure للعرض
+- إشعار المالك: sendOwnerNotification({ title, body, data }) من server/_core/notification.ts
+- نمط رفع الصور لكل قناة: POST /api/downloads/upload أو dataURL عبر التتريك (uploadImage موجود في admin router) — يفضل uploadImage الموجود
+
+
+## تحديث الخادم (اكتمل تقريبًا — 14:57):
+- ✅ contactRouter في server/contact.ts: publicList (publicProcedure, يرجع channels بدون imageKey), list (owner), createChannel/updateChannel/deleteChannel/setVisibility/move (ownerProcedure مع withChannel verification + recordAdminAudit)
+- ✅ مسجل في routers.ts: site.contact وadmin.contact + import contactRouter في النهاية
+- ✅ notifyOwner مستورد في routers.ts من ./_core/notification: عند submitContact يُرسل إشعار للمالك { title: `رسالة جديدة من ${name}`, content: تفاصيل كاملة } مع catch
+- ✅ db.ts: listContactChannels/listContactChannelsPublic/createContactChannel/updateContactChannel/deleteContactChannel/setContactChannelVisibility/moveContactChannel + ChannelRow type + contactTableFor + inferChannelTypeById (سطور 823+)
+- ✅ db.ts يوجد مسبقًا: createContactMessage/upsertCustomer/listContactMessages({status,search,limit})/updateContactMessage({status,adminNotes}) — جدول contact_messages موجود بأعمدة name,phone,email,subject,message,status,adminNotes,customerId,createdAt
+- tsc تحقق: أخطاء متبقية إن وجدت
+
+## المتبقي الآن:
+1. مدير الإدارة admin-contact-manager-r1.js (بصمات جديدة r1 لمدير الاتصال)
+2. تحديث admin-app-r20.js → r21: mountCompatibleContactManager قبل structuredContentWorkspace + sidebar label «إدارة اتصل بنا» + openContactWorkspace + global clicks (نفس نمط mountCompatibleDownloadsManager وopenDownloadsWorkspace)
+3. admin.html: تحميل admin-contact-manager-r1.js + بصمة r21 للتطبيق
+4. app.js للزائر: تحميل site.contact.publicList وعرض القنوات ديناميكيًا (بصمة site-app-r12) — قسم اتصل بنا الحالي في app.js يعرض القنوات الثابتة socialLinks: استبدل/زد بالديناميكية مع حفظ التصميم
+5. اختبارات contactAssets.test.ts + تحديث ownerLoginR13Assets (r21) وvisitorLinksAssets (r12 للموقع)
+6. التحقق التفاعلي: رفع صور حقيقية للقنوات + إرسال رسالة زائر + ظهورها في الإدارة
+7. حذف بيانات الاختبار → pnpm test + pnpm build → checkpoint
+
+## أنماط مرجعية جاهزة:
+- admin-visitor-links-manager-r4.js: نمط workspace/activate/mountCompatible في window + bindSidebarNavigation [data-visitor-links-nav]
+- admin-downloads-manager-r1.js: نمط mountCompatibleDownloadsManager في r20 (السطور ~46-54) + openDownloadsWorkspace في bindSidebarNavigation (~سطر 66) + global clicks (~115-120) + structuredContentWorkspace شرط مبكر
+- رفع صورة القناة: admin.uploadImage موجود (dataURL) أو POST /api/downloads/upload (multipart, cookie session) — استخدم uploadImage عبر التتريك
+- notifyOwner: (title, content) من server/_core/notification.ts
+- recordAdminAudit(action, entityType, entityId, details) من db.ts
+
+
+## تحديث (كتابة مدير الاتصال):
+- ✅ كتب: client/public/assets/js/admin-contact-manager-r1.js — مدير Vanilla JS كامل
+  - window.WajbatContactManager مع activate()/attach(container)/mountCompatible()
+  - API: contact.list/updateChannel/createChannel/deleteChannel/setVisibility/move + admin.uploadImage (dataUrl، حد 4MB في الواجهة، 4_300_000 في الخادم)
+  - أنواع: whatsapp/mobile/email/address/social؛ social فيه platform/platformName/link/username/displayMode/shape/accentColor/textColor/backgroundColor/borderColor/icon + شريحة ألوان 20 لونًا + 4 أشكال
+  - رفع صورة عبر input file مخفي + FileReader dataURL + admin.uploadImage
+  - بطاقة قناة: thumbnail/socialPreview ملوّن CSS variables + أزرار ↑↓/إظهار-إخفاء/تعديل/حذف (نافذة تأكيد داخلية modal-backdrop)
+- ⏳ التالي:
+  1. admin-app-r20.js → cp admin-app-r21.js: (a) labels: contact: ["☎","اتصل بنا","..."] تحديث الوصف ليشمل القنوات المخصصة (حاليًا "بيانات التواصل") (b) navSections: contact موجود في "التواصل" (c) sidebar(): إضافة key === "contact" ? "data-contact-nav" في navAttribute (d) openContactWorkspace (نسخة openDownloadsWorkspace) (e) bindSidebarNavigation: data-contact-nav معالج (f) contentWorkspace(): إضافة if (key === "contact") mountCompatibleContactManager قبل structured (g) structuredContentWorkspace: شرط مبكر downloads/contact (h) s93-like: return mountCompatibleContactManager إذا selected===contact وWajbatContactManager.activate (i) document click handler: data-contact-nav (j) admin.html: تحميل admin-contact-manager-r1.js + بصمة admin-app-r21.js
+  2. app.js للزائر (site-app-r11 → r12): contactItems ديناميكية من site.contact.publicList: بناء دوال من كل نوع (whatsapp→wa/رقم، mobile→tel، email→mailto، address→عرض، social→بطاقة ملونة) + الحفاظ على contactPage الحالية: استبدال grid contact-items بالمجموعات الديناميكية + social-row الملونة بالبطاقات المخصصة، fallback للثابت
+  3. اختبارات contactAssets.test.ts (بصمة r21 للتطبيق + r12 للموقع + WajbatContactManager + admin.uploadImage) + تحديث ownerLoginR13Assets (r21) + visitorLinksAssets (r12)
+  4. تحقق تفاعلي: رفع صور + رسالة زائر + إشعار + pnpm test/build + checkpoint
+
+
+## مواضع تعديلات admin-app-r21.js الدقيقة (7 تعديلات — نفس نمط downloads):
+1. labels (سطر أول): `contact: ["☎", "اتصل بنا", "بيانات التواصل"]` → وصف موسّع: "أرقام واتساب وجوال وبريد وعناوين ووسائل تواصل بأشكال وألوان"
+2. sidebar() سطر 38: navAttribute: أضف `key === "contact" ? "data-contact-nav" :` قبل downloads
+3. سطر 46-53: إضافة mountCompatibleContactManager بعد mountCompatibleDownloadsManager (نفس الهيكل: if (!manager?.attach) + container + `<section class="workspace side-workspace" data-contact-workspace>...`)
+4. contentWorkspace() سطر 64: أضف `if (key === "contact") { const managerWorkspace = mountCompatibleContactManager(); if (managerWorkspace) return managerWorkspace; }` قبل siteSettings
+5. سطر 74: إضافة openContactWorkspace (نسخة openDownloadsWorkspace مع contact)
+6. bindSidebarNavigation() سطر 75: أضف querySelectorAll(".side-menu [data-contact-nav]") مع openContactWorkspace
+7. structuredContentWorkspace سطر 93: شرط مبكر `if (state.selected === "contact" && typeof window.WajbatContactManager?.activate === "function") return mountCompatibleContactManager();`
+8. سطر 127 (document click): أضف data-contact-nav إلى selector والشرط if (button.hasAttribute("data-contact-nav")) {...dashboard(); return;}
+
+- ⚠️ انتبه: structuredContentWorkspace موجود في مكانين (سطر 76 contentWorkspace و90): الشرط المبكر يوضع في الدالة عند السطر 93 فقط.
+- navSections في r21: contact في مجموعة "التواصل". تأكد.

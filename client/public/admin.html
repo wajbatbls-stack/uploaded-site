@@ -19,7 +19,7 @@
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r20.js?v=downloads-r11";
+      adminModule.src = "/assets/js/admin-app-r21.js?v=contact-r3";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -44,6 +44,12 @@
                   const downloadsManager = document.createElement("script");
                   downloadsManager.src = "/assets/js/admin-downloads-manager-r2.js?v=downloads-r2";
                   downloadsManager.async = false;
+                  downloadsManager.onload = () => {
+                    const contactManager = document.createElement("script");
+                    contactManager.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4";
+                    contactManager.async = false;
+                    document.body.append(contactManager);
+                  };
                   document.body.append(downloadsManager);
                 };
                 document.body.append(visitorLinksManager);
@@ -71,6 +77,12 @@
                   const downloadsManager = document.createElement("script");
                   downloadsManager.src = "/assets/js/admin-downloads-manager-r2.js?v=downloads-r2";
                   downloadsManager.async = false;
+                  downloadsManager.onload = () => {
+                    const contactManager = document.createElement("script");
+                    contactManager.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4";
+                    contactManager.async = false;
+                    document.body.append(contactManager);
+                  };
                   document.body.append(downloadsManager);
                 };
                 document.body.append(visitorLinksManager);
@@ -126,6 +138,12 @@
         retryDownloads.src = "/assets/js/admin-downloads-manager-r2.js?v=downloads-r2&reload=" + Date.now();
         retryDownloads.async = false;
         document.body.append(retryDownloads);
+      }
+      if (!window.WajbatContactManager) {
+        const retryContact = document.createElement("script");
+        retryContact.src = "/assets/js/admin-contact-manager-r4.js?v=contact-r4&reload=" + Date.now();
+        retryContact.async = false;
+        document.body.append(retryContact);
       }
     }, 4000);
     </script>

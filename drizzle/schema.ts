@@ -356,3 +356,97 @@ export const downloadFiles = mysqlTable("download_files", {
   downloadFileCategoryIndex: index("download_files_category_index").on(table.categoryId, table.sortOrder),
   downloadFileVisibilityIndex: index("download_files_visibility_index").on(table.isVisible),
 }));
+
+/** أرقام واتساب لقنوات الاتصال التي تعرضها صفحة الزائر. */
+export const contactWhatsappNumbers = mysqlTable("contact_whatsapp_numbers", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  label: varchar("label", { length: 160 }).notNull(),
+  description: longtext("description"),
+  number: varchar("number", { length: 40 }).notNull(),
+  isPrimary: boolean("isPrimary").default(false).notNull(),
+  imageKey: varchar("imageKey", { length: 512 }),
+  imageUrl: longtext("imageUrl"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  contactWhatsappOrderIndex: index("contact_whatsapp_order_index").on(table.sortOrder),
+}));
+
+/** أرقام الجوال لقنوات الاتصال. */
+export const contactMobileNumbers = mysqlTable("contact_mobile_numbers", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  label: varchar("label", { length: 160 }).notNull(),
+  description: longtext("description"),
+  number: varchar("number", { length: 40 }).notNull(),
+  isPrimary: boolean("isPrimary").default(false).notNull(),
+  imageKey: varchar("imageKey", { length: 512 }),
+  imageUrl: longtext("imageUrl"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  contactMobileOrderIndex: index("contact_mobile_order_index").on(table.sortOrder),
+}));
+
+/** عناوين البريد الإلكتروني. */
+export const contactEmails = mysqlTable("contact_emails", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  label: varchar("label", { length: 160 }).notNull(),
+  description: longtext("description"),
+  email: varchar("email", { length: 320 }).notNull(),
+  isPrimary: boolean("isPrimary").default(false).notNull(),
+  imageKey: varchar("imageKey", { length: 512 }),
+  imageUrl: longtext("imageUrl"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  contactEmailOrderIndex: index("contact_emails_order_index").on(table.sortOrder),
+}));
+
+/** العناوين الجغرافية للموقع. */
+export const contactAddresses = mysqlTable("contact_addresses", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  label: varchar("label", { length: 160 }).notNull(),
+  description: longtext("description"),
+  address: varchar("address", { length: 500 }).notNull(),
+  isPrimary: boolean("isPrimary").default(false).notNull(),
+  imageKey: varchar("imageKey", { length: 512 }),
+  imageUrl: longtext("imageUrl"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  contactAddressOrderIndex: index("contact_addresses_order_index").on(table.sortOrder),
+}));
+
+/** وسائل التواصل الاجتماعي بأشكالها وألوانها المخصصة. */
+export const contactSocials = mysqlTable("contact_socials", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  platform: varchar("platform", { length: 80 }).notNull(),
+  label: varchar("label", { length: 160 }),
+  description: longtext("description"),
+  platformName: varchar("platformName", { length: 120 }).notNull(),
+  link: longtext("link").notNull(),
+  username: varchar("username", { length: 160 }),
+  displayMode: varchar("displayMode", { length: 40 }).default("icon").notNull(),
+  shape: varchar("shape", { length: 40 }).default("circle").notNull(),
+  accentColor: varchar("accentColor", { length: 32 }).default("#25d366").notNull(),
+  textColor: varchar("textColor", { length: 32 }).default("#ffffff").notNull(),
+  backgroundColor: varchar("backgroundColor", { length: 32 }).default("#25d366").notNull(),
+  borderColor: varchar("borderColor", { length: 32 }).default("#25d366").notNull(),
+  icon: varchar("icon", { length: 16 }).notNull(),
+  imageKey: varchar("imageKey", { length: 512 }),
+  imageUrl: longtext("imageUrl"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  contactSocialOrderIndex: index("contact_socials_order_index").on(table.sortOrder),
+}));

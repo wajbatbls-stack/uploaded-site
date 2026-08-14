@@ -1,9 +1,14 @@
-import { and, desc, eq, gte, inArray, isNull, like, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, like, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   adminAuditEvents,
   assignmentRequests,
+  contactAddresses,
+  contactEmails,
   contactMessages,
+  contactMobileNumbers,
+  contactSocials,
+  contactWhatsappNumbers,
   contentCollections,
   customers,
   InsertUser,
@@ -812,6 +817,229 @@ export async function moveDownloadCategory(id: number, direction: 1 | -1) {
   const [current, other] = [neighbors[index], neighbors[target]];
   await db.update(downloadCategories).set({ sortOrder: other.sortOrder }).where(eq(downloadCategories.id, current.id));
   await db.update(downloadCategories).set({ sortOrder: current.sortOrder }).where(eq(downloadCategories.id, other.id));
+  return { success: true as const };
+}
+
+/* ---------- قنوات «اتصل بنا» الخمسة: واتساب، جوال، بريد، عناوين، وسائل تواصل ---------- */
+import type { ContactChannelType } from "./contact";
+type AnyContactTable = typeof contactWhatsappNumbers | typeof contactMobileNumbers | typeof contactEmails | typeof contactAddresses | typeof contactSocials;
+
+function contactTableFor(type: ContactChannelType): AnyContactTable {
+  switch (type) {
+    case "whatsapp": return contactWhatsappNumbers;
+    case "mobile": return contactMobileNumbers;
+    case "email": return contactEmails;
+    case "address": return contactAddresses;
+    case "social": return contactSocials;
+  }
+}
+
+const CONTACT_TABLE_META: Record<ContactChannelType, { valueColumns: string[] }> = {
+  whatsapp: { valueColumns: ["number"] },
+  mobile: { valueColumns: ["number"] },
+  email: { valueColumns: ["email"] },
+  address: { valueColumns: ["address"] },
+  social: { valueColumns: ["platform", "platformName", "link"] },
+};
+
+export type ChannelRow = {
+  id: number;
+  type: ContactChannelType;
+  label: string;
+  description: string | null;
+  number?: string;
+  email?: string;
+  address?: string;
+  platform?: string;
+  platformName?: string;
+  link?: string;
+  username?: string | null;
+  displayMode?: string;
+  shape?: string;
+  accentColor?: string;
+  textColor?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  icon?: string;
+  isPrimary?: boolean;
+  imageKey: string | null;
+  imageUrl: string | null;
+  sortOrder: number;
+  isVisible: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export async function listContactChannels(): Promise<ChannelRow[]> {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const rows: ChannelRow[] = [];
+  for (const type of ["whatsapp", "mobile", "email", "address", "social"] as ContactChannelType[]) {
+    const table = contactTableFor(type);
+    const items = await db.select().from(table).orderBy(asc(table.sortOrder), desc(table.createdAt));
+    for (const item of items) {
+      const row: ChannelRow = {
+        id: Number(item.id),
+        type,
+        label: type === "social" ? ((item as any).platformName || (item as any).label) : (item as any).label,
+        description: type === "social" ? ((item as any).description ?? null) : (item as any).description,
+        imageKey: item.imageKey ?? null,
+        imageUrl: item.imageUrl ?? null,
+        sortOrder: Number(item.sortOrder),
+        isVisible: Boolean(item.isVisible),
+        isPrimary: Boolean((item as any).isPrimary),
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      };
+      for (const col of CONTACT_TABLE_META[type].valueColumns) {
+        (row as any)[col] = (item as any)[col];
+      }
+      if (type === "social") {
+        row.platform = (item as any).platform;
+        row.platformName = (item as any).platformName;
+        row.link = (item as any).link;
+        row.username = (item as any).username ?? null;
+        row.displayMode = (item as any).displayMode;
+        row.shape = (item as any).shape;
+        row.accentColor = (item as any).accentColor;
+        row.textColor = (item as any).textColor;
+        row.backgroundColor = (item as any).backgroundColor;
+        row.borderColor = (item as any).borderColor;
+        row.icon = (item as any).icon;
+      }
+      rows.push(row);
+    }
+  }
+  return rows;
+}
+
+export async function listContactChannelsPublic(): Promise<ChannelRow[]> {
+  return (await listContactChannels()).filter(c => c.isVisible);
+}
+
+/**
+ * هجرة لمرة واحدة: نسخ قنوات التواصل الافتراضية من siteSettings
+ * (whatsapp/phone/email/address) إلى جداول القنوات الجديدة إن كانت الجداول فارغة،
+ * دون تكرار أو فقدان للبيانات الأصلية المحفوظة في الموقع.
+ */
+export async function migrateLegacyContactChannels(): Promise<{ migrated: boolean; counts: Record<string, number> }> {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const existing = await listContactChannels();
+  if (existing.length > 0) return { migrated: false, counts: {} as Record<string, number> };
+  const settings = await getPublicSiteContent();
+  const siteSettings = (settings.siteSettings || {}) as Record<string, string>;
+  const counts: Record<string, number> = {} as Record<string, number>;
+  const phoneRaw = siteSettings.phone || "+966567680470";
+  const waRaw = siteSettings.whatsapp || "966567680470";
+  const emailRaw = siteSettings.email || "wajbatbls@gmail.com";
+  const addressRaw = siteSettings.address || "الرياض، المملكة العربية السعودية";
+  await createContactChannel({ type: "whatsapp", label: "واتساب المبيعات", number: String(waRaw), description: "تواصل معنا مباشرة عبر واتساب", sortOrder: 0, isVisible: true });
+  counts.whatsapp = 1;
+  await createContactChannel({ type: "mobile", label: "رقم الجوال", number: String(phoneRaw), description: "اتصل بنا في أي وقت", sortOrder: 1, isVisible: true });
+  counts.mobile = 1;
+  await createContactChannel({ type: "email", label: "البريد الإلكتروني", email: String(emailRaw), description: "راسلنا عبر البريد الإلكتروني", sortOrder: 2, isVisible: true });
+  counts.email = 1;
+  await createContactChannel({ type: "address", label: "العنوان الرئيسي", address: String(addressRaw), description: "نخدم الطلاب في جميع مناطق المملكة", sortOrder: 3, isVisible: true });
+  counts.address = 1;
+  return { migrated: true, counts };
+}
+
+export async function createContactChannel(input: Partial<Record<string, unknown>> & { type: ContactChannelType; label: string }): Promise<{ id: number }> {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const table = contactTableFor(input.type);
+  const values: Record<string, unknown> = { label: input.label.slice(0, 160) };
+  if (input.description !== undefined) values.description = input.description as string;
+  if (input.imageKey !== undefined) values.imageKey = input.imageKey as string | null;
+  if (input.imageUrl !== undefined) values.imageUrl = input.imageUrl as string | null;
+  if (input.sortOrder !== undefined) values.sortOrder = input.sortOrder as number;
+  if (input.isVisible !== undefined) values.isVisible = input.isVisible as boolean;
+  for (const col of CONTACT_TABLE_META[input.type].valueColumns) {
+    if (input[col] !== undefined) values[col] = input[col];
+  }
+  if (input.type === "social") {
+    const s = input as any;
+    values.displayMode = s.displayMode ?? "icon";
+    values.shape = s.shape ?? "circle";
+    values.accentColor = String(s.accentColor ?? "#25d366").slice(0, 32);
+    values.textColor = String(s.textColor ?? "#ffffff").slice(0, 32);
+    values.backgroundColor = String(s.backgroundColor ?? "#25d366").slice(0, 32);
+    values.borderColor = String(s.borderColor ?? "#25d366").slice(0, 32);
+    values.icon = String(s.icon ?? "🔗").slice(0, 16);
+    if (s.username !== undefined) values.username = s.username as string | null;
+  }
+  const result = await db.insert(table).values(values);
+  return { id: Number(result[0].insertId) };
+}
+
+async function inferChannelTypeById(db: NonNullable<ReturnType<typeof drizzle>>, id: number): Promise<ContactChannelType> {
+  for (const type of ["whatsapp", "mobile", "email", "address", "social"] as ContactChannelType[]) {
+    const table = contactTableFor(type);
+    const row = await db.select({ id: table.id }).from(table).where(eq(table.id, id)).limit(1);
+    if (row[0]) return type;
+  }
+  throw new Error("قناة الاتصال غير موجودة");
+}
+
+export async function updateContactChannel(id: number, input: Partial<Record<string, unknown>> & { type?: ContactChannelType }) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const resolvedType = input.type ?? (await inferChannelTypeById(db, id));
+  const table = contactTableFor(resolvedType);
+  const updates: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined) continue;
+    if (key === "type") continue;
+    if (key === "label") updates[key] = String(value).slice(0, 160);
+    else if (key === "icon") updates[key] = String(value).slice(0, 16);
+    else if (key === "platform") updates[key] = String(value).slice(0, 80);
+    else if (key === "platformName" || key === "username") updates[key] = String(value).slice(0, key === "username" ? 160 : 120);
+    else if (key === "link") updates[key] = String(value).slice(0, 2000);
+    else if (key === "address") updates[key] = String(value).slice(0, 500);
+    else if (["accentColor", "textColor", "backgroundColor", "borderColor"].includes(key)) updates[key] = String(value).slice(0, 32);
+    else if (key === "description") updates[key] = value;
+    else if (key === "imageKey" || key === "imageUrl") updates[key] = value;
+    else updates[key] = value;
+  }
+  if (Object.keys(updates).length > 0) {
+    await db.update(table).set(updates).where(eq(table.id, id));
+  }
+  return { success: true } as const;
+}
+
+export async function deleteContactChannel(id: number, type?: ContactChannelType) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const resolvedType = type ?? (await inferChannelTypeById(db, id));
+  const table = contactTableFor(resolvedType);
+  await db.delete(table).where(eq(table.id, id));
+  return { success: true } as const;
+}
+
+export async function setContactChannelVisibility(id: number, isVisible: boolean, type?: ContactChannelType) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const resolvedType = type ?? (await inferChannelTypeById(db, id));
+  const table = contactTableFor(resolvedType);
+  await db.update(table).set({ isVisible }).where(eq(table.id, id));
+  return { success: true } as const;
+}
+
+export async function moveContactChannel(id: number, direction: 1 | -1, type?: ContactChannelType) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const resolvedType = type ?? (await inferChannelTypeById(db, id));
+  const table = contactTableFor(resolvedType);
+  const row = (await db.select().from(table).where(eq(table.id, id)).limit(1))[0];
+  if (!row) return { success: false as const };
+  const neighbors = await db.select().from(table).orderBy(asc(table.sortOrder), desc(table.createdAt));
+  const index = neighbors.findIndex(n => n.id === row.id);
+  const target = index + direction;
+  if (index === -1 || target < 0 || target >= neighbors.length) return { success: false as const };
+  const [current, other] = [neighbors[index], neighbors[target]];
+  await db.update(table).set({ sortOrder: other.sortOrder }).where(eq(table.id, current.id));
+  await db.update(table).set({ sortOrder: current.sortOrder }).where(eq(table.id, other.id));
   return { success: true as const };
 }
 

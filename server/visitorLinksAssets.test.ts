@@ -68,9 +68,14 @@ describe("أصول مدير روابط الزوار", () => {
     expect(app).toContain('visitorLinks: ["🔗", "إنشاء روابط الزوار"');
     expect(app).toContain('items: ["dashboard", "visitorLinks", "homePage", "design"]');
     expect(app).toContain('key === "visitorLinks" ? "data-visitor-links-nav"');
+    expect(app).toContain('function openVisitorLinksWorkspace(event) { const button = event.currentTarget ?? event.target.closest?.("[data-visitor-links-nav]")');
+    expect(app).toContain('state.selected = "visitorLinks"');
+    expect(app).toContain('button.addEventListener("click", openVisitorLinksWorkspace)');
+    expect(app).toContain('event.target.closest?.("button,[data-select],[data-visitor-links-nav]")');
+    expect(app).toContain('button.hasAttribute("data-visitor-links-nav")');
     expect(manager).toContain("admin.createVisitorLink");
     expect(manager).toContain("await verifyAvailability(token, input)");
-    expect(projectFile("client/public/admin.html")).toContain("admin-app-r18.js?v=visitor-links-production-r6");
+    expect(projectFile("client/public/admin.html")).toContain("admin-app-r18.js?v=visitor-links-mobile-fix-r8");
   });
 
   it("يوفّر بحثاً وتصفية وفرزاً فعليين ولا يحذف الرابط قبل تأكيد المالك", () => {

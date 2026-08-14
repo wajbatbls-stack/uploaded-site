@@ -620,3 +620,207 @@ export async function consumeOwnerWebAuthnChallenge(challenge: string, ceremony:
   await db.update(ownerWebAuthnChallenges).set({ usedAt: new Date() }).where(and(eq(ownerWebAuthnChallenges.id, record.id), isNull(ownerWebAuthnChallenges.usedAt)));
   return record;
 }
+
+/* ---------- إدارة التحميلات v2: فئات وملفات مرفوعة من جهاز المالك ---------- */
+
+import { downloadCategories, downloadFiles } from "../drizzle/schema";
+
+export type DownloadCategoryInput = {
+  name: string;
+  description?: string | null;
+  emoji?: string;
+  color?: string;
+  backgroundColor?: string;
+  imageKey?: string | null;
+  imageUrl?: string | null;
+  isVisible?: boolean;
+};
+
+export type DownloadFileInput = {
+  categoryId: number;
+  fileName: string;
+  originalName: string;
+  description?: string | null;
+  fileKey: string;
+  fileUrl: string;
+  mimeType: string;
+  sizeBytes: number;
+  imageKey?: string | null;
+  imageUrl?: string | null;
+  isVisible?: boolean;
+};
+
+export async function listDownloadCategories() {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  return db.select().from(downloadCategories).orderBy(desc(downloadCategories.sortOrder), desc(downloadCategories.createdAt));
+}
+
+export async function listDownloadCategoriesPublic() {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  return db.select().from(downloadCategories).where(eq(downloadCategories.isVisible, true)).orderBy(desc(downloadCategories.sortOrder), desc(downloadCategories.createdAt));
+}
+
+export async function listDownloadFiles(categoryId?: number, visibleOnly = false) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  if (categoryId !== undefined) {
+    const conditions = [eq(downloadFiles.categoryId, categoryId)];
+    if (visibleOnly) conditions.push(eq(downloadFiles.isVisible, true));
+    return db.select().from(downloadFiles).where(and(...conditions)).orderBy(desc(downloadFiles.sortOrder), desc(downloadFiles.createdAt));
+  }
+  if (visibleOnly) return db.select().from(downloadFiles).where(eq(downloadFiles.isVisible, true)).orderBy(desc(downloadFiles.sortOrder), desc(downloadFiles.createdAt));
+  return db.select().from(downloadFiles).orderBy(desc(downloadFiles.sortOrder), desc(downloadFiles.createdAt));
+}
+
+export async function createDownloadCategory(input: DownloadCategoryInput) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const existing = await db.select({ id: downloadCategories.id }).from(downloadCategories).where(eq(downloadCategories.name, input.name)).limit(1);
+  if (existing[0]) throw new Error("اسم القسم موجود مسبقًا، اختر اسمًا مختلفًا");
+  const result = await db.insert(downloadCategories).values({
+    name: input.name,
+    description: input.description ?? null,
+    emoji: (input.emoji ?? "📥").slice(0, 16),
+    color: (input.color ?? "#4966d6").slice(0, 32),
+    backgroundColor: (input.backgroundColor ?? "#eef1fd").slice(0, 32),
+    imageKey: input.imageKey ?? null,
+    imageUrl: input.imageUrl ?? null,
+    isVisible: input.isVisible ?? true,
+  });
+  return { id: Number(result[0].insertId) };
+}
+
+export async function updateDownloadCategory(id: number, input: Partial<DownloadCategoryInput & { sortOrder?: number }>) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const updates: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined) continue;
+    if (key === "emoji") updates[key] = String(value).slice(0, 16);
+    else if (key === "color" || key === "backgroundColor") updates[key] = String(value).slice(0, 32);
+    else updates[key] = value;
+  }
+  await db.update(downloadCategories).set(updates).where(eq(downloadCategories.id, id));
+  return { success: true } as const;
+}
+
+export async function deleteDownloadCategory(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.delete(downloadFiles).where(eq(downloadFiles.categoryId, id));
+  await db.delete(downloadCategories).where(eq(downloadCategories.id, id));
+  return { success: true } as const;
+}
+
+export async function setCategoryVisibility(id: number, isVisible: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.update(downloadCategories).set({ isVisible }).where(eq(downloadCategories.id, id));
+  return { success: true } as const;
+}
+
+export async function createDownloadFile(input: DownloadFileInput) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const result = await db.insert(downloadFiles).values({
+    categoryId: input.categoryId,
+    fileName: input.fileName.slice(0, 255),
+    originalName: input.originalName.slice(0, 255),
+    description: input.description ?? null,
+    fileKey: input.fileKey.slice(0, 512),
+    fileUrl: input.fileUrl,
+    mimeType: input.mimeType.slice(0, 120),
+    sizeBytes: input.sizeBytes,
+    imageKey: input.imageKey ?? null,
+    imageUrl: input.imageUrl ?? null,
+    isVisible: input.isVisible ?? true,
+  });
+  return { id: Number(result[0].insertId) };
+}
+
+export async function updateDownloadFile(id: number, input: Partial<DownloadFileInput & { sortOrder?: number }>) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const updates: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined) continue;
+    if (key === "fileName" || key === "originalName") updates[key] = String(value).slice(0, 255);
+    else if (key === "mimeType") updates[key] = String(value).slice(0, 120);
+    else if (key === "fileKey") updates[key] = String(value).slice(0, 512);
+    else updates[key] = value;
+  }
+  await db.update(downloadFiles).set(updates).where(eq(downloadFiles.id, id));
+  return { success: true } as const;
+}
+
+export async function deleteDownloadFile(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.delete(downloadFiles).where(eq(downloadFiles.id, id));
+  return { success: true } as const;
+}
+
+export async function setFileVisibility(id: number, isVisible: boolean) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.update(downloadFiles).set({ isVisible }).where(eq(downloadFiles.id, id));
+  return { success: true } as const;
+}
+
+export async function replaceDownloadFile(id: number, input: { fileKey: string; fileUrl: string; mimeType: string; sizeBytes: number; originalName?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const updates: Record<string, unknown> = {
+    fileKey: input.fileKey.slice(0, 512),
+    fileUrl: input.fileUrl,
+    mimeType: input.mimeType.slice(0, 120),
+    sizeBytes: input.sizeBytes,
+    downloadCount: 0,
+    lastDownloadedAt: null,
+  };
+  if (input.originalName) updates.originalName = input.originalName.slice(0, 255);
+  await db.update(downloadFiles).set(updates).where(eq(downloadFiles.id, id));
+  return { success: true } as const;
+}
+
+export async function moveDownloadFile(id: number, direction: 1 | -1) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const row = (await db.select().from(downloadFiles).where(eq(downloadFiles.id, id)).limit(1))[0];
+  if (!row) return { success: false as const };
+  const neighbors = await db.select().from(downloadFiles).where(eq(downloadFiles.categoryId, row.categoryId)).orderBy(desc(downloadFiles.sortOrder), desc(downloadFiles.createdAt));
+  const index = neighbors.findIndex(n => n.id === row.id);
+  const target = index + direction;
+  if (index === -1 || target < 0 || target >= neighbors.length) return { success: false as const };
+  const [current, other] = [neighbors[index], neighbors[target]];
+  await db.update(downloadFiles).set({ sortOrder: other.sortOrder }).where(eq(downloadFiles.id, current.id));
+  await db.update(downloadFiles).set({ sortOrder: current.sortOrder }).where(eq(downloadFiles.id, other.id));
+  return { success: true as const };
+}
+
+export async function moveDownloadCategory(id: number, direction: 1 | -1) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  const row = (await db.select().from(downloadCategories).where(eq(downloadCategories.id, id)).limit(1))[0];
+  if (!row) return { success: false as const };
+  const neighbors = await db.select().from(downloadCategories).orderBy(desc(downloadCategories.sortOrder), desc(downloadCategories.createdAt));
+  const index = neighbors.findIndex(n => n.id === row.id);
+  const target = index + direction;
+  if (index === -1 || target < 0 || target >= neighbors.length) return { success: false as const };
+  const [current, other] = [neighbors[index], neighbors[target]];
+  await db.update(downloadCategories).set({ sortOrder: other.sortOrder }).where(eq(downloadCategories.id, current.id));
+  await db.update(downloadCategories).set({ sortOrder: current.sortOrder }).where(eq(downloadCategories.id, other.id));
+  return { success: true as const };
+}
+
+export async function incrementDownloadCount(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("قاعدة البيانات غير متاحة");
+  await db.update(downloadFiles).set({
+    downloadCount: sql`${downloadFiles.downloadCount} + 1`,
+    lastDownloadedAt: new Date(),
+  }).where(eq(downloadFiles.id, id));
+  return { success: true } as const;
+}

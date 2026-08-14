@@ -19,7 +19,7 @@
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r18.js?v=visitor-links-r4-cache-bust-r9";
+      adminModule.src = "/assets/js/admin-app-r20.js?v=downloads-r11";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -40,6 +40,12 @@
                 const visitorLinksManager = document.createElement("script");
                 visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r4.js?v=visitor-links-r4-load";
                 visitorLinksManager.async = false;
+                visitorLinksManager.onload = () => {
+                  const downloadsManager = document.createElement("script");
+                  downloadsManager.src = "/assets/js/admin-downloads-manager-r2.js?v=downloads-r2";
+                  downloadsManager.async = false;
+                  document.body.append(downloadsManager);
+                };
                 document.body.append(visitorLinksManager);
               };
               document.body.append(servicesManager);
@@ -61,6 +67,12 @@
                 const visitorLinksManager = document.createElement("script");
                 visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r4.js?v=visitor-links-r4-load";
                 visitorLinksManager.async = false;
+                visitorLinksManager.onload = () => {
+                  const downloadsManager = document.createElement("script");
+                  downloadsManager.src = "/assets/js/admin-downloads-manager-r2.js?v=downloads-r2";
+                  downloadsManager.async = false;
+                  document.body.append(downloadsManager);
+                };
                 document.body.append(visitorLinksManager);
               };
               document.body.append(servicesManager);
@@ -108,6 +120,12 @@
         retry.src = "/assets/js/admin-visitor-links-manager-r4.js?v=visitor-links-r4-load&reload=" + Date.now();
         retry.async = false;
         document.body.append(retry);
+      }
+      if (!window.WajbatDownloadsManager) {
+        const retryDownloads = document.createElement("script");
+        retryDownloads.src = "/assets/js/admin-downloads-manager-r2.js?v=downloads-r2&reload=" + Date.now();
+        retryDownloads.async = false;
+        document.body.append(retryDownloads);
       }
     }, 4000);
     </script>

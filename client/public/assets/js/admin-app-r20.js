@@ -90,6 +90,7 @@ function mountCompatibleServicesManager() {
 contentWorkspace = function structuredContentWorkspace() {
   const compatibleServicesWorkspace = mountCompatibleServicesManager();
   if (compatibleServicesWorkspace) return compatibleServicesWorkspace;
+  if (state.selected === "downloads" && typeof window.WajbatDownloadsManager?.activate === "function") return mountCompatibleDownloadsManager();
   if (window.WajbatStructuredEditor?.supports?.(state.selected)) return window.WajbatStructuredEditor.workspace(state.selected);
   return legacyContentWorkspace();
 };

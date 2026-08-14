@@ -334,9 +334,11 @@ export const appRouter = router({
     })).mutation(async ({ input }) => ({ success: true, ...(await createContactMessage(input)) })),
     submitReview: publicProcedure.input(z.object({ name: z.string().min(2).max(180), university: z.string().min(2).max(200), review: z.string().min(10).max(2000), rating: z.number().int().min(1).max(5) }))
       .mutation(async ({ input }) => ({ success: true, ...(await createSubmittedReview(input)) })),
+    downloads: downloadsRouter,
   }),
 
   admin: router({
+    downloads: downloadsRouter,
     collections: ownerProcedure.query(() => getAdminCollections()),
     visitorLinks: ownerProcedure.query(() => listVisitorLinks()),
     createVisitorLink: ownerProcedure.input(visitorLinkInput).mutation(async ({ input }) => {
@@ -414,3 +416,6 @@ export const appRouter = router({
 });
 
 export type AppRouter = typeof appRouter;
+
+/* ---------- إدارة التحميلات v2 ---------- */
+import { downloadsRouter } from "./downloads";

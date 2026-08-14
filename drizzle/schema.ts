@@ -313,3 +313,46 @@ export const visitorLinks = mysqlTable("visitor_links", {
 
 export type ContentCollection = typeof contentCollections.$inferSelect;
 export type InsertContentCollection = typeof contentCollections.$inferInsert;
+
+/** فئات أقسام التحميلات التي يديرها المالك — نظام «إدارة التحميلات» الجديد. */
+export const downloadCategories = mysqlTable("download_categories", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  name: varchar("name", { length: 160 }).notNull(),
+  description: longtext("description"),
+  emoji: varchar("emoji", { length: 16 }).default("📥").notNull(),
+  color: varchar("color", { length: 32 }).default("#4966d6").notNull(),
+  backgroundColor: varchar("backgroundColor", { length: 32 }).default("#eef1fd").notNull(),
+  imageKey: varchar("imageKey", { length: 512 }),
+  imageUrl: longtext("imageUrl"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  downloadCategoryOrderIndex: index("download_categories_order_index").on(table.sortOrder),
+}));
+
+/** ملفات التحميل داخل كل فئة — يرفعها المالك من جهازه وتخزن في التخزين السحابي. */
+export const downloadFiles = mysqlTable("download_files", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  categoryId: bigint("categoryId", { mode: "number" }).notNull(),
+  fileName: varchar("fileName", { length: 255 }).notNull(),
+  originalName: varchar("originalName", { length: 255 }).notNull(),
+  description: longtext("description"),
+  fileKey: varchar("fileKey", { length: 512 }).notNull(),
+  fileUrl: longtext("fileUrl").notNull(),
+  mimeType: varchar("mimeType", { length: 120 }).notNull(),
+  sizeBytes: bigint("sizeBytes", { mode: "number" }).default(0).notNull(),
+  imageKey: varchar("imageKey", { length: 512 }),
+  imageUrl: longtext("imageUrl"),
+  sortOrder: int("sortOrder").default(0).notNull(),
+  isVisible: boolean("isVisible").default(true).notNull(),
+  downloadCount: bigint("downloadCount", { mode: "number" }).default(0).notNull(),
+  lastDownloadedAt: timestamp("lastDownloadedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, table => ({
+  downloadFileCategoryIndex: index("download_files_category_index").on(table.categoryId, table.sortOrder),
+  downloadFileVisibilityIndex: index("download_files_visibility_index").on(table.isVisible),
+}));

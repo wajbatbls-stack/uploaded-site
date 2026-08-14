@@ -63,7 +63,7 @@ describe("أصول مدير روابط الزوار", () => {
   });
 
   it("يثبت رابط الزوار قبل الصفحة الرئيسية في التنقل ويمنحه مسار فتح مباشر", () => {
-    const app = projectFile("client/public/assets/js/admin-app-r18.js");
+    const app = projectFile("client/public/assets/js/admin-app-r20.js");
     const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r4.js");
     expect(app).toContain('visitorLinks: ["🔗", "إنشاء روابط الزوار"');
     expect(app).toContain('items: ["dashboard", "visitorLinks", "homePage", "design"]');
@@ -71,11 +71,11 @@ describe("أصول مدير روابط الزوار", () => {
     expect(app).toContain('function openVisitorLinksWorkspace(event) { const button = event.currentTarget ?? event.target.closest?.("[data-visitor-links-nav]")');
     expect(app).toContain('state.selected = "visitorLinks"');
     expect(app).toContain('button.addEventListener("click", openVisitorLinksWorkspace)');
-    expect(app).toContain('event.target.closest?.("button,[data-select],[data-visitor-links-nav]")');
+    expect(app).toContain('event.target.closest?.("button,[data-select],[data-visitor-links-nav],[data-downloads-nav]")');
     expect(app).toContain('button.hasAttribute("data-visitor-links-nav")');
     expect(manager).toContain("admin.createVisitorLink");
     expect(manager).toContain("await verifyAvailability(token, input)");
-    expect(projectFile("client/public/admin.html")).toContain("admin-app-r18.js?v=visitor-links-r4-cache-bust-r9");
+    expect(projectFile("client/public/admin.html")).toContain("admin-app-r20.js?v=downloads-r11");
   });
 
   it("يوفّر بحثاً وتصفية وفرزاً فعليين ولا يحذف الرابط قبل تأكيد المالك", () => {
@@ -97,7 +97,7 @@ describe("أصول مدير روابط الزوار", () => {
   });
 
   it("يركّب مدير روابط الزوار داخل مساحة عمل القسم عند اختياره", () => {
-    const app = projectFile("client/public/assets/js/admin-app-r18.js");
+    const app = projectFile("client/public/assets/js/admin-app-r20.js");
     const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r4.js");
     expect(app).toContain("function mountCompatibleVisitorLinksManager()");
     expect(app).toContain('key === "visitorLinks"');

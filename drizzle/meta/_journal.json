@@ -71,6 +71,13 @@
       "when": 1786652443483,
       "tag": "0009_magenta_thunderball",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1786715188963,
+      "tag": "0010_medical_gargoyle",
+      "breakpoints": true
     }
   ]
 }

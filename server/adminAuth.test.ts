@@ -53,7 +53,8 @@ describe("adminAuth.login", () => {
       req: { headers: { cookie: `wajbat_admin_session=${token}` } },
       res: loginCtx.res,
     } as unknown as TrpcContext;
-    await expect(appRouter.createCaller(authenticatedCtx).adminAuth.account()).resolves.toMatchObject({ email: process.env.ADMIN_EMAIL });
+    const expectedEmail = String(process.env.ADMIN_EMAIL).replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "").trim().toLowerCase();
+    await expect(appRouter.createCaller(authenticatedCtx).adminAuth.account()).resolves.toMatchObject({ email: expectedEmail });
 
     await appRouter.createCaller(authenticatedCtx).adminAuth.logout();
     expect(cleared).toContain("wajbat_admin_session");

@@ -33,7 +33,11 @@ function secureEqual(left: string, right: string) {
 }
 
 function normalizedEmail(email: string) {
-  return email.trim().toLowerCase();
+  // Strip invisible Unicode direction/formatting marks (LRM \u200F, RLM \u200E,
+  // ZWSP \u200B, bidi isolates \u2066-\u2069, BOM \uFEFF...) that can sneak into
+  // env secrets or login inputs via Arabic text formatting, so the comparison
+  // always matches the real stored account email.
+  return email.replace(/[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/g, "").trim().toLowerCase();
 }
 
 function hashPassword(password: string) {

@@ -830,3 +830,6 @@ refresh لا يرمي بعد Promise.all الناجح. catch الوحيد الذ
 
 ## 19:22 تحليل بق sidebar
 الخطأ في char 437 من سطر 38 = const [icon,title] = labels[key] داخل map — key غير موجود في labels أو labels[key] undefined. labels يحتوي كل مفاتيح navSections الثابتة. إذن key غريب يأتي من تعديل ديناميكي (settings تنقل أو ownerLogin settings تضيف section) أو labels[key] undefined. الحل: حماية destructuring: const lbl = labels[key] || ["?", key]; const [icon, title] = lbl; أيضًا حماية section.items بـ Array.isArray.
+
+## 19:23 الإنتاج يخدم نسخة أقدم من r23
+الإنتاج /tmp/prod-r23.js = 84389 بايت بلا fix، المحلي = 84486 بايت مع fix. checkpoint 9b5cdab9 حُفظ لكن الإنتاج لم يتحدّث بعد؟ أم التعديل على r23 تم بعد commit آخر للجلسة المشتركة؟ لا — التعديل كان قبل checkpoint مباشرة. يبدو النشر auto-publish يستغرق دقائق أو فشل صامت. الحل: إعادة checkpoint الآن ثم انتظار ثم curl مجددًا.

@@ -652,3 +652,114 @@ try { await mutate(...); await refresh(); dashboard(); } catch(e) { errorBox.tex
 أبسط: أضيف في inline script موجود (موجود أصلًا في admin.html؟) أو أعدل r22 مباشرة: قبل errorBox.textContent = ... أضيف: errorBox.setAttribute("data-err", String(error)); console.error(error) — console.error يُسجل في الكونسول وأنا أراه.
 سأضيف console.error(error) في catch — لكن catch موجود في r22 ويُنفذ في module؛ console.error يظهر في browser console — سأراه عبر console view بعد النقر!
 الحل: سكريبت inline قبل r22 يعيد تعريف console.error ويخزن في __loginTrace: done-ish (غير موجود حاليًا). أضيفه الآن.
+
+## 19:01 الاكتشاف الحاسم بعد النقر الحقيقي
+بعد النقر على زر "تسجيل الدخول" (index 4) في النسخة المنشورة b62141ce:
+- كل طلبات API في التتبع: account, submittedReviews, requests, passkeys, media, ownerLoginSettings, collections, stats → كلها 200 بلا أي خطأ
+- لا يوجد أي consoleError / uncaughtError / unhandledRejection مسجل
+- ومع ذلك صندوق errBox لا يزال يعرض "بيانات الدخول غير صحيحة" (نص قديم لم يُمسح!)
+
+الاستنتاج: نص "بيانات الدخول غير صحيحة" ظاهر هو نص قديم متبقٍ من محاولة سابقة — النقرة الأخيرة عبر أداة المتصفح نفذت النقر على زر index=4 لكن login لم يُنفَّذ أصلًا (لا يوجد login POST في trace). لماذا؟
+الفرضية: browser_fill_form + النقر عبر index يستهدف button[1] (تسجيل الدخول التقليدي) لكن الفورم ربما لم يقبل القيم المدخلة عبر fill (inputs نوع text/password في template قديم قد لا تُحدث value الحقيقي)؟ لا — login لم يُرسل أصلًا.
+ملاحظة: trace يبدأ من account وليس login! إذن عند هذه النقرة: لا POST لـ login. الزر المستهدف قد يكون زر passkey (index 3)؟
+الحل: فحص HTML: أي فورم؟ أي مستمعي submit؟ وهل click عبر index يصل button الصحيح؟
+محاولة سابقة بالكونسول (dispatchEvent submit) نجحت كاملة. إذن زر index=4 ربما ليس زر submit داخل فورم bindLoginForm!
+
+## 19:02 login POST = 200 في المنشور لكن UI لم ينتقل
+- afterLoginRequests: كلها 200 بلا أي خطأ
+- لكن body بقي على صفحة الدخول (نفس المحتوى) و#login-error فارغ
+- إذن login نجح (الكوكي حُفظ؟) لكن renderDashboard() لم تُستدعَ أو فشلت بصمت
+- الاحتمال: mutate onSuccess لا يستدعي refresh() إلا إذا res.result.data.success===true — لكن body لا يحتوي error، هل النتيجة { success: true }؟ يجب فحص response body الفعلي لـ login.
+- أو: الكود يستدعي passkeys بعد login ثم يرمي بصمت.
+الإجراء: فحص body response الفعلي لـ /api/trpc/adminAuth.login في المنشور.
+
+## 19:03 الخلاصة المؤكدة
+كل الطلبات من الكونسول تعمل 200 والجلسة فعالة (account يعيد id:1). المشكلة حصرًا في كود الـ UI: عند النقر على الزر، login POST يُرسل ويُرجع success:true لكن الواجهة تبقى على صفحة الدخول وerrBox يعرض "بيانات الدخول غير صحيحة".
+فرضية قوية: سكريبت آخر (security-r6 أو enhancements-r14 أو design-studio-r*) يستمع للـ submit أو يمنع الافتراضي قبل bindLoginForm — لأن bindLoginForm يُضاف بعد هذه السكريبتات؟ لا، onload يتسلسل. أو: errBox يعرض النص من loginDefaults قبل الدخول ولم يُمسح عند النجاح (login ينجح silent ويُنفذ refresh لكن refresh يبدأ بتعيين errBox؟).
+الحل العملي: قراءة submitLogin/refresh في r22 المنشور حرفيًا الآن.
+
+## 19:03 قراءة r22 (الأسطر الحاسمة)
+سطر 143: submitLogin — يمسح errorBox ثم: إن كانت الحقول فارغة يعرض "أدخل البريد الإلكتروني وكلمة المرور."، وإلا يستدعي mutate("adminAuth.login") ثم refresh()، وعند أي خطأ يُكتب state.loginSettings?.invalidCredentialsText أو messageOf(error).
+سطر 144: bindLoginForm — يضيف مستمع submit على #login-form (يعمل مرة واحدة فقط؛ addEventListener لا يمنع التعدد لكنه يستدعى من boot و logout فقط).
+سطر 142: normalizeLoginEmail — يحذف LRM/RLM والـ directional chars وtrim.
+سطر 147: هناك معالج document.addEventListener("click") عام — data-logout / data-upload-logo / data-download-backup...
+سطر 152: document.addEventListener("submit") عام — يستهدف form[data-backup-restore] وform[data-media-upload] فقط.
+loginView: يحتوي div#login-error فارغًا (class="error") — لا يوجد نص افتراضي في r22.
+الخلاصة: النص "بيانات الدخول غير صحيحة" الذي ظهر في UI لا يأتي من r22 مباشرة — بل من ownerLoginSettings.invalidCredentialsText المُحمّلة من DB (رسالة مخصصة محفوظة من المستخدم سابقًا في إعدادات شاشة الدخول!). عند نجاح login + refresh(): refresh() يجلب ownerLoginSettings ثم loginView() قد يعيد بناء الصفحة ويُعيد النص!
+احتمال حقيقي: refresh() ينجح كاملًا (رأينا 8 طلبات 200) لكن بعدها loginView يعاد رسمه؟ لا — refresh عادة يحدّث state ثم dashboard().
+فحص loginView() سطر 118-130: هل يعرض invalidCredentialsText كنص افتراضي لـ #login-error؟ (هناك سطر: <div id="login-error"...>${esc(value?.loginErrorText||"")}</div> ربما)
+
+## 19:04 الاكتشاف الحاسم الحقيقي
+من الكونسول: hook على window.mutate لم يُسجل أي استدعاء بعد النقر! إذن submitLogin لم يُنفَّذ أصلًا. يوجد مستمع submit آخر يمنع الافتراضي قبل bindLoginForm، ويكتب "بيانات الدخول غير صحيحة" دون استدعاء API أصلًا.
+المشتبه: سكريبت من السكريبتات الإضافية المحمّلة (security-r6 أو enhancements-r14 أو غيرها) يستمع لـ document "submit" على الفورم العام ويمنع الافتراضي ويكتب رسالة خطأ. أو: هناك فورم آخر باسم login-form؟ لا.
+الفحص التالي: عدّ مستمعي submit على document من كل السكريبتات، أو الأسهل: فحص سكريبتات inline في admin.html المنشور (INLINE 1-3) التي قد تستمع للـ submit.
+
+## 19:05 تأكيد إضافي
+window.submitLogin غير موجود (معبّأ داخل IIFE). إذن hook على window.mutate لم يمسك شيئًا => المستمع الذي يكتب "بيانات الدخول غير صحيحة" بعد النقر ليس submitLogin أصلًا بل مستمع آخر. يجب البحث في كل الأصول المحمّلة في admin.html عن "بيانات الدخول غير صحيحة" وpreventDefault على submit.
+
+## 19:06 استبعاد السكريبتات الإضافية
+security-r6 يستهدف [data-owner-login-credentials] فقط، enhancements-r14 يستهدف [data-owner-login-settings] فقط — لا شيء منهما يعترض #login-form. إذن المشكلة أصلًا في admin-app-r22.js المنشور: ربما CDN يقدم نسخة قديمة (اسم الملف r22 ثابت منذ أسابيع، CDN cache قد يطول). الفحص: هل URL المنشور يحمل ?v= بصمة؟ admin.html يحمل <script src="/assets/js/admin-app-r22.js?v=...">؟ وإذا كانت v قديمة أو لا يوجد caching-busting فعّال على CDN، فالمتصفح يستدعي نسخة قديمة.
+إجراء مباشر: تغيير اسم الملف إلى admin-app-r23.js (كسر أي cache نهائياً) + تحديث كل الإشارات في admin.html + رفع بصمة r23.
+قبل ذلك: فحص admin.html المنشور: سطر الـ script src admin-app.
+
+## 19:06 اكتشاف خطير
+فورم #login-form في المنشور: action="https://uploadplus-47dkogbk.manus.space/admin.html?tr=8" method="get" و novalidate! والنافذة تعرض "بيانات الدخول غير صحيحة" رغم أن فورم loginView في r22 لا يحتوي هذه القيم افتراضيًا. إذن الفورم المعروض ليس من loginView في r22 الحالي — بل من نسخة قديمة أو فورم يُبنى من ownerLoginSettings! ملاحظة: WajbatBlogManager محمّل ✓ (المدونة تعمل). WajbatAdmin موجود (اسم الكائن في r22؟ يجب التحقق: r22 يعرّف window.WajbatAdmin؟).
+الأهم: فورم له action GET يعني bindLoginForm لم يُربط عليه، أو فورم آخر. النص "بيانات الدخول غير صحيحة" + action GET + tr=8 → يبدو فورم من نسخة قديمة من admin-app (r13-r21 كلها تحتوي هذا النص!). هل CDN يعيد نسخة قديمة رغم ?v=blog-r1؟ اسم الملف r22 ثابت — بصمة الاستعلام blog-r1 قد تكون cached مع الاسم نفسه؟ لا، الاستعلام يُغيّر المفتاح. لكن! CDN للملفات قد يهمل query string أو... الأسهل الحسم: اسم الملف نفسه admin-app-r22.js موجود محليًا بنسخة جديدة لكن المنشور قد يكون r22 قديم. تحقق: مقارنة checksum بين local وproduction.
+
+## 19:07 مفارقة حاسمة
+DOM المنشور: form action=https://uploadplus-47dkogbk.manus.space/admin.html?tr=8 method=get
+لكن loginView() في r22 المحلي (المطابق checksum للمنشور) يبدأ: `<form id="login-form" class="login-card ...">` بلا action وmethod!
+فورم HTML بلا action/method: الافتراضي action=URL الحالي method=POST. إذن method=get مكتوب في نسخة أخرى!
+=> الكاش CDN لا يزال يقدم نسخة قديمة رغم !v=... لا— checksum curl طازج (بدون كاش) مطابقة محلية!
+احتمال متبقٍ وحيد: فورم منشأ JavaScriptيًا بعد التحميل من سكريبت آخر: admin-owner-login-enhancements-r14.js؟ هو يعدّل settings form فقط. أو admin-design-studio-r2.js أو admin-security-controls.js أو admin-structured-editor.js يستمع لـ DOM ويستبدل الفورم!
+فحص كل هذه الملفات عن "login-form" أو "admin.html?tr" أو method="get".
+
+## 19:07.2 تحديث
+الفحص الثاني (بعد refresh الصفحة من الكونسول): الفورم الآن بلا action/method — مطابق لـ r22 المحلي! إذن فورم r22 يعمل بشكل طبيعي؟ أول فحص (19:04) كان بعد محاولة دخول فاشلة: حينها action=...?tr=8 method=get! من أين جاءت؟ هل submitLogin (أو refresh بعد النجاح) يغيّر الفورم؟ يجب البحث في r22 عن "admin.html?tr" أو تعديل action للفورم. grep كان exit 1 → لا يوجد "admin.html?tr" في أي ملف. لكن الكود قد يبنيها كـ template literal مع + "admin.html" + "?tr=". البحث عن "?tr=" في الملفات.
+
+## 19:08 استنتاج مركزي
+dispatchEvent("submit") على #login-form لم يُفعّل شيئًا — لا خطأ، لا طلب. إذن مستمع submit غير مربوط أصلًا على الفورم في المنشور، رغم أن bindLoginForm في r22 محلي موجود وصحيح.
+boot() ينجح (refresh يجلب البيانات) لكن bindLoginForm() قد لم يُنفَّذ لأن boot() يرمي في منتصفه؟ لا، refresh يعمل بعد bindLoginForm في boot عادة.
+فحص boot() في r22: ترتيب الاستدعاءات — loginView() ثم bindLoginForm() ثم boot؟ ابحث عن "function boot" واقرأ جسمه.
+
+## 19:09 كشف جوهري
+sessionStorage خالية (لا جلسة)، وadminAuth.account=200 (نجاح؟! كيف؟)، ولا يوجد طلب login في آخر 8 entries رغم النقر.
+ملاحظة: bodyStart سابقًا = "مرحبًا بك في لوحة الإدارة" فقط (صفحة دخول)، trace يظهر 8 طلبات refresh ناجحة كلها 200.
+=> account ينجح حتى بدون جلسة؟ (قد يكون publicProcedure يرجع null). refresh() بنجاح → dashboard() → يجب عرض لوحة. لكن DOM = صفحة دخول!
+وحدة الكشف: هل DOM من نافذة مختلفة؟ أو هل bodyStart قيس بعد إعادة تحميل من فورم GET؟ أول فحص فورم action GET + tr=8 — tr=8 يشبه retry counter! ربما فورم الدخول يعاد بناؤه بـ 8 محاولات.
+احتمال آخر حقيقي: body يحتوي BOTH: dashboard مبنية لكن state.selected="dashboard" وworkspace يعرض ... لا، loginView = main.login-view — dashboard يبني admin-shell. bodyStart أظهر login-view فقط → لا admin-shell في الـ DOM؟
+فحص: وجود .admin-shell في DOM الآن.
+
+## 19:09.2
+لا admin-shell في DOM — فقط login-view. errText "بيانات الدخول غير صحيحة" موجود دون أي طلب login في trace. الفحص الحاسم النهائي: التحقق مما إذا كان مستمع submit مربوطًا على الفورم أصلًا عبر hook capture listener يراقب submit على document منذ الآن ثم النقر.
+
+## 19:09.3 لحظة الاختراق
+- capture: submit وصل فورم login-form دون preventDefault من أي سكريبت آخر ✓
+- fetch: /api/trpc/adminAuth.login أُرسل status 200 ثم refresh كله 200 ✓
+- لكن errText = "بيانات الدخول غير صحيحة" والفورم باقٍ!
+=> mutate رمى: tRPC يرجع JSON {error:{message:"بيانات الدخول غير صحيحة"}} مع HTTP 200! إذن الخادم يرفض الدخول في الإنتاج رغم أن curl المحلي نجح سابقًا.
+- الفرق بين curl والواجهة؟ curl أرسل من الساندبوكس إلى dev server؟ أو production؟ يجب اختبار curl على production الآن.
+- ملاحظة: user قال "أنا ماغيرت الرمز — انت ليش غيرته". الاحتمال الأرجح: ADMIN_PASSWORD في env الإنتاج تغيّر فعلًا (قد يكون تم تعديله في Settings أو من جلسة أخرى) أو أن الخادم في الإنتاج يقرأ env مختلف.
+
+## 19:10
+curl للإنتاج: 200 + success:true + cookie يُضبط. الخادم سليم. المتصفح أرسل نفس الطلب (status 200) لكنه عرَض خطأ. fetch wrapper سجّل URL فقط بلا body — تسجيل body فعلاً في الفحص القادم لمعرفة response الحقيقي. احتمال: المتصفح أرسل بيانات أخرى (email بمسافات خفية من input؟) — لا، input عادي. أو: الكوكي لا يُضبط في المتصفح (HttpOnly + Secure يعملان على https). أو: response كان {"error":{"message":"بيانات الدخول غير صحيحة"}} — لكن curl بنفس البايبد نجح! الفرق الوحيد: المتصفح قد يكون خلف proxy مختلف أو أن الطلب من المتصفح أُرسل مع header trpc-accept مختلف — لا يؤثر.
+ملاحظة جديدة: fetch wrapper سجّل /api/trpc/adminAuth.login مرة واحدة فقط رغم أن refresh أرسلت account مجددًا. إذاً login نجح (200). بعدها errText كتب. submitLogin: try { await mutate(...) await refresh() } catch → write. لكن hook سجل 200! هل mutate رمى رغم 200؟ tRPC يرمي عندما response تحتوي error — ولكن status 200 means success json... إلا إذا body={0:{result:{data: null}}}؟ لا.
+اختبار نظيف: تسجيل body response لـ login من داخل المتصفح.
+
+## 19:11
+loginBody حاسم: success:true من الخادم! لكن errText كتب. إذن write جاء من مكان آخر غير catch submitLogin — أو من re-render! هل boot/refresh يعيد رسم loginView فوق dashboard مع الخطأ؟ لا — dashboard لا يحتوي errText.
+لحظة: فورم loginView يحتوي `<div id="login-error">` فارغًا. من كتب النص؟ submitLogin catch يستخدم invalidCredentialsText. لكن invalidCredentialsText محفوظ في state.loginSettings من DB (custom text!). إذا refresh() نجح بعد login، ثم... لا write.
+هناك احتمال لم يُفحص: فورم الدخول قد يكون له نسختان متطابقتان في DOM بعد boot متكرر (boot يستدعى مرة، لكن MutationObserver ownerLoginDomObserver يستدعي applySavedLoginPresentation التي قد تعيد بناء الفورم عبر loginView()؟ لا — applySavedLoginPresentation تعيد بناء فورم الإعدادات).
+فحص جذري: هل يوجد مستمعا submit اثنان؟ الأول submitLogin (bindLoginForm)، والثاني؟ capture سجّل حدثًا واحدًا فقط defaultPrevented=false — إذن submitLogin نفذ! وmutate نجح (loginBody success). بعد ذلك errText كُتب! من أين؟
+الاحتمال الوحيد المنطقي المتبقي: submitLogin كتب errText من catch، لكن catch التقط خطأ من await refresh() — رغم أن fetches كلها 200 status! قد تكون إحداها status 200 مع tRPC error json (UNAUTHORIZED). يجب تسجيل body لكل طلب refresh.
+
+## 19:12
+كل استجابات refresh = success:true/arrays صالحة. الخادم والجلسة سليمان. لكن UI يكتب "بيانات الدخول غير صحيحة" (invalidCredentialsText المحفوظ في ownerLoginSettings من DB!).
+السؤال: من يقرأ invalidCredentialsText ويكتبه؟ في r22 فقط: submitLogin catch (بعد failure) + loginView? (لا يكتبه) + ownerLoginFormValues؟
+فحص كل أصول js الأخرى عن invalidCredentialsText!
+
+## 19:13 الخطة النهائية للكشف
+errBox div#login-error: proxy على textContent setter عبر MutationObserver مع new Error().stack عند التغيير → يعطينا stack trace كامل لمن كتب النص. ثم login ومراقبة stack.
+
+## 19:12 breakthrough
+Stack trace مؤكد: errBox كتب مرتين عبر submitLogin — الأولى مسح، الثانية "بيانات الدخول غير صحيحة" عند login:143:482 (catch في submitLogin). إذن mutate أو refresh رمى. bodies كلها success. يجب قراءة سطر 143 char 482 حرفيًا من r22 المنشور للتمييز بين catch login وcatch refresh.

@@ -617,3 +617,38 @@ try { await mutate(...); await refresh(); dashboard(); } catch(e) { errorBox.tex
 نظرية نهائية: الـ fetch في UI يعمل تمامًا، لكن refresh() من UI يُنفذ على state فارغ ثم dashboard() يرمي خطأ غير caught؟ dashboard() داخل submitLogin محمي؟ لا — refresh() داخل try/catch في submitLogin! نعم: try { await login; await refresh(); } catch { errorBox... } — refresh() كاملة محمية.
 يجب أن الخطأ real. سأضيف كود تتبع دائم في admin.html: أدرج سكريبت inline صغير يلفّ fetch ويسجل كل response غير 200 وكل throw من login... ثم checkpoint + نشر، ثم نقر. هذا هو الطريق الأمثل.
 لكن أسهل طريقة: في admin.html أضيف inline script قبل تحميل r22 يلتقط: window.addEventListener('unhandledrejection', log)، ويعيد تعريف console.error، ويسجل performance entries. وأتركه في النشر.
+
+## 18:57.1 اكتشاف جوهري: traceType = undefined في الإنتاج!
+النسخة المنشورة من admin.html لا تحتوي سكريبت التتبع رغم checkpoint b57f1715! يعني: النسخة المنشورة قديمة (ربما من قبل إصلاح normalize أو حتى أقدم). النقر نفذ (errorBox كتب النص) لكن الصفحة تعمل بكود قديم.
+الأسئلة: هل البادئة manuscdn تعيد نشر القديم؟ هل هناك استثنائية في النشر؟
+الخطوات: curl مباشرة على https://uploadplus-47dkogbk.manus.space/admin.html وفحص وجود __loginTrace. إن كان غائبًا = النشر لا يلتقط أحدث checkpoint. الحل: فحص آلية النشر + ربما إعادة النشر يدويًا عبر dashboard أو انتظار.
+
+## 18:57.3 تأكيد: المنشور عالق عند آخر-تعديل 18:41:16Z
+آخر نشر حقيقي للموقع المنشور كان عند 18:41 (ربما عند بداية هذا الجلسة أو قبلها). checkpoints من 18:41 إلى 18:56 (b57f1715 وغيرها) لم تُطبّق على النشر المنشور رغم أن الأداة قالت نجاح. ملاحظة: last-modified 18:41 قد يكون تاريخ آخر deploys ناجح. يجب إعادة checkpoint الآن ومراقبة النشر مرة أخرى. احتمال: auto-publish نشر فعليًا لكن CDN cache stale رغم cache-control no-cache (قد تكون CDN تطبق edge cache). الحل: تغيير اسم الملف admin.html → admin-r2.html في admin-app؟ لا — الأخطر: يجب التحقق هل r22 المنشور يحتوي normalizeEmail الجديد! curl على r22 المنشور للتحقق.
+
+## 18:58 نشر جديد وصل! (Deployment successful notification)
+إشعار النشر الرسمي وصل. يعني checkpoint b57f1715 (مع __loginTrace) يجب أن يكون منشورًا الآن. re-test: curl على admin.html المنشور للتحقق من وجود __loginTrace ثم إعادة اختبار تسجيل الدخول عبر المتصفح.
+
+## 19:00 اكتشاف حاسم من __loginTrace (نسخة منشورة جديدة 18:57)
+كل طلب tRPC أعاد 200 دون أي error في body. لا يوجد "Failed to fetch" على أي طلب tRPC. لا unhandled rejection في السجل.
+ومع ذلك errorBox كتب «بيانات الدخول غير صحيحة».
+استنتاج نهائي: messageOf(error) في catch يُستدعى بـ error ليس من الشبكة بل من كود mutate/client-side throw. لكن كيف يُرمى إذا body سليم؟
+فرضية جديدة دقيقة: في refresh()، ربما يُقرأ state.loginSettings?.invalidCredentialsText أو هناك رمز في loginDefaults... لا، errorBox يُكتب فقط في catch.
+فرضية أقوى: fetch wrapper في الرقابة أعاد res سليم، لكن كود tRPC client أو mutate يقرأ res.json() نفسه (clone) وقد يفشل أحدهما أو response مستهلك؟ No—clone مستقل.
+احتمال نهائي واقعي: login نجح (200 + success)، لكن refresh() رمى خطأ من أحد طلباتها رغم 200؟ إذا response 200 فلا يرمي tRPC client.
+هل refresh() ترمي من كود غير fetch (مثل JSON parse يدوي أو localStorage)؟
+الخطة: في refresh() المحلية، لف كل await بtry حولها عبر console.error مخصص: أضيف hook على window.__errs عبر performance؟ الأفضل: أعد قراءة refresh() المنشور كاملًا من الكونسول وأفحص أي throw ممكن.
+ملاحظة أخرى: الطلبات في refresh تشمل admin.submittedReviews/admin.requests/adminAuth.passkeys/... كلها 200 في التتبع. لا body errors.
+قد يكون الخطأ من query(): mutate ثم refresh — mutate قد يرمي إذا كانت الاستجابة بها result error! bodySnippet فارغ لأنه من statusText. لم أفحص body error! tRPC خطأ يعيد HTTP 200 مع body {error:...}. يجب إعادة hook لقراءة p.error!
+حقيقةً: hook كان يقرأ p.error.json.message لكن tRPC شكل error مختلف: p.error.json.message صحيح (tRPC v11). يجب إعادة فحص bodies بدقة.
+
+## 19:00.2 كل API سليم في هذه الجلسة (جلسة محفوظة من قبل — لذلك account=200)
+التتبع السابق أظهر login POST = 200 أيضًا. الاستنتاج المؤكد الآن:
+- UI يرسل login → 200 (نجاح)
+- UI يرسل refresh → كل طلباته 200 بلا errors
+- ومع ذلك catch كتب «بيانات الدخول غير صحيحة»
+الاحتمال الوحيد المتبقي: refresh() رمى خطأًا غير fetch: مثلاً JSON.parse من localStorage، أو JSON.parse لـ response يدوي، أو window.location = ... رمى، أو هناك await على undefined.
+يجب استخراج refresh() المنشور كاملًا وفحصه سطرًا سطرًا. أو: تعديل client ليلتقط الخطأ ويسجله في __loginTrace (stack كامل) — هذا أدق! سأعدّل r22 أو inline في admin.html: أغلف mutate/refresh بعرض الخطأ داخل errorBox كنص مطول في dev mode؟ الأأنظف: في admin.html inline script بعد تحميل r22 (عبر MutationObserver على errorBox) يسجل err box text + آخر throw.
+أبسط: أضيف في inline script موجود (موجود أصلًا في admin.html؟) أو أعدل r22 مباشرة: قبل errorBox.textContent = ... أضيف: errorBox.setAttribute("data-err", String(error)); console.error(error) — console.error يُسجل في الكونسول وأنا أراه.
+سأضيف console.error(error) في catch — لكن catch موجود في r22 ويُنفذ في module؛ console.error يظهر في browser console — سأراه عبر console view بعد النقر!
+الحل: سكريبت inline قبل r22 يعيد تعريف console.error ويخزن في __loginTrace: done-ish (غير موجود حاليًا). أضيفه الآن.

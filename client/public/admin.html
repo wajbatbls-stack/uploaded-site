@@ -18,6 +18,16 @@
     <div id="admin-root"></div>
     <script>
       window.__loginTrace = [];
+      const __origConsoleError = console.error;
+      console.error = function __loginConsoleError(...args) {
+        const t = window.__loginTrace || [];
+        t.push({ t: Date.now(), consoleError: args.map((a) => {
+          try { return a && a.stack ? String(a.stack).slice(0, 800) : typeof a === "object" ? JSON.stringify(a).slice(0, 400) : String(a).slice(0, 400); } catch (e) { return String(a).slice(0, 400); }
+        }).join("\n---\n") });
+        __origConsoleError.apply(console, args);
+      };
+      window.addEventListener("error", (ev) => { (window.__loginTrace = window.__loginTrace || []).push({ t: Date.now(), uncaughtError: String(ev.message), stack: (ev.error && ev.error.stack) ? String(ev.error.stack).slice(0, 800) : "" }); });
+      window.addEventListener("unhandledrejection", (ev) => { (window.__loginTrace = window.__loginTrace || []).push({ t: Date.now(), unhandledRejection: String(ev.reason), stack: (ev.reason && ev.reason.stack) ? String(ev.reason.stack).slice(0, 800) : "" }); });
       const __origFetch = window.fetch;
       window.fetch = function __loginFetch(url, init) {
         return Promise.resolve(__origFetch.call(window, url, init)).then(

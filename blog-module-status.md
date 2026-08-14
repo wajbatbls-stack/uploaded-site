@@ -940,3 +940,164 @@ API site.blog.publicList يرجع 5 مقالات (الرئيسية فقط من D
 - إذن mountCompatibleBlogManager يرجع null دائمًا، والمستخدم يرى المحتوى الافتراضي من content('blog') (قائمة غير تفاعلية من DB مباشرة) وليست الواجهة الكاملة بنموذج الإضافة! هذا يفسر كل شيء: زر + إضافة موجود لكن بلا [data-blog-add-article] — زر content الافتراضي.
 - الإصلاح المطلوب: r2 يجب أن يصدّر دوال متوافقة مع واجهة r24: `activate()` (تعيين container + load) و property `container` موجود. أو تعديل r24 لتقبل الواجهة القديمة. الحل: تعديل r2 نفسه (إضافة activate إلى manager) لأنه ملف الجلسة الحالية.
 - ملاحظة: المحتوى الحالي المعروض "8 مقالات" هو عرض قديم من content() في r24 يعمل (fetch مباشر) — الواجهة الكاملة (tabs، نموذج، رفع صور) غير ظاهرة.
+
+## 19:47 حالة الجلسة الحالية
+الإنتاج أصبح يخدم admin-blog-manager-r3.js (28875 بايت، يحتوي activate()). لوحة الإدارة المنشورة admin-dashboard.html تعمل بالكامل مع الجلسة النشطة: لوحة التحكم تظهر كل الإحصاءات (٨ مقالات، ١٥ خدمة، ٢٢ ملف تحميل...). ملاحظة: في القائمة الجانبية يوجد زر مضاعف — «📝المدونة الأكاديمية 8» يليه مباشرة «?blog» (زران للمدونة) — يجب إخفاء الزر المكرر "?blog" في r24.
+المطلوب الآن: فتح قسم المدونة والتحقق من أن الواجهة الكاملة (activate) تظهر: تبويبات مقالات/تصنيفات، زر إضافة مقال بنموذج كامل، رفع صورة S3، حفظ، ثم التحقق من ظهور المقال في موقع الزائر #/blog.
+ملفات مفيدة: blog-module-status.md (توثيق كامل)، todo.md بجذر المشروع (12 بندًا غير مكتمل).
+
+## 19:46 نموذج الإضافة يعمل
+الواجهة الكاملة للمدونة تظهر الآن (activate يعمل): قائمة 8 مقالات مع أزرار (↑↓تعديل إخفاء حذف) + زر + إضافة.
+عند النقر على + إضافة يظهر نموذج كامل: عنوان (مقال جديد)، تصنيف (عام)، تاريخ (١٤‏/٨‏/٢٠٢٦)، ملخص textarea، محتوى textarea، checkbox ظاهر للزوار، زر حفظ وإلغاء.
+ملاحظة: لا يوجد حقل/زر رفع صورة ظاهرًا صراحة في النموذج الظاهر (يجب فحص: هل رفع الصورة ضمن تبويب آخر أو زر مخفي أسفل النموذج — العناصر 72-81 فقط). قد يكون هناك تبويبان في النموذج (مقالات/تصنيفات) لم يظهر.
+الأهم: يجب تجربة حفظ مقال حقيقي عبر تعبئة الحقول ونقر حفظ (79)، ثم التحقق من DB وموقع الزائر #/blog.
+أيضًا: يوجد زر مضاعف "?blog" في القائمة (index 11) يجب إخفاؤه في admin-app-r24.
+
+## 19:47 نجاح حفظ مقال حقيقي ✅
+حفظ المقال «اختبار رفع الصورة 2026» بنقر زر حفظ فعلًا (بدون JS برمجي):
+- ظهر في القائمة بالمركز 9 مع تصنيف «نصائح دراسية» وحالة «ظاهر».
+- رسالة «تم الحفظ في قاعدة البيانات» ظهرت.
+- عداد المقالات في لوحة التحكم وقائمة الشريط الجانبي أصبح 9، والصفحات أصبحت 2.
+المتبقي: (1) اختبار رفع صورة حقيقي في مقال (2) التحقق من ظهور المقال في موقع الزائر #/blog (3) حذف مقال الاختبار (4) إخفاء زر ?blog المكرر (5) إزالة __loginTrace من admin.html (6) إنهاء.
+
+## 19:47 مدونة الزائر تعرض 5 مقالات فقط رغم 9 في DB
+- الموقع الزائر: https://uploadplus-47dkogbk.manus.space/#/blog يعرض 5 مقالات قديمة فقط (2024) من siteSettings القديمة.
+- publicList في server/blog.ts قد يفلتر على isVisible فقط، لكن المقالات الجديدة (حُفظت من المدير) لم تظهر — سابقًا تبين أن publicList يرجع 5 فقط.
+- الاحتمال: site-app المنشور (r14) ما زال يستخدم بيانات ثابتة من index.html القديمة (الموقع المنشور نفسه قديم؟ لا — صفحة z19 ظهرت حديثة). أو publicList يتحقق من publishedAt ≤ now. المقالات الجديدة تاريخ ١٤/٨/٢٠٢٦ = صحيح.
+- يجب فحص server/blog.ts: publicList الفعلي في الإنتاج + هل المقالات الجديدة حُفظت بـ isVisible=1 في DB.
+
+## 19:49 اكتشاف: مقال «اختبار رفع الصورة 2026» غير موجود في DB!
+الـ DB يحتوي 6 مقالات فقط (1-6). المقال الذي «حُفظ» ظهر في واجهة الإدارة عبر تحديث الـ cache المحلي فقط (optimistic UI) — mutation saveArticle لم تصل للخادم أصلًا، أو استخدمت procedure خاطئة. اللوحة عرضت 9 مقالات وهمية (optimistic).
+المطلوب: تتبع سبب عدم وصول الحفظ للخادم. سابقًا تبين أن publicList يرجع 5 (isVisible=1 فقط) — هذا يفسر مدونة الزائر (مقال id=6 مخفي).
+خطة: اختبار استدعاء saveArticle من الـ API مباشرة من الـ console عبر نفس الـ tRPC client في صفحة الإدارة لمعرفة خطأه الفعلي.
+
+## 19:48 نتائج API الحاسمة
+- site.blog.articles (GET محمي، الكوكي يعمل): يرجع المقالات الحقيقية من DB — يتأكد أن المقالات 6 فقط وأن المقال التجريبي الأخير غير موجود في DB.
+- procedures الحفظ الموجودة (405 = mutation موجودة): site.blog.createArticle وadmin.blog.createArticle.
+- DB: 6 مقالات؛ id=6 «مقال جديد» isVisible=0 (مخفي من الزائر)، id=5 «مهارات البحث العلمي» visible.
+- اللوحة عرضت «9 مقالات» بشكل وهمي (optimistic cache) رغم أن DB = 6. الحفظ الحقيقي من مدير المدونة (r2/r3) يفشل الوصول للخادم: إما اسم procedure خاطئ أو mutate غير مربوط بالدالة الصحيحة.
+- الخطوة التالية: فحص saveArticle في admin-blog-manager-r3.js المنشور: ما procedure يستدعي عبر trpc client، ومقارنته بـ server/blog.ts (createArticle يحتاج أي حقول إلزامية؟).
+
+## البق القاتل النهائي (19:49)
+r3 يستدعي "admin.blog.createArticle" و"admin.blog.updateArticle" — وserver/blog.ts router هو فعلاً admin.blog (مؤكد بأن mutation موجودة، 405). لكن الحفظ يبدو أنه لا يصل للخادم أصلًا! سبب محتمل: this.mutate في r3 غير مربوط أو form يُجمع من state فارغ (الحقول لا تُحدث state). في r3: input يُبنى من form الذي يُجمع collectArticleForm — إذا الحقول بلا data-blog-prop أو المستمع غائب → form فارغ → validation يفشل (title min 1) → catch يكتب "تعذر الحفظ" لكن toast كتب "تم حفظ المقال"؟! لا — catch كتب messageOf.
+فحص: هل r3 يحتوي hook ربط data-blog-prop الذي أضفناه في r2؟ r3 = نسخة r2 + activate فقط. هل hook موجود في r2/r3 أصلًا؟ أُضيف عبر sed إلى ملف — يجب التحقق.
+الأسرع: اختبار mutate فعلي من المتصفح مع بيانات حقيقية عبر raw fetch لـ admin.blog.createArticle ثم فحص response.
+
+## الخلاصة (19:50)
+الخادم سليم 100%: admin.blog.createArticle من المتصفح مع الكوكي نجح (id=60001). المقالات الحقيقية 6 (5 ظاهرة + 1 مخفي id=6 «مقال جديد» من اختبار سابق — سأبقيه لأنه اختباري). مشكلة الحفظ في الر3 هي داخل collectArticleForm: البيانات لا تُجمع صحيحًا عند التعبئة يدويًا (browser fill لا يطلق input events أو hook مفقود)، لذا input أرسل title فارغًا وفشل؟ لا — toast قال «تم حفظ». الأرجح أن form يُقرأ من elements موجودة ونجح لكن... الخلاصة: يجب تتبع saveArticle فعليًا من UI: هل form collected يحتوي title؟ أسهل طريقة: فحص collectArticleForm في r3 المنشور.
+
+## 19:52 آلية الحفظ في r3
+saveArticle() يقرأ form = this.state.editingArticle مباشرة. أي أن ربط الحقول يجب أن يحدث state.editingArticle عند الكتابة. هل يوجد مستمع input على حقول النموذج في r3؟ يجب فحص: بحث "addEventListener('input" أو oninput أو data-blog في r3. إن لم يوجد → هذا هو البق: تعبئة النموذج عبر الواجهة لا تحدث state → form.title فارغ → رسالة "اكتب عنوان المقال"؟ لكن toast سابقًا قال «تم حفظ المقال في قاعدة البيانات»... أي أن form كان يحتوي عنوانًا (من الحقول ربما تُقرأ بطريقة أخرى!).
+ملاحظة: openEditArticle يعبئ state من article الحالي. startNewArticle يهيئه فارغًا. عند التعبئة اليدوية بدون مستمعات، state يبقى فارغًا ويظهر toast العنوان الفارغ. لكن المستخدم/الاختبار رأينا «تم حفظ» — كيف؟ لأن الحقول تُربط عبر hook في r24 shell (data-blog-prop listener الذي أضفته)؟ يجب فحص ذلك في r24.
+
+## 19:54 حالة الاختبار الحالي (browser على dev server)
+- تسجيل الدخول نجح على /admin-dashboard.html — الداشبورد يعرض إحصاءات حية (9 مقالات، سجل blog_article_created).
+- مقالنا التجريبي الآلي «مقال تجريبي آلي» ظهر في صفحة الزائر #/blog (لقطة تظهره بملخص "ملخص تجريبي").
+- site.blog.publicList يعمل (المسار الصحيح site.blog.publicList وليس blog.publicList).
+- متبقٍ: حذف المقالات/التصنيفات التجريبية الآلية، إزالة زر «? blog» الزائد من sidebar في admin-app-r24.js، تنظيف console.log تشخيصي، اختبار حفظ مقال من الواجهة (وليس فقط API)، checkpoint نهائي وتسليم.
+
+## 19:56 نتائج فحص تحميل مدير المدونة (مهم — سبب عدم ظهور القسم في المتصفح)
+- في جلسة المتصفح (localhost) بعد تسجيل الدخول، console وجد: لا WajbatBlogManager ولا عنصر [data-blog-workspace]. أي أن admin-blog-manager-r3.js لم يُحمَّل ولم يُنشأ قسم المدونة.
+- **سبب محتمل**: سلسلة تحميل السكربتات في admin-dashboard.html تعتمد على onload متداخل — blogManager تُحمَّل بعد contactManager داخل onload الخاص به. لكن الملاحظة في الكود: contactManager تُنفَّذ ثم blogManager. يبدو البنيان سليمًا.
+- لكن عند الضغط على زر «📝 المدونة الأكاديمية 9» في sidebar، الرمز يعرض **القسم القديم** «المدونة» (من structured editor القديم، محتوى: «أنشئ المقالات وحدد التصنيف...»، قائمة المقالات القديمة 9 عناصر) وليس مدير WajbatBlog الجديد (تبويبات المقالات/التصنيفات، «صنّف مقالاتك...»).
+- أي أن `contentWorkspace` يستدعي mountStructuredEditor/blog بدلاً من mountCompatibleBlogManager؟ يجب فحص: مفتاح التنقل الحالي `state.selected` عند النقر. الأزرار في sidebar تستخدم key مثل "blog" — لكن الرمز القديم يعرض «المدونة» بـ9 عناصر → يبدو أن هناك قسمين: «المدونة» (القديمة content editor key=blog؟) و«المدونة الأكاديمية» (key=blogAcademic؟) في navSections.
+- navSections تحتوي «📝 المدونة الأكاديمية 9» (رقم 9 = تعداد) وزر «? blog» زائد — يجب إزالة «? blog».
+- الرمز الذي نقرناه (index 10) فتح القسم القديم، يعني label «📝 المدونة الأكاديمية» مربوط بـ key قديم. يجب فحص navSections في r24.
+- admin-blog-manager-r3.js موجود محليًا و`window.WajbatBlogManager` يُصدَّر عبر manager object مع property container وmethods: load/activate/saveArticle... (سطر 540: `window.WajbatBlogManager = manager;`).
+
+## قرارات المتبقية للتنفيذ السريع
+1. فحص navSections في admin-app-r24.js: مفتاح «المدونة الأكاديمية» يجب أن يستدعي mountCompatibleBlogManager()، وقسم «المدونة» القديم key مختلف.
+2. إزالة «? blog» من sidebar (labels[key] زائد أو items زائد).
+3. التحقق من أن سلسلة تحميل السكربتات تعمل (لو لم يُحمَّل r3 — أضيفه أيضًا في admin.html وdashboard.html كـ inline script بعد admin-app؟ لا، هو داخل onload chain. راجع التسلسل الفعلي للسكريبتات في الملف: homepage → structuredEditor → mediaBinding → services → visitorLinks → downloads → contact → blog).
+4. اختبار ع2ع من الواجهة: إضافة مقال جديد بحفظ فعلي، ثم رؤية الزائر.
+5. حذف المقالات/التصنيفات التجريبية الآلية (id=90001 مقال، id=30001 تصنيف «تصنيف تجريبي آلي»).
+6. تنظيف: سطور console.log التشخيصية في submitLogin ([LOGIN]...) — أبقِها أو أزل؟ الأفضل إزالتها.
+7. pnpm test + build + checkpoint + تسليم.
+
+## روابط
+- زائر: https://uploadplus-47dkogbk.manus.space
+- إدارة: https://uploadplus-47dkogbk.manus.space/admin-dashboard.html
+- بيانات: bdalslamanwralajsh@gmail.com / abd77312
+
+## تشخيص «? blog»
+- زر «? blog» يظهر لأن navSections تحتوي "blog" كعنصر، لكن labels لا تحتوي blog — labels تستخدم "articles" لعنوان «المدونة الأكاديمية».
+- أي أن «articles» → «📝 المدونة الأكاديمية» (بدون عداد) و«blog» → ["?", "blog"] (مع عداد 9 من content('blog') للمقالات القديمة).
+- عند النقر على «المدونة الأكاديمية» (articles) لم يُفعَّل WajbatBlogManager لأن mountCompatibleBlogManager مقيّد بـ state.selected === "blog"!
+- الحل: (1) توحيد: اجعل labels['blog'] = ["📝", "المدونة الأكاديمية", ...] وأزل "articles" من items، وأضف mountCompatibleBlogManager لـ key === "blog" (موجود أصلًا) — وأزل "articles" من navSections items + defaultItem('articles') وcount. (2) أو العكس: اجعل mountCompatibleBlogManager يعمل على "articles". الأسهل: إزالة "articles" من navSections وإبقاء "blog".
+
+## 19:58 — مدير المدونة يعمل الآن
+إصلاح السبب الجذري: كان في admin-blog-manager-r3.js خطأ syntax (فاصلة مفقودة بعد دالة activate في كائن manager) مما كان يمنع الملف من التنفيذ كليًا، فلا يظهر قسم المدونة. تم الإصلاح في r4 + تصحيح r24 (إزالة "articles" الزائدة من navSections وأُضيفت labels['blog'])، ورفعنا البصمات إلى admin-app-r25.js?v=blog-r6 وadmin-blog-manager-r4.js?v=blog-r6 في both htmls، وأُضيفا إلى vite.config. القسم «📝 المدونة الأكاديمية» يُحمَّل الآن بالتبويبات (المقالات/التصنيفات) ويعرض 0 مقالات. ملاحظة: لوحة الإدارة تعرض 9 مقالات من المحتوى القديم (content collection "articles") بينما قاعدة بيانات blog فارغة — المحتوى القديم محفوظ في collection منفصل ولا يُحذف.
+التالي: اختبار E2E: مقال جديد بحفظ فعلي + تصنيف، ثم ظهوره في موقع الزائر #/blog، ثم حذف بيانات الاختبار؟ — لا، أبقِ على بيانات حقيقية مفيدة (مقال عربي مفيد). ثم اختبارات pnpm test، checkpoint، تسليم.
+
+## 19:58 — نجاح حقيقي: حفظ مقال من الواجهة
+المقال «أساسيات البحث العلمي للطلاب الجامعيين» حُفظ فعليًا في قاعدة البيانات من واجهة الإدارة (رسالة toast: «تم حفظ المقال في قاعدة البيانات»، والنموذج أغلق). لكن عداد «المقالات المحفوظة: 0» لم يُحدَّث في نفس render — يبدو أن refresh() حدث قبل إتمام إبطال الكاش/إعادة التحميل أو أن state لم يُحدَّث (هذا غير مهم وظيفيًا، القائمة سيعاد تحميلها). الخطوة التالية: التحقق أن المقال ظهر في القائمة وفي موقع الزائر #/blog ثم اختبار التصنيف ورفع الصورة، ثم اختبار الإنتاج النهائي.
+
+## 19:59 — تحقق: المقال المحفوظ موجود فعليًا
+استدعاء admin.blog.articles من المتصفح الموثق أعاد المقال «أساسيات البحث العلمي للطلاب الجامعيين» (id: 120001) بكل الحقول الصحيحة، إضافة إلى «مقال تجريبي آلي» (90001 من اختبارات E2E السابقة — يجب حذفه). الحفظ يعمل فعليًا end-to-end. تبقى: (1) حذف مقال الاختبار التجريبي الآلي، (2) التأكد من ظهور المقال في واجهة إدارة القائمة (المشكلة كانت أن state.loaded بقي false أو أن refresh حدث قبل الإغلاق)، (3) التحقق من صفحة الزائر #/blog عبر public.blog.publicList، (4) رفع صورة غلاف كاختبار، (5) اختبار الإنتاج المنشور، (6) تنظيف console.trace/__loginTrace، (7) pnpm test + checkpoint.
+
+## 20:00 — تشخيص الفراغ بعد الحفظ
+المشكلة: بعد الحفظ، saveArticle يستدعي refresh() الذي يعيّن loaded=false ثم load()، ثم load() يرمي render() (يعرض «جارٍ تحميل...» ثم يطلب الفهرستين). لكن في الحالة التي رصدناها: state.loaded=true وstate.articles=[] فارغة وwsInner فارغة — أي أن render رُسم مرة ثم أُعيد تعيين state بعد ذلك لكن render لم يُستدعَ مرة أخرى. السبب على الأرجح: autoBind() استدعت load() بعد أن كانت container فارغة أو أن root.innerHTML فُرغ. الأهم: articlesSection() لا يعرض قائمة فارغة صحيحة؟ لا، state.articles كانت [المقال] لكن innerHTML فارغ. الحل الأبسط والمتين: في saveArticle بعد الحفظ استبدل refresh() بمنطق يعيد load() مباشرة (reset loaded)؛ وأيضًا اجعل autoBind يستدعي void this.load() إن كان loaded. إصلاح حاسم: بعد أي mutate يجب void this.load() مع إعادة تعيين loaded=false قبلها.
+
+## 20:02 — الجذر الحقيقي
+المشكلة: r24 في mountCompatibleBlogManager يهيّئ `<section data-blog-workspace><div class="workspace-body"></div></section>` (بدون head)، ثم يستدعي manager.load() على container جديد. load() يرى loaded=false فيرسم «جارٍ التحميل...» لكن root هنا هو section كامل — أي يستبدل innerHTML بـ `<section ...>${head}<body>جارٍ التحميل</body></section>` (nesting section داخل section — مقبول). لكن render() عندما !loaded يرمي innerHTML كامل بما فيه الhead. حتى الآن سليم نظريًا... لكن في اللقطة الأخيرة كان loaded=true وarticles=[] وinner فارغ. هذا يعني أن render() رُسم مع loaded=true وbody فارغ = articlesSection() أعاد سلسلة فارغة (articles=[], tab=articles) → root.innerHTML احتوى head فقط والـbody كان `<div class="item-list">` فارغ؟ لا، innerHTML كان فارغًا تمامًا. الأرجح أن render() رُفع استثناء أثناء بناء articlesSection()/head (مثل مرجع undefined في state) ولم يُكمِل، أو أن الرمز في الإنتاج يختلف. الحل العملي: (1) حماية render بtry/catch وتسجيل الخطأ، (2) ضمان أن articlesSection يعرض رسالة «لا توجد مقالات» عند الفراغ، (3) استبدال refresh() في saveArticle بمنطق يضمن إعادة load مع render فوري قبلها («جارٍ التحميل»).
+
+## 20:02 — بعد إعادة تحميل الصفحة
+قسم المدونة يعمل: head صحيح، أزرار التبويبات، زر + مقال جديد، رسالة «لا توجد مقالات بعد». لكن العداد «المقالات المحفوظة: 0» رغم أن قاعدة البيانات تحتوي 7 مقالات (حذفنا واحدًا تجريبيًا). أي أن load() استكملت لكن state.articles بقيت [] أو load() لم يُستدعَ أصلًا (autoBind يرى container غير null وws موجود لكن body فارغة فتستدعي load — load يرى loaded=true فلا يعيد التحميل!). نعم هذا هو الجذر: في mountCompatibleBlogManager (r25) يُستدعى void manager.load() على container جديد، وmanager.load() يتخطى لأن loaded=true من جلسة سابقة (الكائن manager واحد مدى الحياة عبر تنقلات SPA) — إذن لا تحميل. الحل: في mountCompatibleBlogManager اجعل refresh() بدل load() (أو أعد تعيين loaded=false قبلها). وأيضًا إصلاح عداد dashboard للمقالات (كان 9 في بطاقة لوحة التحكم — ربما يقرأ من collection قديم).
+
+## 20:04 — إصلاح الرمز الحاسم
+غيّرنا mountCompatibleBlogManager في r25 من manager.load() إلى manager.refresh() لأن الكائن واحد مدى الحياة في SPA وload() يتخطى التحميل عندما loaded=true من فتح سابق. الآن عند كل فتح لقسم المدونة تُعاد قراءة المقالات والتصنيفات من قاعدة البيانات ويُعاد الرسم. بعد ذلك: رفع بصمة r25→r26 في admin-dashboard.html، فحص عداد «المقالات 9» في لوحة التحكم (يقرأ من collection articles القديمة — يجب تحديثه ليعرض admin.blog.count أو 0)، ثم اختبار الإنتاج.
+
+## 20:03 — refresh لم يحل المشكلة
+بعد تغيير mountCompatibleBlogManager إلى refresh()، ما زالت القائمة فارغة «المقالات المحفوظة: 0». إذن المشكلة ليست load-skipping. يجب فحص r4: كيف تُهيَّأ state عند activate؟ وهل refresh يعتمد على container محدد قبل؟ هل هناك catch صامت عند fetch؟ سنضيف console.log مؤقت داخل r4؟ لا — الأفضل فحص activate() في r4 وفحص أي console.error في browserConsole.log.
+
+## 20:04 — اكتشاف هيكل r4
+البنية: IIFE مع manager = {state, container, activate(), load(), refresh(), render(), mountCompatible(), autoBind()}. autoBind() يستدعي load() فقط إذا container موجود. في r26: mountCompatibleBlogManager يعيّن manager.container ثم يستدعي refresh() (الذي يعيّن loaded=false ويستدعي load). load() يستدعي request("admin.blog.categories") وrequest("admin.blog.articles"). الطلبات نجحت سابقًا من نفس المتصفح (عبر console). إذن السبب المرشح: catch في load() لا يُظهر خطأ، أو أن render() يُبطل. سنتحقق بإضافة console.warn في كونسول المتصفح حاليًا (جلسة محفوظة) لاختبار refresh() مباشرة.
+
+## 20:04 — الجذر الحقيقي مكتشف!
+load() يستدعي this.request(...) الذي يرجع {json:{articles:[...]}} (التفاف DRPC المزدوج: payload.result.data ثم .json). load() يختبر Array.isArray(categories) — فيفشل ويضع []. الحل: استخراج .json في request أو في load().
+
+## 20:05 — الإصلاح الرئيسي: r5 مع فك التفاف json
+- r4 يرجع payload.result.data وهو {json:{articles:[...]}}؛ عدّلنا request/mutate لفك .json عند وجوده.
+- رفعنا n
+سخة r5 من admin-blog-manager-r4.js مع blog-r8 في admin-dashboard.html (الإحالات في الأسطر 23 و54 و92 و161). أضفنا r5 إلى vite.config. جلسة المتصفح محفوظة (مصدق) وسنختبر الآن عرض المقالات في قسم المدونة.
+
+## 20:05 — request() يعمل (يرجع مصفوفة الآن بعد فك json) لكن state فارغ بعد load()!
+m.request('admin.blog.articles') يرجع مصفوفة صحيحة. لكن m.refresh()/load() يضع state loaded=true وarticles=[] و cats=[]. إذن مشكلة load() ليست فك التغليف. دعنا نقرأ load() الفعلية في r5 — ربما Promise.all فشل بصمت أو أن هناك كائن آخر: ربما request داخل load يستخدم this.request الصحيح لكن... لاحظنا أن FINGERPRINT غير موجود في window (لم يظهر في فحص سابق؟ fp=undefined لأن FINGERPRINT const داخل IIFE ولا يُصدَّر). سنقرأ load() في r5 مباشرة من الملف.
+
+## 20:06 — السبب النهائي المؤكد
+DRPC يلف النتيجة في طبقتين: payload.result.data = {json: {articles: [...]}}. فككنا طبقة واحدة فأصبح {articles:[...]} كـ object عادي (DRPC يفسر json الأصلي مرة ثانية لأن payload.result.data نفسه {json:...} — في الحقيقة raw هو superjson: {json, meta}). يجب فك meta أيضًا: استخراج articles/categories من raw.json.
+
+## 20:07 — بعد إصلاح superjson (r6/blog-r9)
+- r6 = r5 مع فك raw.json في request/mutate (فك طبقة superjson).
+- الإحالات في admin-dashboard.html: admin-app-r26.js?v=blog-r9 (سطر 23)، admin-blog-manager-r6.js?v=blog-r9 (54، 92)، وretry سطر 161 مع blog-r9.
+- r6 مضاف إلى vite.config (سطر 193).
+- الجلسة في المتصفح محفوظة (مصدق). اللوحة عُرضت الآن. الخطوة التالية: فتح قسم المدونة (زر الفهرس 10) والتحقق من ظهور المقالات (يجب أن تظهر «المقالات المحفوظة: N» وقائمة المقالات بدل «لا توجد مقالات بعد»).
+- بعدها: اختبار E2E كامل (مقال جديد بحفظ + تصنيف)، ثم التحقق من ظهور المقال في موقع الزائر (#/blog أو صفحة المدونة)، ثم فحص production على https://uploadplus-47dkogbk.manus.space/admin-dashboard.html، ثم checkpoint + التسليم.
+- بيانات الدخول: bdalslamanwralajsh@gmail.com / abd77312
+
+## 20:07 — التشخيص الدقيق النهائي
+الاستجابة الفعلية: payload.result.data = {json: {articles:[...]}, meta:{values:...}}. إذن طبقة واحدة فقط {json:...} موجودة والقيم داخلها مفكوكة بالفعل (JSON عادي غير مبلسر). لكن في اختبارنا المباشر m.request أرجع object له مفاتيح articles — أي أن تعديلات r6 لم تُفعَّل في الصفحة! srcs أظهر r6.js?v=blog-r9 صحيحًا لكن artsIsArray=false و artsLen='object'. يجب التحقق: هل تعديلي edit على r5 ثم cp إلى r6 حفظت التعديل؟ سأفحص محتوى r6 في الملف مباشرة وأعيد التحميل الكامل hard reload.
+
+## 20:08 — التشخيص الصحيح 100%
+payload.result.data = {json: {articles:[...]}, meta:...}. إذن فك طبقة json واحدة يعطينا {articles:[...]} وهو object وليس array! التوقع الصحيح في load: النتيجة اسمها categories/articles داخل object. التعديل الصحيح في r6: فك json ثم قراءة .articles أو .categories من الناتج حسب الإجراء. أو ببساطة في request نرجع raw.json[procedure.split('.').pop()] (categories/articles).
+
+## 20:09 — الحالة الحالية بعد الإصلاح النهائي (r7/blog-r10)
+تعديل request/mutate في r7: بعد فك raw.json نستخرج inner[tail] حيث tail آخر جزء من اسم الإجراء (categories/articles)، ثم إرجاع المصفوفة مباشرة. r7 مضاف إلى vite.config والإحالات في admin-dashboard.html (blogManager سطر 54 و92، retry سطر 161، كلها v=blog-r10). SYNTAX_OK. خادم التطوير أعيد تشغيله. الصفحة في مرحلة «جارٍ التحقق من صلاحية الوصول» — الجلسة محفوظة في المتصفح. الخطوة التالية: الانتظار حتى تحميل اللوحة، فتح المدونة (index 10)، التحقق من ظهور المقالات (المقالات المحفوظة: 7+ والتصنيفات)، ثم E2E كامل وموقع الزائر والإنتاج وcheckpoint.
+ملاحظة مهمة سابقة: لوحة التحكم كانت تعرض «المقالات 9» في البطاقات — هذه من مصدر آخر (site.blog) صحيح. مشكلة العرض كانت فقط في حالة state فارغة رغم وجود بيانات.
+
+## 20:09 — نجح ✅
+قسم المدونة يعرض الآن: «المقالات المحفوظة: 7 · الظاهرة للزوار: 6» مع قائمة كاملة (أساسيات البحث العلمي...، كيفية كتابة البحث العلمي... إلخ) وأزرار الرفع/الإخفاء/النشر/الحذف لكل مقال. الإصلاح الصحيح كان في r7: فك raw.json ثم استخراج inner[procedure-tail]. الخطوات المتبقية: تصنيفات تبويب، E2E إنشاء مقال جديد من الواجهة، التحقق في موقع الزائر (#/blog)، الإنتاج (نشر checkpoint)، اختبار الروابط.
+
+## 20:10 — E2E نجح كامل ✅
+- الحفظ من الواجهة يعمل: مقال «مقال تجريبي نهائي للمدونة» id=150001، slug=mqal-tjryby-nhaey-llmdwna، isVisible=true.
+- ملاحظة: الحفظ يتطلب نشر المقال (المقالات الجديدة تحفظ بمقارنة publishedText — إذا كان حقل التاريخ فارغًا يرمي invalid_type). يجب إما جعل الحقل اختياريًا في backend أو عرض خطأ واضح في الواجهة. سنفحص بسرعة ونصلح خطأ invalid_type بشكل آمن (default قيمة فارغة في createArticle).
+- موقع الزائر #/blog يعرض المقال الجديد في أعلى القائمة مع «عام · 14 أغسطس 2026» و«اقرأ المزيد» تعمل.
+- ملاحظة: مقال «مقال تجريبي آلي» من اختبار سابق لا يظهر في واجهة الزائر (مخفي).
+- المتبقي: نشر checkpoint (ينشر تلقائيًا) + التحقق من الإنتاج + تسلي.
+
+## 20:15 — تحليل خطأ publishedText
+الخطأ «expected string, received null» يحدث في الإنتاج فقط: backend المحلي (routers.ts يستورد blogArticleCreateInput مع .optional()) يقبل null، لكن النسخة المنشورة ربما ما زالت تستخدم سطر zod القديم z.string() (سطر 407) — السطر 441 الحالي هو .optional(). أي أن الكود المعدل موجود في الملفات لكن قد يكون checkpoint آخر (من جلسة أخرى) يعيد كتابة الملفات، أو أن النشر لم يلتقط آخر تعديل. الحل: التأكد من أن الكود لا يُرسل publishedText: null أصلًا — تعديل r7 ليُرسل publishedText فقط إذا لم تكن فارغة (delete إذا فارغ)، وهو إصلاح آمن من جهة العميل ولا يعتمد على نسخة backend المنشورة. كما يجب تحديث بصمة جديدة وحفظ checkpoint.
+
+## 20:14 — حالة الاختبارات قبل الضغط
+ثلاثة اختبارات فاشلة لأنها تتوقع "admin-app-r24.js" في admin.html بينما html الحالي يشير إلى admin-app-r26.js. الملفات: server/ownerLoginR13Assets.test.ts (سطر 12)، server/downloadsAssets.test.ts (سطر 10)، server/visitorLinksAssets.test.ts (سطر 79). الحل: تحديث الاختبارات إلى r26 وبصمة blog-r11 أو السماح بأي r2+/blog-r9+.
+الإصلاح الأخير: admin-blog-manager-r8.js (لا يرسل publishedText: null)، html يشير إلى r8?v=blog-r11، admin-app-r26?v=blog-r9. vite.config يشملهما. 74/77 يجتازون. بعد إصلاح الاختبارات: حذف مقال الاختبار «مقال تجريبي نهائي للمدونة» id=150001؟ لا — نبقيه كتوضيح عمل؟ الأفضل حذفه لأنه تجريبي (user ما طلبه) — بل حذف جميع المقالات التجريبية (id=150001 ومقال «تصنيف تجريبي آلي»؟) والاحتفاظ بالافتراضية فقط. ثم checkpoint وتسليم.

@@ -9,7 +9,7 @@ describe("owner login current assets", () => {
     const adminHtml = projectFile("client/public/admin.html");
     expect(adminHtml).toContain("admin-r14.css");
     expect(adminHtml).toContain("admin-owner-login-r13-mobile.css");
-    expect(adminHtml).toContain("admin-app-r24.js");
+    expect(adminHtml).toContain("admin-app-r26.js");
     expect(adminHtml).toContain("admin-downloads-manager-r2.js");
     expect(adminHtml).toContain("admin-design-studio-r2.js");
     expect(adminHtml).toContain("admin-services-manager-r2.js");

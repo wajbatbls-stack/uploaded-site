@@ -40,7 +40,9 @@
       const response = await fetch(`${TRPC}/${procedure}${suffix}`, { credentials: "same-origin", cache: "no-store" });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error((payload?.error?.json?.message) || "تعذر الاتصال بالخادم");
-      return payload?.result?.data ?? payload?.result;
+      const raw = payload?.result?.data ?? payload?.result;
+      if (raw && typeof raw === "object" && "json" in raw) return raw.json;
+      return raw;
     },
     async mutate(procedure, input) {
       const response = await fetch(`${TRPC}/${procedure}`, {
@@ -49,7 +51,9 @@
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error((payload?.error?.json?.message) || "تعذر حفظ التعديلات");
-      return payload?.result?.data ?? payload?.result;
+      const raw = payload?.result?.data ?? payload?.result;
+      if (raw && typeof raw === "object" && "json" in raw) return raw.json;
+      return raw;
     },
     esc(value = "") {
       return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));

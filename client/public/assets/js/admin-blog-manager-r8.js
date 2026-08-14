@@ -40,7 +40,11 @@
       const response = await fetch(`${TRPC}/${procedure}${suffix}`, { credentials: "same-origin", cache: "no-store" });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error((payload?.error?.json?.message) || "تعذر الاتصال بالخادم");
-      return payload?.result?.data ?? payload?.result;
+      const raw = payload?.result?.data ?? payload?.result;
+      const inner = (raw && typeof raw === "object" && "json" in raw) ? raw.json : raw;
+      const tail = procedure.split(".").pop();
+      if (inner && typeof inner === "object" && !Array.isArray(inner) && tail in inner) return inner[tail];
+      return inner;
     },
     async mutate(procedure, input) {
       const response = await fetch(`${TRPC}/${procedure}`, {
@@ -49,7 +53,11 @@
       });
       const payload = await response.json().catch(() => null);
       if (!response.ok) throw new Error((payload?.error?.json?.message) || "تعذر حفظ التعديلات");
-      return payload?.result?.data ?? payload?.result;
+      const raw = payload?.result?.data ?? payload?.result;
+      const inner = (raw && typeof raw === "object" && "json" in raw) ? raw.json : raw;
+      const tail = procedure.split(".").pop();
+      if (inner && typeof inner === "object" && !Array.isArray(inner) && tail in inner) return inner[tail];
+      return inner;
     },
     esc(value = "") {
       return String(value ?? "").replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
@@ -230,19 +238,23 @@
       if (!form) return;
       if (!form.title.trim()) { this.toast("اكتب عنوان المقال أولًا"); return; }
       if (!form.body || !form.body.trim()) { this.toast("اكتب محتوى المقال أولًا"); return; }
+      const publishedText = form.publishedText ? String(form.publishedText).trim() : "";
       const input = {
         title: form.title.trim(),
-        summary: form.summary.trim() || null,
+        summary: form.summary ? String(form.summary).trim() || undefined : undefined,
         body: form.body,
-        author: form.author.trim() || null,
-        publishedText: form.publishedText.trim() || null,
+        author: form.author ? String(form.author).trim() || undefined : undefined,
+        publishedText: publishedText || undefined,
         categoryId: form.categoryId ? Number(form.categoryId) : null,
         imageKey: form.imageKey,
         imageUrl: form.imageUrl,
       };
+      if (!publishedText) delete input.publishedText;
       try {
         if (form.id) {
-          await this.mutate("admin.blog.updateArticle", { id: form.id, ...input });
+          const upd = { id: form.id, ...input };
+          if (upd.publishedText === undefined) delete upd.publishedText;
+          await this.mutate("admin.blog.updateArticle", upd);
         } else {
           await this.mutate("admin.blog.createArticle", input);
         }

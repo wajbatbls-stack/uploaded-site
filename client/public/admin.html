@@ -65,7 +65,7 @@
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r24.js?v=blog-r5";
+      adminModule.src = "/assets/js/admin-app-r26.js?v=blog-r9";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -96,7 +96,7 @@
                     contactManager.async = false;
                     document.body.append(contactManager);
                   const blogManager = document.createElement("script");
-                  blogManager.src = "/assets/js/admin-blog-manager-r3.js?v=blog-r3";
+                  blogManager.src = "/assets/js/admin-blog-manager-r8.js?v=blog-r11";
                   blogManager.async = false;
                   blogManager.onload = () => {};
                   document.body.append(blogManager);
@@ -134,7 +134,7 @@
                     contactManager.async = false;
                     document.body.append(contactManager);
                   const blogManager = document.createElement("script");
-                  blogManager.src = "/assets/js/admin-blog-manager-r3.js?v=blog-r3";
+                  blogManager.src = "/assets/js/admin-blog-manager-r8.js?v=blog-r11";
                   blogManager.async = false;
                   blogManager.onload = () => {};
                   document.body.append(blogManager);
@@ -203,7 +203,7 @@
       }
       if (!window.WajbatBlogManager) {
         const retryBlog = document.createElement("script");
-        retryBlog.src = "/assets/js/admin-blog-manager-r3.js?v=blog-r3&reload=" + Date.now();
+        retryBlog.src = "/assets/js/admin-blog-manager-r8.js?v=blog-r11&reload=" + Date.now();
         retryBlog.async = false;
         document.body.append(retryBlog);
       }

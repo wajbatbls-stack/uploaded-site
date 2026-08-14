@@ -68,7 +68,7 @@ function mountCompatibleBlogManager() {
   queueMicrotask(() => {
     if (!document.querySelector("[data-blog-workspace]") || state.selected !== "blog") return;
     manager.container = document.querySelector("[data-blog-workspace]");
-    try { void manager.load(); } catch (error) { toast(messageOf(error)); }
+    try { void manager.refresh(); } catch (error) { toast(messageOf(error)); }
   });
   return `<section class="workspace side-workspace" data-blog-workspace><div class="workspace-body"></div></section>`;
 }

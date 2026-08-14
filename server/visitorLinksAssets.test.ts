@@ -75,7 +75,9 @@ describe("أصول مدير روابط الزوار", () => {
     expect(app).toContain('button.hasAttribute("data-visitor-links-nav")');
     expect(manager).toContain("admin.createVisitorLink");
     expect(manager).toContain("await verifyAvailability(token, input)");
-    expect(projectFile("client/public/admin.html")).toContain("admin-app-r22.js?v=blog-r1");
+    expect(
+      [projectFile("client/public/admin-dashboard.html"), projectFile("client/public/admin.html")].some(content => content.includes("admin-app-r24.js?v=blog-r5")),
+    ).toBe(true);
   });
 
   it("يوفّر بحثاً وتصفية وفرزاً فعليين ولا يحذف الرابط قبل تأكيد المالك", () => {

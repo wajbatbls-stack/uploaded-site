@@ -185,6 +185,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-list-controls.js", destination: "assets/js/admin-list-controls.js" },
         { source: "assets/js/admin-app-r16.js", destination: "assets/js/admin-app-r16.js" },
         { source: "assets/js/admin-app-r24.js", destination: "assets/js/admin-app-r24.js" },
+        { source: "assets/js/admin-blog-manager-r2.js", destination: "assets/js/admin-blog-manager-r2.js" },
         { source: "assets/js/admin-design-studio-r2.js", destination: "assets/js/admin-design-studio-r2.js" },
         { source: "assets/js/admin-owner-login-security-r6.js", destination: "assets/js/admin-owner-login-security-r6.js" },
         { source: "assets/js/admin-owner-login-enhancements-r14.js", destination: "assets/js/admin-owner-login-enhancements-r14.js" },

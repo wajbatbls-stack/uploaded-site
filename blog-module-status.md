@@ -909,3 +909,10 @@ API site.blog.publicList يرجع 5 مقالات (الرئيسية فقط من D
 6. صفحة الزائر /#/blog تعمل وتعرض 5 مقالات أصلية + 12 تصنيفًا.
 7. تسجيل الدخول يعمل: https://uploadplus-47dkogbk.manus.space/admin-dashboard.html
 8. todo.md يجب تحديثه: إضافة بند "إصلاح ربط حقول نموذج المقال/التصنيف بمدير المدونة" وبنود التحقق من رفع الصور والحفظ.
+
+## 19:40 حالة النشر بعد checkpoint 7b7e9cf6
+- Curl: الإنتاج يخدم admin-dashboard.html يشير إلى admin-blog-manager-r1.js (3 occurrences)! رغم أن checkpoint 7b7e9cf6 حُفظ بعد sed إلى r2.
+- md5: r2-prod.js = 92e728c3 ≠ المحلي ccbbeac1 → الإنتاج يحتوي r2 بقدر مختلف (أقدم، بلا hook الربط).
+- الاستنتاج: النشر التلقائي لا ينشر admin-blog-manager-r2.js لأن vite.config لا ينسخ سوى أسماء محددة (copyPublicPlugin)، أو النشر تأخر.
+- الحل: فحص vite.config copyPublicPlugin: يجب إضافة admin-blog-manager-r2.js إلى قائمة النسخ صراحة. نفس المشكلة التي واجهناها مع admin-dashboard.html.
+- بعدها: إعادة checkpoint، انتظار نشر، curl تحقق md5، ثم اختبار تفاعلي كامل للمدونة (إنشاء مقال + صورة + حفظ + publicList + حذف).

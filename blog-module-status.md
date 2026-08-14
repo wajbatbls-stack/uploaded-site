@@ -852,3 +852,13 @@ refresh لا يرمي بعد Promise.all الناجح. catch الوحيد الذ
 
 ## 19:27 كاش CDN عنيد على admin.html
 رغم النشر (Deployment successful) الصفحة المنشورة ما زالت تعرض سطر script指向 admin-app-r23.js?v=blog-r3. CDN يحتفظ بنسخة HTML قديمة. الحل الحاسم: استخدام مسار HTML مختلف كليًا admin2.html أو admin-dashboard.html يشير إلى r24 — مسار جديد لا cache له مطلقًا.
+
+## 19:28 فشل admin-dashboard.html
+الملف خدم موقع الزائر (site-app) وليس لوحة الإدارة! السبب: URL انتهى بـ ?tr=18#/ — الـ hash /# جعل SPA الزائر يفسّر المسار. أو أن admin-dashboard.html نفس محتوى admin.html لكن متصفح sandbox redirect؟ الأهم: URL الذي حمّل هو site-app مع #/
+فحص: الـ markdown يظهر صفحة زائر كاملة. هل admin-dashboard.html نفسه خاطئ؟ لا — سطر 23 adminModule.src admin-app-r24. لكن ربما loader في admin-dashboard.html يختلف عن admin.html؟ أم أن الـ hash في URL جعل site-app يهيمن؟ admin.html لم يكن فيه problem سابقًا مع ?tr=N.
+الفرق: admin-dashboard.html أُنشئ بنسخة admin.html (168 سطر) — admin.html 213 سطر بعد إضافة سكريبتات أخرى لاحقًا (مثل site-app؟ لا admin.html لا يحمل site-app).
+انتظر — URL الذي حمّلتُه: https://.../admin-dashboard.html?tr=18#/ — الـ #/ في النهاية! هذا هو السبب على الأرجح: الكاش أو redirect داخل index.html؟ لا.
+موقع الزائر يُخدم من index.html الذي يقرأ hash route. إذا طلبت admin-dashboard.html#/ قد يخدم index.html؟ لا.
+لكن النتيجة تقول Title: واجبات بلس | منصتك الذكية — هذه index.html! إذن المسار admin-dashboard.html أعاد إلى index؟ هذا مستحيل إلا إن...
+فكرة: CDN caching لمسار index.html نفسه. لكن المسار مختلف.
+الحل: فحص فعلي: curl على https://.../admin-dashboard.html

@@ -165,6 +165,7 @@ function copyAdminAssets(): Plugin {
       const destination = path.resolve(import.meta.dirname, "dist", "public");
       const files = [
         { source: "admin.html", destination: "admin.html" },
+        { source: "admin-dashboard.html", destination: "admin-dashboard.html" },
         { source: "assets/js/admin-login-fix-v2.js", destination: "assets/js/admin-login-fix-v2.js" },
         { source: "assets/js/admin-media-binding-core.js", destination: "assets/js/admin-media-binding-core.js" },
         { source: "assets/js/admin-structured-editor.js", destination: "assets/js/admin-structured-editor.js" },
@@ -183,6 +184,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-list-controls-core.js", destination: "assets/js/admin-list-controls-core.js" },
         { source: "assets/js/admin-list-controls.js", destination: "assets/js/admin-list-controls.js" },
         { source: "assets/js/admin-app-r16.js", destination: "assets/js/admin-app-r16.js" },
+        { source: "assets/js/admin-app-r24.js", destination: "assets/js/admin-app-r24.js" },
         { source: "assets/js/admin-design-studio-r2.js", destination: "assets/js/admin-design-studio-r2.js" },
         { source: "assets/js/admin-owner-login-security-r6.js", destination: "assets/js/admin-owner-login-security-r6.js" },
         { source: "assets/js/admin-owner-login-enhancements-r14.js", destination: "assets/js/admin-owner-login-enhancements-r14.js" },

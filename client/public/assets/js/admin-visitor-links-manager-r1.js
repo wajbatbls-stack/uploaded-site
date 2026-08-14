@@ -45,7 +45,7 @@
     const url = publicUrl(link.token);
     return `<article class="vl-card" data-vl-id="${link.id}">
       <div class="vl-card-main"><div class="vl-card-title"><span class="vl-link-mark">↗</span><div><h3>${esc(link.name)}</h3><p>${status(link)} <span>أُنشئ ${date(link.createdAt)}</span></p></div></div>
-      <div class="vl-url"><code dir="ltr">${esc(url)}</code><button type="button" class="vl-icon-button" data-vl-action="copy" data-id="${link.id}" aria-label="نسخ الرابط">⧉</button></div>
+      <div class="vl-url"><code dir="ltr">${esc(url)}</code><button type="button" class="vl-icon-button" data-vl-action="copy" data-id="${link.id}" aria-label="نسخ الرابط">⧉</button><button type="button" class="vl-icon-button vl-whatsapp-button" data-vl-action="whatsapp" data-id="${link.id}" aria-label="مشاركة الرابط عبر واتساب" title="مشاركة عبر واتساب">واتساب</button></div>
       <dl class="vl-meta"><div><dt>الوجهة</dt><dd dir="ltr">${esc(link.targetPath)}</dd></div><div><dt>الزيارات</dt><dd>${Number(link.visitCount || 0).toLocaleString("ar-SA")}</dd></div><div><dt>آخر استخدام</dt><dd>${date(link.lastVisitedAt)}</dd></div><div><dt>الصلاحية</dt><dd>${link.expiresAt ? date(link.expiresAt) : "بدون انتهاء"}</dd></div></dl></div>
       <div class="vl-actions"><button type="button" data-vl-action="preview" data-id="${link.id}">👁 معاينة</button><button type="button" data-vl-action="visitor" data-id="${link.id}">🌐 اختبار كزائر</button><button type="button" data-vl-action="edit" data-id="${link.id}">✏️ تعديل</button><button type="button" data-vl-action="toggle" data-id="${link.id}">${link.isActive ? "🔴 تعطيل" : "🟢 تفعيل"}</button><button type="button" class="danger" data-vl-action="delete" data-id="${link.id}">🗑 حذف</button></div>
     </article>`;
@@ -65,7 +65,7 @@
   const createdNotice = () => {
     if (!state.created?.token) return "";
     const url = publicUrl(state.created.token);
-    return `<aside class="vl-created-notice" role="status" aria-live="polite"><div><span class="vl-created-notice-mark">✓</span><div><strong>تم إنشاء الرابط والتحقق منه</strong><p>رابط «${esc(state.created.name || "الزائر")}» جاهز للمشاركة الآن.</p><code dir="ltr">${esc(url)}</code></div></div><div class="vl-created-notice-actions"><button type="button" class="btn" data-vl-action="copy-created">⧉ نسخ رابط الزائر</button><button type="button" class="vl-created-dismiss" data-vl-action="dismiss-created" aria-label="إغلاق رسالة الرابط المنشأ">×</button></div></aside>`;
+    return `<aside class="vl-created-notice" role="status" aria-live="polite"><div><span class="vl-created-notice-mark">✓</span><div><strong>تم إنشاء الرابط والتحقق منه</strong><p>رابط «${esc(state.created.name || "الزائر")}» جاهز للمشاركة الآن.</p><code dir="ltr">${esc(url)}</code></div></div><div class="vl-created-notice-actions"><button type="button" class="btn" data-vl-action="copy-created">⧉ نسخ رابط الزائر</button><button type="button" class="btn btn-outline" data-vl-action="whatsapp-created">مشاركة عبر واتساب</button><button type="button" class="vl-created-dismiss" data-vl-action="dismiss-created" aria-label="إغلاق رسالة الرابط المنشأ">×</button></div></aside>`;
   };
   const workspace = () => {
     const links = current();
@@ -97,6 +97,13 @@
     try { await navigator.clipboard.writeText(value); }
     catch { const input = document.createElement("textarea"); input.value = value; document.body.append(input); input.select(); document.execCommand("copy"); input.remove(); }
     toast("تم نسخ الرابط بنجاح.");
+  };
+  const shareWhatsApp = link => {
+    const value = publicUrl(link.token);
+    const message = `مرحباً، هذا رابط الزائر: ${value}`;
+    const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+    toast("تم فتح واتساب لمشاركة رابط الزائر.");
   };
   const preview = link => {
     const url = publicUrl(link.token);
@@ -142,6 +149,8 @@
       else if (action === "refresh") await list();
       else if (action === "copy" && link) await copy(link);
       else if (action === "copy-created" && state.created) await copy(state.created);
+      else if (action === "whatsapp" && link) shareWhatsApp(link);
+      else if (action === "whatsapp-created" && state.created) shareWhatsApp(state.created);
       else if (action === "dismiss-created") { state.created = null; render(); }
       else if (action === "preview" && link) preview(link);
       else if (action === "visitor" && link) window.open(publicUrl(link.token), "_blank", "noopener");

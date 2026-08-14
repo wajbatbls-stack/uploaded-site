@@ -33,7 +33,20 @@ describe("أصول مدير روابط الزوار", () => {
     expect(manager).toContain("state.created = old.id ? null");
     expect(manager).toContain('action === "copy-created" && state.created');
     expect(manager).toContain("تم نسخ الرابط بنجاح.");
-    expect(adminHtml).toContain("visitor-links-copy-r3");
+    expect(adminHtml).toContain("visitor-links-whatsapp-r4");
+  });
+
+  it("يوفّر مشاركة الرابط عبر واتساب من بطاقة الرابط ومن بطاقة النتيجة", () => {
+    const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r1.js");
+    const adminHtml = projectFile("client/public/admin.html");
+    expect(manager).toContain("const shareWhatsApp = link =>");
+    expect(manager).toContain("https://wa.me/?text=");
+    expect(manager).toContain('data-vl-action="whatsapp"');
+    expect(manager).toContain('data-vl-action="whatsapp-created"');
+    expect(manager).toContain('action === "whatsapp" && link');
+    expect(manager).toContain('action === "whatsapp-created" && state.created');
+    expect(manager).toContain("مرحباً، هذا رابط الزائر:");
+    expect(adminHtml).toContain("visitor-links-whatsapp-r1.css");
   });
 
   it("يوفّر بحثاً وتصفية وفرزاً فعليين ولا يحذف الرابط قبل تأكيد المالك", () => {

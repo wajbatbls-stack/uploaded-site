@@ -801,3 +801,13 @@ refresh لا يرمي بعد Promise.all الناجح. catch الوحيد الذ
    `const result = await mutate("adminAuth.login", {...}); dashboard();` بدل refresh الذي يفشل.
    الأفضل: إصلاح عملي: بعد نجاح login، استدعاء dashboard() مباشرة (بدون refresh) ثم refresh في الخلفية. أو: جعل refresh يتسامح مع أخطاء account بـ try/catch داخلي.
    الإصلاح الأضمن: تغيير submitLogin: بعد await mutate(login) → dashboard() فورًا + refresh() خلفيًا مع try/catch مستقل يطبع الخطأ.
+
+## 19:17.5 استنتاج حاسم: الكاش
+- بعد patch (checkpoint 9b7898e7) والنشر التلقائي، صفحة admin المنشورة ما زالت تعرض فورم الدخول بنفس الشكل ونفس رسالة الخطأ، ورسائل [LOGIN]/[LOGIN-REFRESH-ERROR]/[LOGIN-CATCH] غير موجودة في الكونسول.
+- الاستنتاج: متصفح الاختبار (أو CDN) يخدم نسخة قديمة. patch في r22.js جديد + بصمة blog-r2 في admin.html منشورة في checkpoint 9b7898e7. لكن ربما النشر التلقائي يحتاج وقتًا (قد تأخر قليلًا) أو الكاش CDN طويل (90 يوم!) للملفات نفسها.
+- الحل: التحقق من أن الإنتاج يخدم r22 الجديد عبر curl مع cache-buster، ثم إعادة تحميل المتصفح بـ no-cache (فتح صفحة جديدة؟ browser_navigate يعيد التحميل لكن ملف JS cached).
+- ملاحظة: __loginTrace يعمل في النسخة القديمة (blog-r1). إذا النسخة الجديدة تعمل يجب أن لا يظهر أي trace جديد بعد login لأن login نجح وdashboard عُرض.
+- الخطة: الانتظار لحظات، ثم curl https://uploadplus-47dkogbk.manus.space/assets/js/admin-app-r22.js?v=blog-r2 والبحث عن "[LOGIN-REFRESH-ERROR" فيه. إذا موجود → النسخة الجديدة منشورة، المشكلة كاش المتصفح؛ إعادة تحميل قوية أو اختبار في نافذة جديدة مع meta no-cache.
+
+## 19:18 استنتاج
+الإنتاج يخدم نسخة أصغر (83912 بايت) تحتوي LOGIN-CATCH فقط — أي checkpoint 042287e. النسخة المحلية (84389، checkpoint 9b7898e) لم تنشر فعلًا! auto-publish قد يكون تأخر/فشل لهذا checkpoint. سأعيد الحفظ الآن.

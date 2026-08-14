@@ -763,3 +763,41 @@ errBox div#login-error: proxy على textContent setter عبر MutationObserver 
 
 ## 19:12 breakthrough
 Stack trace مؤكد: errBox كتب مرتين عبر submitLogin — الأولى مسح، الثانية "بيانات الدخول غير صحيحة" عند login:143:482 (catch في submitLogin). إذن mutate أو refresh رمى. bodies كلها success. يجب قراءة سطر 143 char 482 حرفيًا من r22 المنشور للتمييز بين catch login وcatch refresh.
+
+## 19:14
+Raw fetch من داخل الصفحة: login=200 success, account=200{id:1}. الكوكي HttpOnly طبيعي. كل شيء سليم.
+لكن errBox كتب الخطأ. console.error [LOGIN-CATCH] الذي أضفته لم يظهر في الكونسول! → الصفحة تخدم نسخة قديمة من الملف cached في المتصفح. الحل: كسر كاش المتصفح للملف (إضافة cache buster جديد في admin.html: admin-app-r23.js؟ لا — نغير src في admin.html إلى r22?nocache أو نصدّر نسخة جديدة بصمة).
+الأفضل: تغيير admin.html ليحمّل admin-app-r22.js?v=blog-r2 (bust الكاش مع نفس الملف).
+
+## 19:15 حالة شاملة (قبل ضغط السياق)
+- تم patch في admin-app-r22.js سطر 143: إضافة console.error("[LOGIN-CATCH]", ...) داخل catch في submitLogin.
+- تحديث admin.html: adminModule.src = "/assets/js/admin-app-r22.js?v=blog-r2" (كسر كاش المتصفح).
+- نشر checkpoint 042287ec (auto-publish). النشر التالي سيضمن وصول النسخة الجديدة.
+- الخادم سليم: curl ومن المتصفح raw fetch: login=200 success:true + كوكي يُضبط، account=200 id:1.
+- المشكلة: عند النقر من UI، errBox يكتب "بيانات الدخول غير صحيحة" من submitLogin catch رغم أن mutate يبدو ناجحًا. stack أظهر login:143:482.
+- فرضية قيد الاختبار: متصفح الاختبار كان يخدم نسخة قديمة cached من الملف. الآن بكسر الكاش (?v=blog-r2) سيظهر [LOGIN-CATCH] في الكونسول إن كان mutate يرمي فعلًا، أو لن يظهر ويعني الخطأ من مكان آخر.
+- خطوات تالية: 1) تحميل صفحة admin?tr=10 وانتظار الفورم، تعبئة البيانات، نقر تسجيل الدخول، فحص errBox + الكونسول ([LOGIN-CATCH] و__loginTrace). 2) إن ظهر LOGIN-CATCH بمحتوى: تحليل السبب وإصلاحه. 3) إن لم يظهر: الخطأ من نسخة قديمة فعلًا والنسخة الجديدة ستعمل. 4) بعد إصلاح الدخول: التحقق من عمل لوحة المالك كاملة ثم حذف __loginTrace وأدوات التشخيص من admin.html وإزالة console.error من r22، حفظ checkpoint نهائي، pnpm build + test.
+- بيانات الدخول: bdalslamanwralajsh@gmail.com / abd77312 — موقع الزائر: https://uploadplus-47dkogbk.manus.space — الإدارة: /admin.html أو /admin
+- صورة صفحة الزائر تعمل بشكل ممتاز (الساعة والعناصر كلها ظاهرة).
+
+## 19:15.5
+الصفحة المنشورة ما زالت تخدم admin-app-r22.js?v=blog-r1 (CDN cache لصفحة admin.html نفسها). patch console.error غير ظاهر لهذا.
+الخطوة التالية: قراءة refresh() كاملة في r22 لفهم لماذا catch يتفعّل رغم bodies كلها 200. ثم إصلاح، ثم نشر checkpoint جديد + كسر كاش admin.html (بصمة HTML مختلفة إن أمكن — لا يمكن، لكن يمكن إضافة meta cache-control أو إعادة تحميل بقوة من المتصفح عبر no-cache headers... الأفضل: patch الكود نفسه لإصلاح السبب الجذري أولًا).
+
+## 19:16 فرضية dashboard()
+refresh لا يرمي بعد Promise.all الناجح. catch الوحيد الذي يكتب errText موجود في submitLogin. إذن الخطأ من dashboard() بعد assignments — يجب قراءتها.
+
+## 19:17 ملخص شامل قبل ضغط السياق
+1) الخادم سليم تمامًا: login يرجع success:true + كوكي (curl + raw fetch من المتصفح). account يرجع {id:1,email}. كل طلبات refresh التسعة 200 بدون error json.
+2) UI يكتب "بيانات الدخول غير صحيحة" من catch في submitLogin (login:143:482) — ثابت عبر MutationObserver + stack.
+3) dashboard()/sidebar()/statsCards()/workspace() كلها آمنة (محتاطة بـ || و Array.isArray).
+4) trace __loginTrace لا يحتوي أي error entry بعد login — إذن refresh request responses كلها data صالحة من منظور trace (p.error غير موجود).
+5) manus-webdev-logs للإنتاج: لا توجد أخطاء login/hash/Unauthorized إطلاقًا بعد 19:14.
+6) النسخة المنشورة تخدم blog-r1 (CDN كاش لصفحة admin.html). حدّثت admin.html إلى blog-r2 + console.error في catch لكن الكاش لم ينكسر بعد.
+7) نقطة غامضة: رغم success، errBox يكتب. الاحتمال الوحيد المتبقي: mutate في r22 يستخدم trpc client مع parser superjson — response json field قد يكون undefined (login procedure يرجع void/input فقط؟) لا — {result:{data:{json:{success:true}}}} data موجود.
+   احتمال آخر: login procedure في الخادم يكتب الكوكي لكن cookie header يفشل للإرسال (SameSite)، وrefresh التالي بدون كوكي → account يرجع 401 — لكن bodies 200 في test raw! إلا إذا raw fetch كان من نافذة فيها كوكي قديم من تجربة ناجحة سابقة!
+   نعم!! هذا التفسير المحتمل: في اختبارات raw السابقة كان الكوكي محفوظًا من اختبار نشط (curl من sandbox لا يشارك كوكي المتصفح لكن المتصفح: بعد أول تجربة login... هل كان هناك نجاح؟)
+   الحل الحاسم: في كود submitLogin بعد login: لا يجب الاعتماد على كوكي للإثبات — mutate mutate login ينجح → يجب أن ننقل المستخدم للوحة مباشرة دون refresh كامل، أو نتحقق من response مباشرة:
+   `const result = await mutate("adminAuth.login", {...}); dashboard();` بدل refresh الذي يفشل.
+   الأفضل: إصلاح عملي: بعد نجاح login، استدعاء dashboard() مباشرة (بدون refresh) ثم refresh في الخلفية. أو: جعل refresh يتسامح مع أخطاء account بـ try/catch داخلي.
+   الإصلاح الأضمن: تغيير submitLogin: بعد await mutate(login) → dashboard() فورًا + refresh() خلفيًا مع try/catch مستقل يطبع الخطأ.

@@ -276,6 +276,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         site: path.resolve(import.meta.dirname, "client/public/index.html"),
+        "js/site-app-r15": path.resolve(import.meta.dirname, "client/public/assets/js/site-app-r15.js"),
       },
     },
   },

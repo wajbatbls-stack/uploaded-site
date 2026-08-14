@@ -20,14 +20,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <main>
-        {/* Example: lucide-react for icons */}
-        <Loader2 className="animate-spin" />
-        Example Page
-        {/* Example: Streamdown for markdown rendering */}
-        <Streamdown>Any **markdown** content</Streamdown>
-        <Button variant="default">Example Button</Button>
-      </main>
+      {/* الصفحة الرئيسية للزائر تُبنى بواسطة Vanilla SPA داخل div#app (site-app-r15.js) */}
+      <div id="app" className="site-home-root" />
+      {isAuthenticated ? (
+        <main>
+          <Loader2 className="animate-spin" />
+          يتم تحميل لوحة المالك...
+        </main>
+      ) : null}
     </div>
   );
 }

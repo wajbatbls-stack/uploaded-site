@@ -53,3 +53,48 @@
 - routers.ts: يحتوي 'team: teamRouter' و'partners: partnersRouter' (تحت site وadmin). لا يحتوي "listPublic" (الموجود في team.ts/partners.ts).
 - db.ts: listTeamMembers/listPartners + CRUD.
 - تعديل الاختبار: استبدال admin.team. بـ listAll في team.ts، admin.partners. بـ listAll في partners.ts، وإضافة expect على team.ts/partners.ts لـ listPublic.
+
+
+## تشخيص مشكلة النشر القديم (20:54 UTC)
+
+**الأعراض:** production admin.html عند https://uploadplus-47dkogbk.manus.space/admin.html يعرض نسخة قديمة (Last-Modified: 20:16:42 GMT) قبل checkpoint e67b8e7 (20:51:37 UTC). لا يحتوي على admin-team-manager-r1.js / admin-partners-manager-r1.js، رغم أن assets المنفردة ترجع 200. dev preview سليم.
+
+**ما جُرِّب:** curl مع cache-busting query — ما زال قديمًا. vite build محلي سليم (dist/public/admin.html 20:53 يحتوي المديريَن). git origin/main عند e67b8e7.
+
+**خطة الحل المقترحة (من debug agent):** نسخ admin.html وadmin-dashboard.html إلى أسماء ملفات مُصدرة (versioned filenames) مثل admin-r27.html / admin-dashboard-r27.html بحيث تعامل CDN الملفات الجديدة كأهداف جديدة لا تُكاش، مع تحديث أي مراجع (بما فيها /admin redirect إن وُجد).
+
+**ملاحظة مهمة:** checkpoint auto-publish يعمل غالبًا لكنه يبدو أنه لم يحدّث ملفات HTML الجذرية القديمة (أو كاش CDN للجذر). إنشاء checkpoint جديد سيحاول نشرها مجددًا، لكن الحل الأنسب: إنشاء admin-dashboard-r27.html جديد كملف مختلف كليًا.
+
+
+## تشخيص حرج: موقع الزائر معطل في الإنتاج بسبب البناء (21:00 UTC)
+
+**الحقيقة المؤكدة:**
+- dev preview (/ 3000) يخدم client/public/index.html (موقع الزائر vanilla بسكربت site-app-r15.js) — يعمل.
+- vite build يكتب dist/public/index.html من **client/index.html** (React SPA فارغ "Example Page") — يستبدل موقع الزائر!
+- الإنتاج https://uploadplus-47dkogbk.manus.space/ يخدم هذا SPA الفارغ حاليًا (grep "Example Page" = 7).
+- client/public/index.html (موقع الزائر) ليس جزءًا من build graph، لا يصل للإنتاج عبر بناء Vite.
+- admin.html وadmin-dashboard.html وصلتا للإنتاج بعد نشر e67b8e7 (PROD NOW OK). assets/js/site-app-r15.js موجود 200 في الإنتاج لكن لا أحد يشير إليه لأن index.html المنشور SPA فارغ.
+- كيف كان الموقع يعمل قبل؟ نشر سابق ربما كان ينسخ client/public مباشرة أو كان هناك آلية أخرى (ربما قبل الترقية web-db-user كان المشروع static يخدم client/public). بعد الترقية، البناء يكسر موقع الزائر.
+
+**الحل المختار (الأقل تدخلًا):**
+1. في client/index.html: استبدل title بالعنوان العربي، dir="rtl"، وخطوط، وCSS الموقع، وأضف سكربت module يحمّل /assets/js/site-app-r15.js (بنفس نمط client/public/index.html) مع div#app بجانب div#root.
+2. ملاحظة: div#root لـ React SPA يُحفظ لكن SPA Home يعرض "Example Page" فقط — يجب إخفاؤه أو جعل Home يعرض div#app للموقع. الأسهل: App.tsx: Route "/" renders <div id="app"></div> (بدل Home) ليعمل site-app على div#app.
+3. التحقق: build محلي ثم curl localhost:3000 بعد بناء (أو فحص dist) للتأكد أن / يعرض الموقع قبل checkpoint جديد.
+4. تذكير: dist/public/pages/ تحتوي صفحات فرعية (about.html...) مع README — الصفحات الفرعية قد تكون معطلة أيضًا في الإنتاج (server/index.ts يخدم index.html لكل المسارات *). الصفحات الفرعية في site-app تعمل بـ hash routing داخل SPA واحد، لذا /#/about يكفي — لا حاجة لملفات pages/ في الإنتاج.
+
+**حالة مهمة فريق الإدارة:** مكتملة (جدول + روترات + مدراء + اختبار 85/85) وتم نشرها ونجح نشر admin.html (20:55).
+
+
+## حالة إصلاح موقع الزائر في البناء (21:10 UTC) — نجاح جزئي
+
+**ما تم:**
+1. عدّلت client/index.html: html dir=rtl + عنوان عربي + meta + خطوط + CSS الموقع + سكربت module يحمّل /assets/js/site-app-r15.js داخل div#app (بجانب div#root).
+2. عدّلت client/src/pages/Home.tsx: div#app مع site-home-root بدل "Example Page" (لا يظهر مثال إلا عند isAuthenticated).
+3. نتيجة vite build محلي: dist/public/index.html (368KB) الآن يحتوي: title عربي، div id="app" واحد، div#root، div#toast-region، سكريبت site-app-r15.js module، main.tsx. grep count: div#app=1, site-home-root=0 في dist (لأن React inline)، Example Page=0. ✅
+4. tsc نظيف، البناء نجح.
+
+**متبقي:**
+- ملاحظة: div#app يظهر في dist/index.html لكن Home.tsx render يعيد div#app أيضًا — React سيرسمه ثانية عند hydration؟ لا، Home.tsx يُعرض داخل #root، و#app مستقل — لا تكرار إلا إذا React أزاله (React يعرض فقط داخل #root، لذا #app يبقى). آمنة.
+- يجب: pnpm test، ثم checkpoint جديد (auto-publish)، ثم curl للإنتاج والتأكد أن / يعرض الموقع ("منصتك الذكية للتعلم وا")، ثم فحص صفحات #/services و#/about تعمل (site-app routing داخلي).
+- تذكير: assets موجودة في dist/public/assets/js/site-app-r15.js عبر copy-wajbat-admin-assets plugin (موجودة في build log).
+- رابط الإنتاج: https://uploadplus-47dkogbk.manus.space — لوحة الإدارة: /admin-dashboard.html (تعمل الآن).

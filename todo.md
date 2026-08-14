@@ -358,3 +358,11 @@
 - [x] إضافة الملفات إلى قائمة نسخ الأصول في vite.config.ts
 - [x] اختبار vitest جديد teamPartners.test.ts (8 بنود) وتحديث اختبارات الأصول إلى r15
 - [x] اجتياز 85/85 اختبار وفحص TypeScript بدون أخطاء
+
+## جلسة إصلاح بناء موقع الزائر بعد الترقية (2026-08-14)
+- [x] تشخيص سبب عرض SPA فارغ (Example Page) في الإنتاج: vite build يستبدل index.html بـ client/index.html (React entry) بدل موقع الزائر في client/public
+- [x] نقل إعدادات موقع الزائر (عنوان عربي، dir=rtl، خطوط، CSS) وسكربت تحميل site-app-r15.js إلى client/index.html
+- [x] تعديل Home.tsx لعرض div#app للموقع بدل محتوى Example الفارغ
+- [x] إضافة site-app-r15.js كمدخل ثانٍ في rollupOptions ليُمرَّره البناء ويظهر في dist/index.html
+- [x] التحقق: البناء يُنتج dist/public/index.html يحتوي div#app وdiv#root وbundle سكريبت site-app-r15.js، وsite-app-r15.js موجود في dist/public/assets/js
+- [x] اجتياز 85 اختبار وحدة وفحص TypeScript ثم حفظ checkpoint منشور

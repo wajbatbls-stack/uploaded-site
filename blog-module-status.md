@@ -428,3 +428,192 @@ fetch('/admin.html') في الإنتاج يعيد admin-app-r21.js?v=contact-r3 
 ## الروابط النهائية (لا تتغير)
 - الزائر: https://uploadplus-47dkogbk.manus.space/public/index.html
 - الإدارة: https://uploadplus-47dkogbk.manus.space/admin.html
+
+## 18:41 فشل الدخول في المنشور رغم إصلاح normalize
+سبب محتمل: الخادم المنشور في الإنتاج هو النسخة الأقدم (قبل normalize fix). checkpoint 82120328 حُفظ — هل نُشر تلقائيًا (auto-publish مفعل)؟ يجب التحقق من curl على المنشور بعد checkpoint. ملاحظة مهمة: فشل المنشور قد يكون أيضًا لأن الـ ENV المنشورة ما زالت ملوثة بـ LRM — لكن الخادم الجديد normalize يحذفها! إذن الفشل سببه أن الخادم المنشور لا يحتوي التعديل. تحقق: curl على https://uploadplus-47dkogbk.manus.space بعد نشر 82120328.
+
+## 18:42 فشل الدخول من المتصفح في الإنتاج رغم نجاح curl (success:true)
+curl إلى المنشور يعطي success:true مع نفس البيانات، لكن المتصفح في نفس الصفحة يظهر «بيانات الدخول غير صحيحة». فرضية: المتصفح يرسل البريد بطريقة مختلفة (normalizer عميل؟) أو أن الرمز المنشور يستخدم جلسة قديمة محظورة؟ الأرجح: المتصفح يستخدم normalizeLoginEmail عميل ويضيف شيًا؟ أو أن صفحة admin المنشورة لم تُحدَّث؟ لكن admin.html يعرض admin-app-r22 (من screenshot). الفرضية الأقوى: خطأ "بيانات الدخول غير صحيحة" يظهر عند فشل API، لكن curl من نفس الشبكة نجح — الفرق الوحيد: المتصفح لا يرسل superjson json؟ يجب فحص network log أو استكشاف الكونسول مباشرة بإرسال login عبر fetch مثلما يرسل الكود الفعلي.
+
+## 18:44 تشخيص كامل
+curl: login يعطي success + كوكي wajbat_admin_session + account بعدها يعمل ويعيد البريد الصحيح. إذن الخادم المنشور (100%) سليم. المتصفح ينجح mutate (fetch مع credentials:same-origin يحفظ الكوكي تلقائيًا) لكن بعدها refresh يرمي خطأ «بيانات الدخول غير صحيحة». ملاحظة غريبة: في المتصفح errorBox يعرض «بيانات الدخول غير صحيحة» وهو state.loginSettings?.invalidCredentialsText الافتراضي. يعني catch التقط خطأ من mutate أو refresh. لكن fetch مع credentials:same-origin في صفحة uploadplus-47dkogbk.manus.space يجب أن يحفظ الكوكي (HttpOnly; Secure; SameSite=Lax) — يجب أن يعمل!
+فرضية جديدة: ربما الخادم المنشور autoscale يوجَّه requests لعدة نسخ غير متزامنة؟ أو أن JWT verify يفشل بسبب... لا. الأرجح: fetch نجح لكن الـ cookies لم تُخزَّن (sandbox browser بدون نفس الأصل؟ لا — الصفحة على نفس الدومين).
+الاختبار الحاسم: من داخل صفحة المتصفح، نفذ login ثم account متتاليًا وأخبرني بالنتيجة. إن نجح account → المشكلة في query آخر داخل refresh (مثل admin.passkeys يرمي خطأ غير مرتبط بالدخول؟ لكنه protected — بدون كوكي يعطي 401 → messageOf يعيد «بيانات الدخول غير صحيحة»؟ لا، messageOf(401)...). تحقق من messageOf.
+
+## 18:45 النتيجة الحاسمة
+كل خطوة fetch من داخل صفحة المتصفح تنجح (login, account, collections, passkeys كلها 200). إذن الخادم سليم والكوكي يُخزَّن. لكن الضغط على زر تسجيل الدخول في UI ما زال يعرض «بيانات الدخول غير صحيحة». الفرضية: المتصفح استخدم كوكي قديمًا/جلسة منسوخة؟ لا — نفس الصفحة. الأرجح: عند النقر في UI، الـ fetch يرسل الكوكي لكن الـ browser profile يرفض تخزين كوكي HttpOnly؟ لا — account نجح مباشرة بعد login في نفس الكونسول.
+فرضية أقوى: ربما صفحة admin المنشورة في المتصفح استُخدمت من قبل بجلسة فاشلة، وفي هذه الجلسة السابقة mutate رمى، و«بيانات الدخول غير صحيحة» ظهرت... لكننا رأينا النص يظهر مباشرة بعد النقر الأخير. ربما زر الدخول في UI يرسل normalizeLoginEmail بشكل صحيح...
+احتمال مهم: التوقيت — عند النقر على الزر، هل حدثت إعادة تحميل/redirect قبل اكتمال fetch؟ لا.
+الخطة: أعد تحميل الصفحة وأعد اختبار النقر مع hook على console.error وperformance (fetch failures) لالتقاط الخطأ الفعلي.
+
+## 18:46 اكتشاف جوهري
+الـ hook سجل: account=200, ownerLoginSettings=200, passkeys=200، وكلها في نفس الطلبات التي ينفذها UI. إذن refresh نجح كله! لكن الخطأ «بيانات الدخول غير صحيحة» ظهر. كيف؟ إذاً الخطأ يأتي من mutate login نفسه؟ لكن hook لم يسجل login كفشل (الشرط يستثني login). إذن login أعاد 200... لكن ربما payload login كان خطأ؟ لا.
+انتظر: السجل لا يحتوي login. الشرط: s>=400. إذاً login كان 200. إذاً كل شيء 200، لكن UI يعرض الخطأ! أين يُعرض errorBox؟ فقط في submitLogin catch. كيف قفز إلى catch إذا لم يُرمَ شيء؟
+فرضية: await refresh() لا يوجد فيه await داخل Promise.all على fetchات غير محفوظة الكوكي؟ لا...
+فرضية جديدة: النقر على الزر نفذ submitLogin من سكريبت قديم (cache) الذي لم يتضمن إصلاحات؟ لكن r22 محدث والبصمة blog-r1 واضحة. أو: النموذج يحتوي حقلين بنفس name وأحدهما من نسخة قديمة؟
+فحص مباشر: استعن بـ hook أشمل — سجّل كل fetch بلا شرط وأرَ ما حدث بالترتيب الزمني الدقيق أثناء النقر.
+
+## 18:46.5 محاكاة submitLogin كاملة من الكونسول نجحت تمامًا
+نفس المنطق الحرفي: login success + 9 طلبات كلها 200. لكن النقر على الزر عبر عنصر index يعرض «بيانات الدخول غير صحيحة».
+فرضية حاسمة: عند النقر بـ index (tool) ربما الحدث يمر بمعالجة مختلفة، أو أن fill_form أعاد تعيين القيم لكن form.querySelector('#login-error')... لا.
+فرضية أقوى: fill_form يملأ الحقول لكن button index 4 قد يكون زرًا من نموذج مخفي آخر (#login-form قديم أو نسخة مكررة)، أو أن الكود الذي استمع عليه addEventListener('submit') موجود على نموذج مختلف عن النموذج الذي مُنع default عليه. أو أن النقر على الزر يسبب إعادة تحميل الصفحة (form.submit default غير مُعطَّل) لأن submitLogin رمى قبل preventDefault؟ لا — preventDefault أول سطر.
+الاختبار: افحص كم عدد عناصر #login-form في الصفحة، وهل هناك form مكرر، واستدعِ submitLogin الفعلية عبر dispatchEvent مع تتبع.
+
+## 18:46.7 اكتشاف مهم جدًا
+dispatchEvent('submit') على #login-form: كل الـ fetchات 200، success:true، لكن errorBox يعرض «بيانات الدخول غير صحيحة» ولوحة الإدارة لم تظهر!
+إذن بعد refresh() لا توجد dashboard() عرض، أو أن dashboard() رمى خطأ لاحقًا... لكن الخطأ في errorBox — يعني catch التقط خطأ. مع أن كل fetch نجح!
+الاحتمال الوحيد المتبقي: خطأ حدث في dashboard() أو بعده داخل submitLogin؟ لا، catch فقط حول await mutate + await refresh، وrefresh رمى؟
+انتظر — refresh() رمى بالفعل! كيف؟ Promise.all على 9 طلبات: كل واحد fetch ثم r.status. إذا كان أحدها رمى (r.text() أو json()...) لكن status كلها 200.
+أوه! هناك catch داخل query: `if (!response.ok) throw ...; return payload?.result?.data?.json ?? payload?.result?.data;` — ماذا لو أن أحد الطلبات أعاد 200 لكن payload.result.data.json undefined؟ لا، كل الأجسام سليمة.
+فحص جديد: ربما dashboard() رمى وsubmitLogin ليس catch عليه. الخطأ يظهر من... أين يُكتب errorBox؟ فقط في submitLogin catch وsubmitPasskey؟ تحقق: ابحث عن "login-error" في السكريبت — ربما معالج آخر (مثل bindEvents عام) يعرض هذا النص عند فشل أي شيء؟ أو أن نص errorBox ثابت في HTML من البداية ولم يُمسَح لأنه في submitLogin يبدأ بمسح textContent لكن حدث النقر هذا لم يمر بـ submitLogin؟
+الحاسم: استخرج من السكريبت كل مكان يكتب على #login-error وكل مكان يعرض النص «بيانات الدخول».
+
+## 18:47 تحليل أعمق
+errorBox موجود داخل login-form نفسه. submitLogin يمسحه أولًا ثم عند catch يعيد «بيانات الدخول غير صحيحة» (loginDefaults.invalidCredentialsText). إذن catch التُقط فعلًا أثناء mutate أو refresh رغم أن كل fetch أعاد 200 في سجل hook!
+تنبيه: في تجربتي الأخيرة (dispatchEvent) نص errorBox «بيانات الدخول غير صحيحة»... لكن هل هو من هذه التجربة أم بقي من تجربة النقر السابقة (index 4) التي عرضت النص قبل أن أشغّل الـ hook الجديد؟ نعم محتمل! الـ hook الجديد رُكّب بعد أن بقي النص.
+الاختبار الحاسم: امسح errorBox يدويًا ثم أعد dispatchEvent وراقب هل يظهر النص من جديد. إن بقي فارغًا → النقر السابق هو المصدر، والآن نجح فعلًا.
+
+## 18:47.3 خطأ مؤكد داخل refresh() رغم نجاح fetch
+errText «بيانات الدخول غير صحيحة» ظهر مجددًا بعد مسح وإعادة submit. login-card ما زال ظاهرًا (لم تنجح dashboard). إذن refresh رمى فعلًا. كل الـ 9 fetch نجحت (200). إذن الخطأ يأتي من بعد الاستجابات: من معالجة response.json() أو من dashboard()...
+تذكّر: query() داخل refresh: `const payload = await response.json().catch(() => null); if (!response.ok) throw ...; return payload?.result?.data?.json ?? payload?.result?.data;`
+إذا كان response.ok=200 وpayload.result.data.json موجود — لا خطأ. لكن ماذا إذا json() رمى خطأ parsing غير ملتقط؟ ملتقط بـ catch(() => null) ثم payload=null → payload?.result?.data?.json = undefined → لا رمي.
+فحص مباشر: أعِد تعريف refresh() في الكونسول مع console.log لكل خطوة ثم استدعِه لرؤية أين الخطأ بالضبط.
+
+## 18:48 refresh سليم
+refresh = Promise.all على 9 query ثم أسناد state ثم dashboard(). لا يمكن أن يرمي إلا: query رمى، أو dashboard() رمى. dashboard() مُعرّف قبل refresh. الخطأ يُلتقط في submitLogin catch... انتظر، submitLogin catch: `errorBox.textContent = state.loginSettings?.invalidCredentialsText || messageOf(error)` — إذا رمى dashboard() بعد login (خارج try submitLogin؟ لا — refresh() داخل try).
+فحص حاسم: طبّق query('adminAuth.passkeys') وquery('admin.collections') مباشرة عبر eval واستخرج الاستثناء الحقيقي.
+
+## 18:48.7 لحظة! الفرق الحاسم
+عندما نجح الكونسول سابقًا، كنا قد أنشأنا بالفعل كوكي جلسة صالحًا من fetch السابق! بعد إعادة تحميل الصفحة، الكوكي القديم انتهت صلاحيته أو لم يعد صالحًا، والـ login الجديد يحتاج إرسال... انتظر login لا يحتاج كوكي!
+لكن: submitLogin يرسل login (200 success) ثم refresh. سجل الكونسول السابق (dispatchEvent) أظهر login=200 + الـ 9 طلبات كلها 200. إذن كل شيء 200 رغم أن errorBox ظهر! كيف؟
+ملاحظة: في اختبار الـ dispatchEvent السابق، نص errorBox كان ظاهرًا قبل التشغيل (بقي من اختبار index 4). مسحناه ثم أعَدْنا — ظهر مجددًا. لكن... هل يمكن أن الـ login نجح لكن refresh رمى من dashboard()؟ dashboard() قد ترمي خطأ إذا state.collections الخ... لا يرمي عادة.
+الاختبار الحاسم الأخير: عدّل loginDefaults.invalidCredentialsText مؤقتًا لقيمة مميزة عبر JS ثم انقر الزر: إذا ظهر النص المميز → الخطأ من catch submitLogin الحقيقي (أي من mutate أو refresh فعليًا يرمي). إن لم يظهر → نص errorBox يُكتب من مكان آخر (مثل dashboard عند فشل شيء) أو أن النص المميز ظهر عبر messageOf(error)؟ messageOf يعيد الرسالة من error.message وليس من invalidCredentialsText. إذن إذا ظهر النص المميز = catch حقيقي.
+
+## 18:49 تأكيد: catch حقيقي
+mutations أظهرت مسح ثم كتابة النص — من submitLogin catch. إذن mutate أو refresh رمى فعلًا. لكن سجل الـ hook السابق (نفس الصفحة، نفس النقر) أظهر كل شيء 200! التفسير الوحيد المتسق: الكود يرمي من مكان لا يسجله hook — وهو json parsing في query؟ ملتقط.
+تذكّر: refresh ينادي dashboard() بعد await Promise.all. dashboard() ليس async — إذا رمى sync، يُلتقط في catch submitLogin (نعم، catch على await refresh يلتقط أخطاء dashboard أيضًا). dashboard() يعتمد على state وHTML. هل dashboard() رمى؟
+احتمال كبير: في الكود المنشور، loginVisual أو renderLogin... انتظر، قبل dashboard(): bindSidebarNavigation()؟ لا.
+فحص: اعرض dashboard() من السكريبت المنشور وابحث عن رمي أخطاء.
+
+## 18:49.5 ملخص تشخيص شامل (قبل ضغط السياق)
+المشكلة: في الإنتاج (https://uploadplus-47dkogbk.manus.space/admin.html) بعد إدخال البريد bdalslamanwralajsh@gmail.com / abd77312 والنقر على تسجيل الدخول، يظهر «بيانات الدخول غير صحيحة» رغم أن:
+- curl من نفس الشبكة: login=success + كوكي wajbat_admin_session + account بعدها يعمل (200، يعيد البريد الصحيح).
+- من كونسول المتصفح: كل fetch مباشرة (login, 9 طلبات refresh) = 200 + success:true.
+- MutationObserver على #login-error أكد أن النص يُكتب من submitLogin catch (مسح ثم كتابة).
+
+الحقائق المؤكدة:
+1. السكريبت المنشور: /assets/js/admin-app-r22.js?v=blog-r1
+2. submitLogin: await mutate('adminAuth.login',{email,password}) ثم await refresh()، catch يكتب errorBox.
+3. refresh: Promise.all على query('admin.collections','admin.stats','admin.requests','admin.messages','admin.submittedReviews','admin.media','adminAuth.account','adminAuth.ownerLoginSettings','adminAuth.passkeys') ثم أسناد state ثم dashboard() غير async.
+4. mutate وquery: fetch `/api/trpc/${procedure}` مع {credentials:'same-origin'}، throw إذا !response.ok، وإلا payload?.result?.data?.json ?? payload?.result?.data.
+5. dashboard() يعتمد على state.navOpen وsidebar() — لا يبدو أنه يرمي.
+6. loginDefaults.invalidCredentialsText = 'بيانات الدخول غير صحيحة' (سطر 7717 في r22).
+
+نقطة غامضة: رغم أن كل fetch أُظهر 200 عبر hook، catch التقط خطأ. الفرضيات المتبقية:
+أ) ربما catch يلتقط خطأ من await refresh() لأن dashboard() رمى خطأ sync (مثل document.querySelector('#admin-root')؟ موجود. أو sidebar() استخدمت state.passkeys بشكل خاطئ؟).
+ب) ربما أحد الطلبات في Promise.all رمى من json() قبل الالتقاط الداخلي — لكن query يلتقط json failure ويحول null ثم يعيد undefined — لا رمي.
+ج) ربما credentials:'same-origin' لا يرسل الكوكي في هذا السياق فlogin نجح لكن الـ 9 طلبات فشلت... لكن hook أظهر 200 لكلها!
+د) ربما هناك نسخة ثانية من السكريبت قديمة تعمل (cache) — البصمة v=blog-r1 واضحة لكن قد يكون هناك سكريبت آخر داخل index.
+
+الخطوة التالية المقترحة:
+- أعِد بناء dashboard/refresh في scope الصفحة عبر new Function مع async wrapper صحيح (new Function body كـ string داخل setTimeout async) مع console.log لكل سطر، أو أعد استدعاء refresh عبر: scriptElement جديد يُحمل بنسخة معدلة؟ أو: استخدم eval module عبر Blob URL type=module.
+- أو الأسهل: افحص الخادم المنشور logs عبر manus-webdev-logs لمعرفة إن كان هناك رمي في login بعد success (مثل فشل set-cookie؟ لا).
+
+## 18:49.7 اكتشاف جديد: [Auth] Missing session cookie في الإنتاج
+سجلات الإنتاج تعج بـ "[Auth] Missing session cookie" أثناء كل عملياتنا. هذه تظهر من الـ 9 طلبات refresh (كلها عبر الترميز المشفر protectedProcedure؟ لا — بعضها public لكن context يتحقق دائمًا).
+سؤال: إذا كانت الـ 9 طلبات تعيد "Missing session cookie" كخطأ HTTP... لكن hook أظهر status=200!
+أوه!!! status=200 لكن body هو {"error":{...}} لأن tRPC يعيد 200 للخطأ؟ لا — TRPCError رمى → status 401. لكن curl سابقًا أظهر: adminAuth.login success ثم account بـ 200 مع الكوكي المرسَل.
+لكن المتصفح: login نجح (success) — login يمنح كوكي set-cookie. ثم refresh... هل الكوكي لُعب بشكل صحيح؟
+فحص من منشور curl: عند login، header set-cookie: wajbat_admin_session=...; HttpOnly. المتصفح قد يرفضه إذا Secure+SameSite مع سياق iframe/preview؟ نحن على النطاق الحقيقي uploadplus-47dkogbk.manus.space مباشرة — يجب أن يعمل.
+لكن! سجل الإنتاج يظهر Missing session cookie في 18:49:10 (مجموعة من 9 = refresh كاملة!). إذن الـ 9 طلبات في المتصفح لم يرسلوا الكوكي أو الخادم المنشور رفضه!
+الحل/الفحص: هل كوكي الجلسة من login فشل في الإرسال بسبب SameSite? افحص headers login response من الكونسول (getEntries أو تسجيل response headers).
+
+## 18:50.2 login + account ناجحان في المتصفح على المنشور (200 + البريد الصحيح)
+إذن كوكي الجلسة يعمل. سجلات "[Auth] Missing session cookie" قد تكون من صفحة التحميل الأولية أو passkeys؟ على أي حال: الطلبات الموثّقة كلها 200 سليمة.
+بعد ذلك كل طلبات refresh التسعة 200 (موثقة سابقًا). لكن catch يعرض الخطأ!
+الاحتمال الوحيد الذي لم نفحصه: dashboard() رمى sync داخل refresh بعد state. أو... انتظر: في submitLogin الكود:
+```
+try { await mutate(...); await refresh(); dashboard(); } catch(e) { errorBox.textContent = ... }
+```
+هل dashboard() مكررة بعد refresh() الذي يناديها داخليًا؟ هذا لا يسبب رميًا.
+فحص dashboard(): `${sidebar()}...` — sidebar() تستخدم state + navCount + esc + fmtDate. esc وfmtDate معرفان؟ نعم موجودان في السكريبت (يستخدمان في كل مكان). لكن ماذا لو sidebar() نادى navCount(state.stats) ثم state.passkeys... كل شيء آمن.
+فرضية جديدة: loginDefaults.invalidCredentialsText يُقرأ من state.loginSettings?.invalidCredentialsText || messageOf(error). إذا messageOf(error) أعاد النص — لكن النص «بيانات الدخول غير صحيحة» هو من loginDefaults فقط... إلا إذا error.message نفسه هذا!
+من أين يأتي error.message بهذا النص؟ من login router في الخادم: إذا كانت كلمات المرور خاطئة → throw TRPCError('Invalid credentials')؟ لا، النص عربي. بحث: أين يعرف الخادم هذا النص؟ أو client: messageOf؟
+فحص الخادم: routers.ts login: ما هي الرسالة عند الفشل؟
+
+## 18:51 ownerProcedure
+كل إجراءات refresh (admin.collections وغيرها وownerLoginSettings/passkeys) هي ownerProcedure تتطلب جلسة (الكوكي). login ينشئ الجلسة وset-cookie. سجل الإنتاج يظهر "Missing session cookie" — هذا من الـ 9 طلبات refresh لأن الكوكي لم يُستقبل في الخادم المنشور!
+لكن hook أظهر 200... انتظر: ownerProcedure: إذا لا جلسة → throw UNAUTHORIZED → status 401. لكن hook أظهر 200!
+فحص: admin.collections في curl المنشور (قبل) أعاد 200 مع body سليم [collections] عندما أُرسل كوكي. في المتصفح بعد login: hook أظهر 200 لكل الطلبات. لكن سجل الإنتاج Missing session cookie في نفس التوقيت!
+التناقض يُحَل فقط إذا: الخادم المنشور يعمل على عدة_instances_ أو أن سجل المنشور من طلبات أخرى (نفسنا، لكن من صفحة التحميل الأولية قبل login). توقيت 18:49:10 و18:48:40 و18:48:38 = مجموعات refresh تجريبية. لكن hook قال status=200!
+احتمال مهم: hook سجل status من استجابات مختلفة — 9 في مجموعة refresh × عدة تجارب.
+الخلاصة: لا يمكن التوفيق بين "200 في hook" و"Missing session cookie في الخادم" إلا إذا الكوكي أرسل لكن الخادم رفضه (signature فشل!) — عندها يرمي 401 لا 200.
+حل نهائي: جرب refresh من الكونسول مع ملاحظة حالة كل استجابة body لا status فقط — ربما body يحتوي error.
+
+## 18:51.5 استنتاج حاسم محتمل
+كل fetchات الكونسول (login+refresh) = 200 وسليمة تمامًا. لكن dispatchEvent/btn.click() يعرض الخطأ!
+الفرق الوحيد: dispatchEvent/btn.click() يعملان في نفس الصفحة! وhook سجل الـ 200 أيضًا في تجربة الـ dispatchEvent السابقة. لكن الخطأ ظهر!
+كيف يمكن أن كل fetchات refresh 200 سليمة ثم catch؟ الاحتمالات المتبقية صفر تقريبًا إلا:
+1) dashboard() رمى داخل refresh بعد await. لكن الكونسول نفسه لا ينفذ dashboard().
+2) هناك كود بين refresh والدالة التالية رمى... لا.
+3) أحد طلبات refresh في UI (عبر fn mutate) استخدم body مختلف/مقطع... لا.
+4) MutationObserver أظهر أن errorBox كتب مرتين: مسح ثم «بيانات الدخول». لكن هل من الممكن أن النقر (btn.click) نفّذ submit مرتين (نموذجان أو معالجان: addEventListener على form + onclick على button)؟
+الفحص: عدّ event listeners على الـ form والـ button. هل يوجد اثنان؟ إذا استُدعي submitLogin مرتين بالتسلسل، الأولى تنجح، الثانية... الكوكي موجود، login ينجح مجددًا... لا خطأ.
+5) أو المعالج الثاني: submitPasskey الذي قد يرمي؟
+6) أو أن الخطأ ليس من submitLogin أصلًا! MutationObserver رصد تغيير النص. لكن من سجل الـ stack في console.log... كان أنونيماً.
+حل نهائي مباشر: أعد تعريف submitLogin في console مع console.trace داخل catch. كيف أنفذ؟ عبر eval على السكريبت مع تعديل اسم الدالة لا يؤثر على الـ UI. لكن UI يشير إلى الدالة الأصلية.
+الحل: أعتَرِض على Promise.prototype.catch؟ لا. الأفضل: عدّل الخطأ عبر إضافة log في query/mutate عبر Object.defineProperty على console.error... فعلنا ولم يظهر شيء.
+جرب: أعِد تحميل الصفحة، ثم قبل أي شيء أعد تعريف window.addEventListener('error') وunhandledrejection، ثم انقر الزر الحقيقي عبر tool، ثم افحص.
+
+## 18:52.2 النقر الحقيقي عبر tool أظهر الخطأ مجددًا
+تم تثبيت window.__errs + MutationObserver مع stack قبل النقر الحقيقي (index 4). الخطأ ظهر في markdown («بيانات الدخول غير صحيحة»). الخطوة التالية: قراءة window.__errs لمعرفة المصدر الحقيقي.
+
+## 18:52.5 لا أخطاء sync/unhandled — الخطأ من catch داخل submitLogin نفسه
+التالي: هل كود الخادم المنشور (dist) مختلف عن المحلي؟ curl على المنشور نجح login... إذن الخادم المنشور سليم (login نجح من الكونسول والـ curl).
+نقطة مهمة جدًا: الـ curl السابق عبر الشبكة... هل كان من نفس sandbox إلى المنشور؟ نعم من sandbox. إذن منشور الإنتاج: login=200، account=200، collections=200 (عبر curl مع كوكي).
+من الكونسول: login+refresh تسعة = كلها 200 سليمة.
+من tool-click (نفس الصفحة): الخطأ يظهر!
+الفرق الوحيد المنطقي: الـ tool click يستهدف الزر عبر index على صفحة «محدثة جزئيًا»؟ لا، نفس الصفحة.
+أو: النقر أُرسل بينما الصفحة في حالة «جار التحقق من صلاحية الوصول» — صفحة الدخول تحتوي طبقتين: شاشة «جار التحقق» + النموذج. هل الـ click ضرب زرًا في شاشة أخرى أو form قديم؟
+أو: السكريبت يعيد رسم النموذج أثناء النقر (re-render) فيبطل الحدث؟
+أو: هناك نسختان من السكريبت: module في index.html يستورد أيضًا؟ admin-app-r21 + r22 معًا — r21 يحتوي دالة login قديمة تُسمع على نفس الـ form! نعم! احتمال قوي: admin-app-r21.js (القديم) لا يزال مُحمّلًا في HTML المنشور أو module loader يحمل الاثنين، وr21 submitLogin يرمي الخطأ!
+الفحص: عدّ كل السكريبتات في الصفحة + عدّ event listeners على الزر/الفورم.
+
+## 18:53 فحص السكريبتات
+زر واحد وفورم واحد، ولكن هناك 15+ سكريبتات إدارية! أي منها قد يستمع لـ submit ويكتب الخطأ؟
+مرشح رئيسي: admin-owner-login-security-r6.js أو admin-owner-login-enhancements-r14.js — قد تحتوي كود تسجيل دخول خاصًا يتعارض.
+وأيضًا: هل admin-app-r22.js يستورد/يعيد تعريف؟ السكريبتات الـ 15 كلاسيكية (script src) — ترتيب التحميل! admin-app-r22.js module يُنفذ... هل السكريبتات الأخرى تعمل على نفس الـ DOM؟
+يجب فحص: من أين يأتي نص «بيانات الدخول غير صحيحة» في كل السكريبتات المنشورة (grep على ملفات CDN).
+
+## 18:53.3 security-r6 وenhancements-r14 ليسا المصدر
+- security-r6 يستمع submit على [data-owner-login-credentials] (فورم تغيير البريد/كلمة المرور في لوحة الإدارة).
+- enhancements-r14 يستمع على [data-owner-login-settings] capture=true (فورم الإعدادات).
+فورم الدخول الرئيسي يجب فحص selector الخاص به في r22: هل هو [data-owner-login]؟ وما هو اسم الدالة التي تستمع له؟ وهل توجد نسختان مستمعتان؟
+
+## 18:54 تحليل bindLoginForm
+- سطر 144: bindLoginForm: form.addEventListener("submit", submitLogin) — بدون capture، بدون stopImmediatePropagation.
+- سطر 149: click listener capture=true على document — لا preventDefault لنص "تسجيل الدخول" العادي (لا يملك data-owner-login-*). إذن button.type=submit يولد حدث submit طبيعي.
+- refresh في r22 المنشور: ماذا يحتوي refresh()؟ هل admin.blog؟ لا — blog manager منفصل (mountCompatibleBlogManager من admin-blog-manager-r1.js).
+الاحتمال الأخير الأقوى: passkeys API! في refresh أو login قد يستدعي الكود navigator.credentials.get() الذي في Sandbox browser يعود بـ DOMException "The operation either timed out or was not allowed"? لكن هذا سيكون في fetch monitor...
+فحص refresh() المنشور كاملًا.
+
+## 18:54.5 الكود نظيف — الفرضية النهائية المتبقية
+- S142: normalizeLoginEmail يحذف LRM/RLM بالفعل (تم في إصلاح سابق).
+- query/mutate سليمان. refresh = Promise.all + state + dashboard().
+الطريقة الحاسمة: أدرج نسخة instrumented من refresh داخل الصفحة عبر new Function من نص السكريبت المنشور مع console.log، وأستدعيها بدل الأصلية، ثم أنقر الزر عبر tool... لكن UI يستخدم الأصلية.
+حل أسرع وأضمن: أعدل r22 مؤقتًا ليكتب console.trace في catch ويكشف الخطأ الفعلي. لكن النشر يتطلب checkpoint! البديل: يمكنني إضافة index.html تعديل بسيط؟ لا — auto-publish.
+الحل الأذكى: استخدام MutationObserver مع أداء submitLogin نفسه — أعرف أنه يُنفذ (النص يتغير). هل يمكن أن الخطأ من messageOf(error) حيث error ليس Error بل response؟ لا.
+انتظر... هناك احتمال لم يُفحص: هل السكرتين r22 module يتعارض مع admin-app قديم (inline) في index؟ يوجد INLINE×3 في scripts! ما محتوى الـ inline scripts في HTML المنشور؟
+
+## 18:54.9 أسئلة مفتوحة
+التسلسل في admin.html: r22 → media-binding → structured-editor → homepage → services → visitor-links → downloads → contact → blog.
+لكن الصفحات المنفصلة (admin-owner-login-security-r6, admin-owner-login-enhancements-r14, admin-design-studio-r2, admin-security-controls, admin-list-controls*) من أين تُحمّل؟ يجب أن تكون referenced في HTML أيضًا أو من r22 نفسه. فحص HTML المنشور لبقية السكريبتات.
+
+## 18:55.2 خلاصة HTML: لا تعارض تحميل
+كل السكريبتات تُحمّل عبر append سليم وdefer. لا يوجد script مكرر.
+التشخيص المنطقي المتبقي (احتمالان فقط):
+1) catch في submitLogin يُلتقط خطأ حقيقي — لكن hook على fetch سجل كل شيء 200. إلا أن error قد لا يكون network: query() قد يرمي إذا payload null... لكن hook سجل النجاح.
+2) السكريبت r22 في /tmp/pub_r22.js قد يكون نسخة قديمة رغم wc متطابق مع المحلي (لأن المحلي نفسه لم يتغير!) — هل التعديل (normalizeEmail حذف LRM) موجود في r22؟ نعم محليًا S142، لكن هل في المنشور؟ يجب diff: r22 محلي = r22 منشور؟ wc كان 83729 للطرفين. لكن هل التعديل الجديد (إصلاح login) كان داخل r22 أم routers.ts؟ الرامي هنا هو client، وr22 لم يتغير منذ إصلاح normalizeEmail (كان التعديل في adminSession.ts فقط). إذن r22 المنشور سليم.
+نظرية نهائية: الـ fetch في UI يعمل تمامًا، لكن refresh() من UI يُنفذ على state فارغ ثم dashboard() يرمي خطأ غير caught؟ dashboard() داخل submitLogin محمي؟ لا — refresh() داخل try/catch في submitLogin! نعم: try { await login; await refresh(); } catch { errorBox... } — refresh() كاملة محمية.
+يجب أن الخطأ real. سأضيف كود تتبع دائم في admin.html: أدرج سكريبت inline صغير يلفّ fetch ويسجل كل response غير 200 وكل throw من login... ثم checkpoint + نشر، ثم نقر. هذا هو الطريق الأمثل.
+لكن أسهل طريقة: في admin.html أضيف inline script قبل تحميل r22 يلتقط: window.addEventListener('unhandledrejection', log)، ويعيد تعريف console.error، ويسجل performance entries. وأتركه في النشر.

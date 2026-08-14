@@ -16,6 +16,42 @@
   </head>
   <body>
     <div id="admin-root"></div>
+    <script>
+      window.__loginTrace = [];
+      const __origFetch = window.fetch;
+      window.fetch = function __loginFetch(url, init) {
+        return Promise.resolve(__origFetch.call(window, url, init)).then(
+          (res) => {
+            if (String(url || "").includes("/api/trpc/")) {
+              const t = window.__loginTrace || [];
+              t.push({
+                t: Date.now(),
+                url: String(url),
+                status: res.status,
+                bodySnippet: (res.statusText || "").slice(0, 40),
+              });
+              res.clone().json().then(
+                (p) => {
+                  if (p && p.error) t.push({ t: Date.now(), url: String(url), error: (p.error && (p.error.json && p.error.json.message) || "").slice(0, 200) });
+                },
+                () => {},
+              );
+            }
+            return res;
+          },
+          (err) => {
+            (window.__loginTrace || []).push({ t: Date.now(), url: String(url), throw: String(err && err.message) });
+            throw err;
+          },
+        );
+      };
+      window.addEventListener("unhandledrejection", (e) => {
+        (window.__loginTrace || []).push({ t: Date.now(), unhandled: String(e && e.reason && e.reason.message || e.reason).slice(0, 300) });
+      });
+      window.addEventListener("error", (e) => {
+        (window.__loginTrace || []).push({ t: Date.now(), error: String(e && e.message).slice(0, 300), stack: String(e && e.error && e.error.stack).slice(0, 500) });
+      });
+    </script>
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";

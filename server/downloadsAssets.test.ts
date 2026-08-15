@@ -7,7 +7,7 @@ describe("أصول قسم إدارة التحميلات الحديث", () => {
   it("يحمّل مدير التحميلات الحديث ومدير التطبيق المبصّم من صفحة الإدارة", () => {
     const adminHtml = projectFile("client/public/admin.html");
     expect(adminHtml).toContain("admin-downloads-manager-r3.js");
-    expect(adminHtml).toContain("admin-app-r29.js");
+    expect(adminHtml).toContain("admin-app-r30.js");
     expect(adminHtml).toContain("downloads-r2");
         expect(projectFile("client/public/assets/js/admin-downloads-manager-r3.js")).toContain("WajbatDownloadsManager");
     expect(projectFile("client/public/assets/js/admin-app-r21.js")).toContain("mountCompatibleDownloadsManager");

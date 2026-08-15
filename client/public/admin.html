@@ -17,6 +17,15 @@
   <body>
     <div id="admin-root"></div>
     <script>
+      /* SW إجباري لكسر كاش JS/CSS القديم نهائيًا على أجهزة المستخدمين */
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw-forced.js").then(() => {
+          const reg = navigator.serviceWorker.controller ? null : null;
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            window.location.reload();
+          });
+        }).catch(() => {});
+      }
       window.__loginTrace = [];
       const __origConsoleError = console.error;
       console.error = function __loginConsoleError(...args) {

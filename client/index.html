@@ -37,6 +37,16 @@
     <div id="root"></div>
     <div id="app"></div>
     <div id="toast-region" aria-live="polite" aria-atomic="true"></div>
+    <script>
+      /* SW إجباري لكسر كاش JS/CSS القديم نهائيًا على أجهزة الزوار */
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/sw-forced.js").then(() => {
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            window.location.reload();
+          });
+        }).catch(() => {});
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script type="module" src="/assets/js/site-app-r32.js"></script>
     <script

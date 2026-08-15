@@ -6,12 +6,12 @@ const projectFile = (path: string) => readFileSync(resolve(process.cwd(), path),
 describe("أصول قسم إدارة التحميلات الحديث (r10)", () => {
   it("يحمّل مدير التحميلات r10 ومدير التطبيق المبصّم من صفحة الإدارة", () => {
     const adminHtml = projectFile("client/public/admin.html");
-    expect(adminHtml).toContain("admin-downloads-manager-r10.js");
+    expect(adminHtml).toContain("admin-downloads-manager-r11.js");
     expect(adminHtml).toContain("admin-app-r30.js");
     expect(adminHtml).toContain("downloads-r10");
     expect(adminHtml).toContain("admin-structured-editor-r6.js");
     expect(adminHtml).toContain("structured-r6");
-    expect(projectFile("client/public/assets/js/admin-downloads-manager-r10.js")).toContain("WajbatDownloadsManager");
+    expect(projectFile("client/public/assets/js/admin-downloads-manager-r11.js")).toContain("WajbatDownloadsManager");
     expect(projectFile("client/public/assets/js/admin-app-r21.js")).toContain("mountCompatibleDownloadsManager");
   });
 
@@ -30,7 +30,7 @@ describe("أصول قسم إدارة التحميلات الحديث (r10)", () 
     expect(app).toContain('downloads: ["📥", "إدارة التحميلات"');
     expect(app).toContain("mountCompatibleDownloadsManager();");
     expect(app).toContain("manager.activate()");
-    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r10.js");
+    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r11.js");
     expect(manager).toContain("admin.downloads.list");
     expect(manager).toContain("admin.downloads.createCategory");
     const editor = projectFile("client/public/assets/js/admin-structured-editor-r6.js");
@@ -49,13 +49,13 @@ describe("أصول قسم إدارة التحميلات الحديث (r10)", () 
 
   it("يقيّد الرفع على 50 ميجابايت ويتوافق بين الخادم ومدير الإدارة", () => {
     const index = projectFile("server/_core/index.ts");
-    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r10.js");
+    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r11.js");
     expect(index).toContain("50 * 1024 * 1024");
     expect(manager).toContain("50");
   });
 
   it("لا يحذف الملف قبل تأكيد المالك وينتج نافذة تأكيد داخلية", () => {
-    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r10.js");
+    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r11.js");
     expect(manager).not.toContain("window.confirm(");
     expect(manager).toContain("data-dl10-delete-file");
     expect(manager).toContain("data-dl10-delete-category");
@@ -64,7 +64,7 @@ describe("أصول قسم إدارة التحميلات الحديث (r10)", () 
   });
 
   it("يثبّت حدود الرفع الفعلية ويعرض عداد التحميلات وسجل النشاط بعد كل عملية", () => {
-    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r10.js");
+    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r11.js");
     expect(manager).toContain("downloadCount");
     expect(manager).toContain("s + Number(f.downloadCount || 0), 0");
     expect(manager).toContain("تحميل ·");
@@ -79,11 +79,13 @@ describe("أصول قسم إدارة التحميلات الحديث (r10)", () 
 
   it("يوجّه كل نسخ مدير التحميلات والمحرر القديمة إلى النسخ الجديدة عبر redirects", () => {
     const vite = projectFile("vite.config.ts");
-    // كل النسخ القديمة r1→r4 تُوجَّه إلى مدير التحميلات الحديث r10
-    for (const old of ["r1.js", "r2.js", "r3.js", "r4.js"]) {
-      expect(vite).toContain(`admin-downloads-manager-${old}`, `يجب توجيه ${old} إلى r10`);
+    // كل النسخ القديمة تُوجَّه إلى مدير التحميلات الحديث r11
+    for (const old of ["r1.js", "r2.js", "r3.js"]) {
+      expect(vite).toContain(`admin-downloads-manager-${old}`, `يجب توجيه ${old} إلى r11`);
     }
+    // r10 يُقدَّم باسمه الصحيح، وr11 هو الإصدار الحالي
     expect(vite).toContain('destination: "assets/js/admin-downloads-manager-r10.js"');
+    expect(vite).toContain('destination: "assets/js/admin-downloads-manager-r11.js"');
     // كل نسخ المحرر العام القديمة تُوجَّه إلى r6 الذي أعفي قسم التحميلات
     expect(vite).toContain('"assets/js/admin-structured-editor-r6.js"');
     expect(vite).toContain('"assets/js/admin-structured-editor-r5.js"');

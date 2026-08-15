@@ -194,7 +194,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-blog-manager-r7.js", destination: "assets/js/admin-blog-manager-r7.js" },
         { source: "assets/js/admin-blog-manager-r8.js", destination: "assets/js/admin-blog-manager-r8.js" },
         { source: "assets/js/site-app-r14.js", destination: "assets/js/site-app-r14.js" },
-        { source: "assets/js/site-app-r16.js", destination: "assets/js/site-app-r16.js" },
+        { source: "assets/js/site-app-r17.js", destination: "assets/js/site-app-r17.js" },
         { source: "assets/js/admin-team-manager-r1.js", destination: "assets/js/admin-team-manager-r1.js" },
         { source: "assets/js/admin-partners-manager-r1.js", destination: "assets/js/admin-partners-manager-r1.js" },
         { source: "assets/js/admin-design-studio-r2.js", destination: "assets/js/admin-design-studio-r2.js" },
@@ -276,7 +276,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         site: path.resolve(import.meta.dirname, "client/public/index.html"),
-        "js/site-app-r16": path.resolve(import.meta.dirname, "client/public/assets/js/site-app-r16.js"),
+        "js/site-app-r17": path.resolve(import.meta.dirname, "client/public/assets/js/site-app-r17.js"),
       },
     },
   },

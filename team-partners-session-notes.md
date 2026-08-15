@@ -122,3 +122,13 @@
 - تم إنشاء site-app-r16.js وتحديث client/index.html + client/public/index.html + vite.config.ts (copy + rollupOptions)
 - التحقق: newsletter=0 في r16، node --check OK، build OK، لقطة شاشة الهاتف تؤكد اختفاء قسم الاشتراك والفوتر سليم
 - متبقٍ: checkpoint + نشر تلقائي + تحديث todo.md
+
+
+## مهمة حذف قسَمَي «الروابط السريعة» و«خدماتنا» من الفوتر (2026-08-15)
+- طلب المستخدم: حذف قسَمَي «روابط سريعة» و«خدماتنا» الموجودين أسفل كل صفحة من موقع الزائر مع إبقاء الحقوق
+- الإنجاز: حُذفا السطران من footer() في client/public/assets/js/site-app-r16.js، وتوازن الأقواس سليم (1314/205/673/337 متوازن)، وconst quick/services ما زالت في الكود (غير مستخدمة — غير ضارة)
+- الفوتر الآن: العمود الأول (العلامة/الهاتف) + copyright فقط
+- المتبقي: (1) رفع بصمة إلى r17 + تحديث client/public/index.html وclient/index.html وvite.config (r16→r17 في قائمة النسخ وrollupOptions)، (2) pnpm test + تحقق بصري، (3) checkpoint (auto-publish) + إعلام المستخدم
+- رابط موقع الزائر: https://uploadplus-47dkogbk.manus.space — لوحة الإدارة: https://uploadplus-47dkogbk.manus.space/admin-dashboard.html
+- سكربت الحذف: /home/ubuntu/remove_footer_cols.py (مرة واحدة على r16)
+- ملف النسخة الاحتياطية أُنجز وسُلِّم: /home/ubuntu/full-backup/wajbatplus-full-backup.zip

@@ -27,6 +27,11 @@ const partnerInput = z.object({
   city: z.string().max(120).default(""),
   description: z.string().max(1200).default(""),
   kind: z.enum(["جامعة", "معهد", "جهة تعليمية"]).default("جامعة"),
+  shape: z.enum(["circle", "square", "pill", "card", "badge", "banner"]).default("card"),
+  accentColor: z.string().regex(/^#([0-9a-f]{3}){1,2}$/i).max(12).default("#4966d6"),
+  textColor: z.string().regex(/^#([0-9a-f]{3}){1,2}$/i).max(12).default("#3f4254"),
+  backgroundColor: z.string().regex(/^#([0-9a-f]{3}){1,2}$/i).max(12).default("#eef1f8"),
+  borderColor: z.string().regex(/^#([0-9a-f]{3}){1,2}$/i).max(12).nullable().default(null),
   link: z.string().max(512).default(""),
   isVisible: z.boolean().default(true),
 });

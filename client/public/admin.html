@@ -65,7 +65,7 @@
     <script type="module">
       const adminModule = document.createElement("script");
       adminModule.type = "module";
-      adminModule.src = "/assets/js/admin-app-r26.js?v=blog-r9";
+      adminModule.src = "/assets/js/admin-app-r28.js?v=merge-r2";
       adminModule.onload = () => {
         const mediaBinding = document.createElement("script");
         mediaBinding.src = "/assets/js/admin-media-binding-core.js";
@@ -100,7 +100,7 @@
                   teamManager.async = false;
                   teamManager.onload = () => {
                   const partnersManager = document.createElement("script");
-                  partnersManager.src = "/assets/js/admin-partners-manager-r1.js?v=partners-r1";
+                  partnersManager.src = "/assets/js/admin-partners-manager-r2.js?v=partners-r2";
                   partnersManager.async = false;
                   partnersManager.onload = () => {};
                   document.body.append(partnersManager);
@@ -151,7 +151,7 @@
                   teamManager.async = false;
                   teamManager.onload = () => {
                   const partnersManager = document.createElement("script");
-                  partnersManager.src = "/assets/js/admin-partners-manager-r1.js?v=partners-r1";
+                  partnersManager.src = "/assets/js/admin-partners-manager-r2.js?v=partners-r2";
                   partnersManager.async = false;
                   partnersManager.onload = () => {};
                   document.body.append(partnersManager);
@@ -241,7 +241,7 @@
       }
       if (!window.WajbatPartnersManager) {
         const retryPartners = document.createElement("script");
-        retryPartners.src = "/assets/js/admin-partners-manager-r1.js?v=partners-r1&reload=" + Date.now();
+        retryPartners.src = "/assets/js/admin-partners-manager-r2.js?v=partners-r2&reload=" + Date.now();
         retryPartners.async = false;
         document.body.append(retryPartners);
       }

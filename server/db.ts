@@ -1114,7 +1114,7 @@ export async function listPartners() {
   return db.select().from(partners).orderBy(asc(partners.sortOrder), desc(partners.createdAt));
 }
 
-export async function createPartner(input: { name: string; city?: string; description?: string; kind?: "جامعة" | "معهد" | "جهة تعليمية"; logoUrl?: string; logoMediaId?: number; link?: string; isVisible?: boolean }) {
+export async function createPartner(input: { name: string; city?: string; description?: string; kind?: "جامعة" | "معهد" | "جهة تعليمية"; shape?: string; accentColor?: string; textColor?: string; backgroundColor?: string; borderColor?: string | null; logoUrl?: string; logoMediaId?: number; link?: string; isVisible?: boolean }) {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة");
   const [last] = await db.select({ sortOrder: partners.sortOrder }).from(partners).orderBy(desc(partners.sortOrder), desc(partners.id)).limit(1);
@@ -1123,6 +1123,11 @@ export async function createPartner(input: { name: string; city?: string; descri
     city: input.city ?? null,
     description: input.description ?? null,
     kind: input.kind ?? "جامعة",
+    shape: input.shape ?? "card",
+    accentColor: input.accentColor ?? "#4966d6",
+    textColor: input.textColor ?? "#3f4254",
+    backgroundColor: input.backgroundColor ?? "#eef1f8",
+    borderColor: input.borderColor ?? null,
     logoUrl: input.logoUrl ?? null,
     logoMediaId: input.logoMediaId ?? null,
     link: input.link ?? null,
@@ -1132,7 +1137,7 @@ export async function createPartner(input: { name: string; city?: string; descri
   return { id: Number(result[0].insertId) };
 }
 
-export async function updatePartner(id: number, input: Partial<{ name: string; city: string; description: string; kind: "جامعة" | "معهد" | "جهة تعليمية"; logoUrl: string; logoMediaId: number; link: string; isVisible: boolean }>) {
+export async function updatePartner(id: number, input: Partial<{ name: string; city: string; description: string; kind: "جامعة" | "معهد" | "جهة تعليمية"; shape: string; accentColor: string; textColor: string; backgroundColor: string; borderColor: string | null; logoUrl: string; logoMediaId: number; link: string; isVisible: boolean }>) {
   const db = await getDb();
   if (!db) throw new Error("قاعدة البيانات غير متاحة");
   await db.update(partners).set(input).where(eq(partners.id, id));

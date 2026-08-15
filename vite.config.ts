@@ -169,7 +169,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-login-fix-v2.js", destination: "assets/js/admin-login-fix-v2.js" },
         { source: "assets/js/admin-media-binding-core.js", destination: "assets/js/admin-media-binding-core.js" },
         { source: "assets/js/admin-structured-editor.js", destination: "assets/js/admin-structured-editor.js" },
-        { source: "assets/js/admin-structured-editor-r2.js", destination: "assets/js/admin-structured-editor-r2.js" },
+        { source: "assets/js/admin-structured-editor-r3.js", destination: "assets/js/admin-structured-editor-r3.js" },
         { source: "assets/js/admin-homepage-manager-r1.js", destination: "assets/js/admin-homepage-manager-r1.js" },
         { source: "assets/js/admin-services-manager-r1.js", destination: "assets/js/admin-services-manager-r1.js" },
         { source: "assets/js/admin-services-manager-r2.js", destination: "assets/js/admin-services-manager-r2.js" },

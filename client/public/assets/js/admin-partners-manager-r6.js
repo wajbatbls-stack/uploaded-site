@@ -161,7 +161,7 @@
       try {
         const result = await this.uploadLogo(file, form.id);
         form.logoUrl = result?.url || null;
-        this.toast("تم رفع شعار الشريك");
+        this.toast("تم رفع الشعار بنجاح. احفظ الشريك لتطبيقه.");
         this.render();
       } catch (error) { this.toast(this.messageOf(error)); }
     },

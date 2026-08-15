@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const editorSource = fs.readFileSync(
-  path.join(projectRoot, "client/public/assets/js/admin-structured-editor-r2.js"),
+  path.join(projectRoot, "client/public/assets/js/admin-structured-editor-r3.js"),
   "utf8",
 );
 const seedSource = fs.readFileSync(path.join(projectRoot, "server/siteSeed.ts"), "utf8");

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const projectRoot = path.resolve(import.meta.dirname, "..");
 const editorSource = fs.readFileSync(
-  path.join(projectRoot, "client/public/assets/js/admin-structured-editor.js"),
+  path.join(projectRoot, "client/public/assets/js/admin-structured-editor-r2.js"),
   "utf8",
 );
 const seedSource = fs.readFileSync(path.join(projectRoot, "server/siteSeed.ts"), "utf8");
@@ -20,7 +20,7 @@ describe("تغطية محررات الوسائط", () => {
     expect(editorSource).toContain('filePicker(file.remoteFile, `downloadFile${fileIndex}`)');
   });
 
-  it("لا يعرض حقول روابط يدوية للوسائط في هذه المحررات", () => {
+  it("يوفر نموذج شركاء كامل بالشعار والألوان والرابط", () => {
     expect(editorSource).not.toContain('label>رابط الصورة');
     expect(editorSource).not.toContain('label>رابط الملف');
   });

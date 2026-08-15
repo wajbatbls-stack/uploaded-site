@@ -132,3 +132,13 @@
 - رابط موقع الزائر: https://uploadplus-47dkogbk.manus.space — لوحة الإدارة: https://uploadplus-47dkogbk.manus.space/admin-dashboard.html
 - سكربت الحذف: /home/ubuntu/remove_footer_cols.py (مرة واحدة على r16)
 - ملف النسخة الاحتياطية أُنجز وسُلِّم: /home/ubuntu/full-backup/wajbatplus-full-backup.zip
+
+
+## حالة مهمة حذف قسَمَي «الروابط السريعة» و«خدماتنا» من الفوتر (2026-08-15)
+- المستخدم: يريد حذف «روابط سريعة» و«خدماتنا» من نهاية كل صفحة وكل خدمة؛ الحفاظ على حقوق الملكية فقط
+- أُنجز: حذف العمودين من footer في site-app-r16.js عبر سكربت بايثون (/home/ubuntu/remove_footer_cols.py)
+- أُنجز: إنشاء site-app-r17.js + تحديث client/public/index.html + client/index.html + vite.config (قائمة النسخ + rollupOptions entry) + تحديث اختبارين (ownerLoginR13Assets, visitorLinksAssets) إلى r17
+- أُنجز: بناء سليم + اختبارات مجتازة + تحقق بصري من الرئيسية وصفحة خدمة (الفوتر يظهر بحقوق الملكية فقط)
+- أُنجز: checkpoint 01cdd0b6 محفوظ ومنشور تلقائيًا (auto-publish مفعل)
+- متبقي: تسليم النتيجة للمستخدم (todo.md بنود الجلسة الأخيرة تحتاج تعليم [x])
+- ملاحظة: production URL = https://uploadplus-47dkogbk.manus.space | admin = /admin-dashboard.html

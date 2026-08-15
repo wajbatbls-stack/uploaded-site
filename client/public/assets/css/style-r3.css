@@ -1,0 +1,42 @@
+/* أنماط صفحة «اتصل بنا» المعاد تصميمها — تنظم المحتوى وتزيل الازدحام */
+.contact-page { display: grid; gap: 1.6rem; align-content: start; }
+.contact-info-title { font-size: 1rem; margin: 0 0 .9rem; display: flex; align-items: center; gap: .5rem; }
+.contact-info-title::before { content: "◉"; color: var(--accent, var(--primary)); font-size: 1.1rem; }
+.contact-chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; }
+.contact-chip { display: flex; align-items: center; gap: .7rem; padding: .8rem .9rem; border-radius: .8rem; background: var(--muted, #f3f4f6); }
+.contact-chip.wa { background: color-mix(in srgb, #25d366 10%, var(--card, #fff)); border: 1px solid color-mix(in srgb, #25d366 30%, transparent); }
+.contact-chip.mob { background: color-mix(in srgb, var(--primary, #0f2b5b) 8%, var(--card, #fff)); border: 1px solid color-mix(in srgb, var(--primary, #0f2b5b) 20%, transparent); }
+.contact-chip.email { background: color-mix(in srgb, var(--accent, #eab308) 8%, var(--card, #fff)); border: 1px solid color-mix(in srgb, var(--accent, #eab308) 25%, transparent); }
+.contact-chip.addr { background: color-mix(in srgb, var(--muted, #6b7280) 10%, var(--card, #fff)); border: 1px solid var(--border, #e5e7eb); }
+.contact-chip-icon { width: 2.6rem; height: 2.6rem; display: grid; place-items: center; border-radius: .7rem; background: var(--card, #fff); font-size: 1.15rem; flex: none; }
+.contact-chip.wa .contact-chip-icon { color: #25d366; }
+.contact-chip.mob .contact-chip-icon { color: var(--primary, #0f2b5b); }
+.contact-chip.email .contact-chip-icon { color: var(--accent, #eab308); }
+.contact-chip-body { min-width: 0; }
+.contact-chip-label { display: block; font-size: .7rem; opacity: .75; margin-bottom: .15rem; }
+.contact-chip-value, .contact-chip-link { display: block; font-size: .82rem; font-weight: 700; overflow-wrap: anywhere; }
+.contact-chip-link { color: inherit; }
+.contact-chip-link:hover { color: var(--primary, #0f2b5b); }
+.contact-main-grid { display: grid; grid-template-columns: 3fr 2fr; gap: 1.6rem; align-items: start; }
+.contact-form-title { font-size: 1.1rem; margin: 0 0 .15rem; }
+.contact-form-hint { font-size: .85rem; margin-bottom: 1.2rem; }
+.contact-form { display: grid; gap: .9rem; }
+.contact-form .btn { justify-self: start; min-width: 12rem; }
+.contact-side-card { display: grid; align-content: start; height: 100%; text-align: right; }
+.contact-side-title { font-size: 1rem; margin: 0 0 .2rem; }
+.contact-wa-btn { justify-self: stretch; text-align: center; }
+.contact-map-card { display: grid; gap: 0; }
+.contact-map-head { display: flex; align-items: center; gap: .7rem; padding-bottom: .5rem; }
+.contact-map-icon { width: 2.6rem; height: 2.6rem; display: grid; place-items: center; border-radius: .7rem; background: var(--primary-soft, #e8eefc); color: var(--primary, #0f2b5b); font-size: 1.15rem; flex: none; }
+.contact-map-card .map { min-height: 220px; }
+@media (max-width: 900px) {
+  .contact-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .contact-main-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .contact-page { gap: 1.1rem; }
+  .contact-chip { padding: .65rem .7rem; }
+  .contact-chip-icon { width: 2.2rem; height: 2.2rem; font-size: 1rem; }
+  .contact-chip-value, .contact-chip-link { font-size: .78rem; }
+  .contact-map-card .map { min-height: 190px; }
+}

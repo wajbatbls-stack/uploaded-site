@@ -43,7 +43,9 @@ describe("owner login current assets", () => {
     const site = projectFile("client/public/index.html");
     const css = projectFile("client/public/assets/css/site-design-r2.css");
     expect(site).toContain("site-design-r2.css");
-    expect(site).toContain("site-app-r17.js");
+    expect(site).toContain("site-app-r18.js");
+    expect(site).toContain("style-r3.css");
+    expect(projectFile("client/public/assets/css/style-r3.css")).toContain(".contact");
     expect(site).toContain("services-manager-r2.css");
     expect(css).toContain("#site-design-clock");
   });

@@ -29,13 +29,31 @@
     <div id="app"></div>
     <div id="toast-region" aria-live="polite" aria-atomic="true"></div>
     <script>
-      /* SW إجباري لكسر كاش JS/CSS القديم نهائيًا على أجهزة الزوار */
+      /* SW نهائي v16: يُلغي كل تسجيل SW قديم محجوز على الجهاز ويحذف كاشاته */
       if ("serviceWorker" in navigator) {
+        const __killAllOldSW = () => {
+          navigator.serviceWorker.getRegistrations().then(regs => {
+            Promise.all(regs.map(r => r.unregister())).then(() => {
+              if ("caches" in window) {
+                caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
+              }
+            });
+          }).catch(() => {});
+        };
         navigator.serviceWorker.register("/sw-forced.js").then(() => {
           navigator.serviceWorker.addEventListener("controllerchange", () => {
             window.location.reload();
           });
-        }).catch(() => {});
+          if (navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({ type: "sw-kill-me" });
+            navigator.serviceWorker.addEventListener("message", ev => {
+              if (ev.data && (ev.data.type === "sw-unregistered" || ev.data.type === "sw-all-caches-cleared")) {
+                __killAllOldSW();
+                window.location.reload();
+              }
+            });
+          }
+        }).catch(() => { __killAllOldSW(); window.location.reload(); });
       }
     </script>
     <script type="module">

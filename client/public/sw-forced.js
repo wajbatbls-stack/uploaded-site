@@ -1,32 +1,34 @@
-/* Service worker إجباري — يكسر كاش JS/CSS القديم نهائيًا
-   يُنشَّط من admin.html/index.html عند كل تحميل، ويمسح كل كاش قديم ثم يعيد تحميل الصفحة مرة واحدة. */
-const SW_VERSION = "v15-cache-bust";
+/* Service worker نهائي — v16-kill-old-sw
+   مهمته الوحيدة: تفعيله يمحو كل الكاشات ثم يُلغي نفسه نهائيًا،
+   فلا يبقى أي Service Worker قديم يتحكم بأي صفحة بعد هذه الزيارة. */
+const SW_VERSION = "v16-kill-old-sw";
 
-self.addEventListener("install", e => { self.skipWaiting(); });
+self.addEventListener("install", () => { self.skipWaiting(); });
+
 self.addEventListener("activate", e => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(
-      keys.filter(k => k !== SW_VERSION).map(k => caches.delete(k))
-    )).then(() => self.clients.claim())
+    caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+      .then(() =>
+        self.clients.matchAll({ type: "window" }).then(clients => {
+          clients.forEach(c => c.postMessage({ type: "sw-all-caches-cleared" }));
+        })
+      )
   );
 });
 
-self.addEventListener("fetch", e => {
-  const url = new URL(e.request.url);
-  if (url.origin !== self.location.origin) return;
-  const isCachedAsset = /\.(js|css|html|woff2?|png|jpe?g|webp|svg|ico)(\?|$)/i.test(url.pathname);
-  if (!isCachedAsset) return;
-  // شبكة أولًا دائمًا مع تحديث الكاش — لا يُخدم أي ملف قديم من الكاش
-  e.respondWith(
-    fetch(e.request)
-      .then(netRes => {
-        const keep = new Response(netRes.body, {
-          headers: { "content-type": netRes.headers.get("content-type") || "text/plain" },
-          status: netRes.status,
-        });
-        caches.open(SW_VERSION).then(cache => cache.put(url.href, keep).catch(() => {}));
-        return netRes;
-      })
-      .catch(() => caches.match(url.href))
-  );
+self.addEventListener("message", e => {
+  if (e.data && e.data.type === "sw-kill-me") {
+    void self.registration.unregister().then(() => {
+      void caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+        .then(() =>
+          self.clients.matchAll({ type: "window" }).then(clients => {
+            clients.forEach(c => c.postMessage({ type: "sw-unregistered" }));
+          })
+        );
+    });
+  }
 });
+
+/* لا نخزن أي ملف نهائيًا — مرور فقط */
+self.addEventListener("fetch", () => {});

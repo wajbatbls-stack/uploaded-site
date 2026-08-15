@@ -582,4 +582,13 @@
 - [x] إضافة service worker إجباري (sw-forced.js v15-cache-bust): يمسح كل كاش قديم عند التفعيل ويعيد التحميل، ويشترط fetch من الشبكة دائمًا (لا يُخدم ملف قديم من الكاش)
 - [x] تفعيل الـSW في client/public/admin.html وclient/public/index.html وclient/index.html
 - [x] اختبارات 93/93 + بناء نظيف (dist/public يحمل sw-forced.js + r14 بمطابقة md5 كاملة + لا إحالات r1-r13 للدل والشركاء)
-- [ ] checkpoint ونشر وتسليم المستخدم مع تعليمات المسح اليدوي للهاتف
+- [x] checkpoint منشور تلقائيًا (171a0f56) + تحقق من الإنتاج: sw-forced.js يُخدم بمحتوى صحيح، admin.html وindex.html المنشوران يسجلان الـSW، md5 المنشور c91c6bf2/r14 سليمة، 22 ملفًا أصليًا في DB — تسليم المستخدم مع تعليمات المسح اليدوي
+
+# جلسة 2026-08-16 (متابعة 3): «المشكلة مستمرة حتى على هاتف آخر»
+- [x] إعادة إنتاج على prod بمحاكاة هاتف: صفحة prod المعروضة تعرض «آخر الملفات» بملفات اختبار من الأمس رغم أن DB نظيفة
+- [x] إثبات قاطع للسبب الجذري: tRPC admin.downloads.list على prod = 22 ملفًا أصليًا فقط؛ prod admin.html = r14 سليم؛ /sw.js على prod يعيد HTML (fallback) — لا SW قديم على الخادم؛ **السبب: SW قديم مسجل في كاش متصفحات المستخدمين منذ الأمس ما زال يخدم صفحاته المخزنة قديمًا**
+- [x] اكتشاف ضعف v15: sw-forced الحالي لا يستدعي registrations.forEach(unregister) ولا يحذف كل الكاشات (فقط أسماء مختلفة عن SW_VERSION)
+- [ ] إعادة كتابة sw-forced.js: في activate يحذف **كل** الكاشات بلا استثناء، وفي fetch يخدم من الشبكة فقط
+- [ ] تعديل تسجيل الـSW في client/public/admin.html + client/public/index.html + client/index.html: يلغي جميع التسجيلات القديمة عبر registrations.forEach(unregister) قبل التسجيل ثم يعيد التحميل بعد controllerchange
+- [ ] اختبارات + بناء نظيف
+- [ ] checkpoint ونشر + تحقق نهائي على prod + تسليم المستخدم مع تعليمات

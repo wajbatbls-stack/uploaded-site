@@ -40,3 +40,35 @@
   .contact-chip-value, .contact-chip-link { font-size: .78rem; }
   .contact-map-card .map { min-height: 190px; }
 }
+
+/* ===== شريط أيقونات التواصل الاجتماعي الموحد (صفحة اتصل بنا r19) ===== */
+.contact-social-strip {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.contact-social-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 1.25rem;
+  text-decoration: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: transform 0.18s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.18s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.contact-social-icon:hover { transform: translateY(-3px) scale(1.06); box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18); }
+.contact-social-icon:active { transform: scale(0.95); }
+.contact-send-btn { margin-top: 1.25rem; }
+@media (max-width: 640px) {
+  .contact-social-icon { width: 48px; height: 48px; font-size: 1.35rem; }
+  .contact-social-strip { gap: 0.9rem; }
+}

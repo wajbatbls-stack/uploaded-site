@@ -13,11 +13,11 @@ describe("أصول قسم إدارة التحميلات الحديث", () => {
     expect(projectFile("client/public/assets/js/admin-app-r21.js")).toContain("mountCompatibleDownloadsManager");
   });
 
-  it("يحمل تطبيق الزائر المبصّم site-app-r18 ويعيد رسم صفحة التحميلات بعد التحميل الديناميكي", () => {
+  it("يحمل تطبيق الزائر المبصّم site-app-r19 ويعيد رسم صفحة التحميلات بعد التحميل الديناميكي", () => {
     const indexHtml = projectFile("client/public/index.html");
-    expect(indexHtml).toContain("site-app-r18.js");
-    expect(projectFile("client/public/assets/js/site-app-r18.js")).toContain("loadSiteDownloads()"), expect(projectFile("client/public/assets/js/site-app-r18.js")).toContain("location.hash.startsWith(\"#/downloads\")");
-    expect(projectFile("client/public/assets/js/site-app-r18.js")).not.toContain("site-app-r11.js");
+    expect(indexHtml).toContain("site-app-r19.js");
+    expect(projectFile("client/public/assets/js/site-app-r19.js")).toContain("loadSiteDownloads()"), expect(projectFile("client/public/assets/js/site-app-r19.js")).toContain("location.hash.startsWith(\"#/downloads\")");
+    expect(projectFile("client/public/assets/js/site-app-r19.js")).not.toContain("site-app-r11.js");
   });
 
   it("يركّب مدير التحميلات الحديث داخل مساحة عمل قسم التحميلات بعد اعتراض structured editor", () => {

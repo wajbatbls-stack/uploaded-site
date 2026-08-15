@@ -1,0 +1,148 @@
+/* ===== شركاء النجاح — تصميم احترافي جديد (r4) ===== */
+
+/* — شبكة القالب الزجاجي الافتراضي — */
+.partner-grid-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1.4rem;
+  margin-top: 2.2rem;
+}
+
+/* — بطاقة الشريك الزجاجية — */
+.partner-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  text-align: center;
+  padding: 1.6rem 1.2rem 1.3rem;
+  border-radius: 18px;
+  text-decoration: none;
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(73, 102, 214, 0.16);
+  box-shadow: 0 8px 24px rgba(63, 66, 84, 0.08), 0 1.5px 4px rgba(63, 66, 84, 0.05);
+  transition: transform 0.22s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.22s cubic-bezier(0.23, 1, 0.32, 1);
+  color: var(--partner-text, #3f4254);
+}
+.partner-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 32px rgba(63, 66, 84, 0.14), 0 2px 6px rgba(63, 66, 84, 0.07);
+}
+.partner-card:active { transform: translateY(-1px) scale(0.985); }
+
+/* — غلاف الشعار (يحترم shape عبر المتغيرات) — */
+.partner-logo-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 66px;
+  height: 66px;
+  background: var(--partner-bg, #eef1f8);
+  border: 2px solid var(--partner-border, #4966d6);
+  color: var(--partner-accent, #4966d6);
+  font-size: 1.6rem;
+  overflow: hidden;
+}
+.partner-logo-wrap img {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  border-radius: inherit;
+}
+
+/* — الأشكال المحددة من الإدارة لكل شريك — */
+.partner-shape-card .partner-logo-wrap { border-radius: 16px; }
+.partner-shape-circle .partner-logo-wrap { border-radius: 50%; }
+.partner-shape-square .partner-logo-wrap { border-radius: 8px; border-width: 3px; }
+.partner-shape-pill .partner-logo-wrap {
+  width: 96px; height: 58px; border-radius: 999px;
+}
+.partner-shape-badge .partner-logo-wrap {
+  width: 44px; height: 44px; border-radius: 50%; border-style: dashed;
+}
+.partner-shape-banner .partner-logo-wrap {
+  width: 72px; height: 72px; border-radius: 50%; border-width: 3px;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--partner-border, #4966d6) 18%, transparent);
+}
+
+/* — نص البطاقة — */
+.partner-name {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--partner-text, #3f4254);
+  line-height: 1.35;
+}
+.partner-meta {
+  font-size: 0.78rem;
+  color: var(--partner-accent, #4966d6);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+.partner-desc {
+  font-size: 0.78rem;
+  color: var(--partner-text, #3f4254);
+  opacity: 0.75;
+  line-height: 1.5;
+  margin-top: 0.15rem;
+}
+
+/* — قالب الدوائر الفاخر — */
+.partner-grid-circles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 2.2rem 1.2rem;
+  margin-top: 2.6rem;
+  padding-top: 1rem;
+}
+.partner-circles-template .partner-card {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  padding: 0 0.6rem;
+  gap: 0.8rem;
+}
+.partner-circles-template .partner-card:hover { transform: translateY(-3px); box-shadow: none; }
+.partner-circles-template .partner-logo-wrap {
+  width: 108px; height: 108px;
+  transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.25s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.partner-circles-template .partner-card:hover .partner-logo-wrap {
+  transform: scale(1.06);
+  box-shadow: 0 12px 26px rgba(63, 66, 84, 0.16);
+}
+
+/* — قالب الشريط الكبير (banner) — */
+.partner-grid-banner {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.1rem;
+  margin-top: 2rem;
+}
+.partner-grid-banner .partner-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.9rem;
+  text-align: right;
+  padding: 1rem 1.2rem;
+}
+.partner-grid-banner .partner-logo-wrap { flex: none; }
+.partner-grid-banner .partner-card > span { align-self: flex-start; }
+.partner-grid-banner .partner-name { font-size: 1rem; }
+.partner-grid-banner .partner-meta { display: block; margin-top: 0.2rem; }
+
+/* — حالة الفراغ — */
+.empty-state { display: flex; flex-direction: column; align-items: center; }
+
+/* — تجاوب الجوال — */
+@media (max-width: 640px) {
+  .partner-grid-card { grid-template-columns: repeat(2, 1fr); gap: 0.9rem; }
+  .partner-grid-circles { grid-template-columns: repeat(3, 1fr); gap: 1.6rem 0.6rem; }
+  .partner-circles-template .partner-logo-wrap { width: 86px; height: 86px; }
+  .partner-grid-banner { grid-template-columns: 1fr; }
+  .partner-card { padding: 1.3rem 0.9rem 1.1rem; }
+  .partner-name { font-size: 0.95rem; }
+}

@@ -6,18 +6,18 @@ const projectFile = (path: string) => readFileSync(resolve(process.cwd(), path),
 describe("أصول قسم إدارة التحميلات الحديث", () => {
   it("يحمّل مدير التحميلات الحديث ومدير التطبيق المبصّم من صفحة الإدارة", () => {
     const adminHtml = projectFile("client/public/admin.html");
-    expect(adminHtml).toContain("admin-downloads-manager-r2.js");
-    expect(adminHtml).toContain("admin-app-r28.js");
+    expect(adminHtml).toContain("admin-downloads-manager-r3.js");
+    expect(adminHtml).toContain("admin-app-r29.js");
     expect(adminHtml).toContain("downloads-r2");
-        expect(projectFile("client/public/assets/js/admin-downloads-manager-r2.js")).toContain("WajbatDownloadsManager");
+        expect(projectFile("client/public/assets/js/admin-downloads-manager-r3.js")).toContain("WajbatDownloadsManager");
     expect(projectFile("client/public/assets/js/admin-app-r21.js")).toContain("mountCompatibleDownloadsManager");
   });
 
   it("يحمل تطبيق الزائر المبصّم site-app-r19 ويعيد رسم صفحة التحميلات بعد التحميل الديناميكي", () => {
     const indexHtml = projectFile("client/public/index.html");
-    expect(indexHtml).toContain("site-app-r20.js");
-    expect(projectFile("client/public/assets/js/site-app-r20.js")).toContain("loadSiteDownloads()"), expect(projectFile("client/public/assets/js/site-app-r20.js")).toContain("location.hash.startsWith(\"#/downloads\")");
-    expect(projectFile("client/public/assets/js/site-app-r20.js")).not.toContain("site-app-r11.js");
+    expect(indexHtml).toContain("site-app-r21.js");
+    expect(projectFile("client/public/assets/js/site-app-r21.js")).toContain("loadSiteDownloads()"), expect(projectFile("client/public/assets/js/site-app-r21.js")).toContain("location.hash.startsWith(\"#/downloads\")");
+    expect(projectFile("client/public/assets/js/site-app-r21.js")).not.toContain("site-app-r11.js");
   });
 
   it("يركّب مدير التحميلات الحديث داخل مساحة عمل قسم التحميلات بعد اعتراض structured editor", () => {
@@ -27,7 +27,7 @@ describe("أصول قسم إدارة التحميلات الحديث", () => {
     expect(app).toContain('state.selected = "downloads"');
     expect(app).toContain("mountCompatibleDownloadsManager();");
     expect(app).toContain("manager.activate()");
-    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r2.js");
+    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r3.js");
     expect(manager).toContain("admin.downloads.list");
     expect(manager).toContain("admin.downloads.createCategory");
   });
@@ -43,13 +43,13 @@ describe("أصول قسم إدارة التحميلات الحديث", () => {
 
   it("يقيّد الرفع على 50 ميجابايت ويتوافق بين الخادم ومدير الإدارة", () => {
     const index = projectFile("server/_core/index.ts");
-    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r2.js");
+    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r3.js");
     expect(index).toContain("50 * 1024 * 1024");
     expect(manager).toContain("50");
   });
 
   it("لا يحذف الملف قبل تأكيد المالك وينتج نافذة تأكيد داخلية", () => {
-    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r2.js");
+    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r3.js");
     expect(manager).not.toContain("window.confirm(");
     expect(manager).toContain("data-dl-delete-file");
     expect(manager).toContain("data-dl-delete-category");
@@ -58,7 +58,7 @@ describe("أصول قسم إدارة التحميلات الحديث", () => {
   });
 
   it("يثبّت حدود الرفع الفعلية ويعرض عداد التحميلات وسجل النشاط بعد كل عملية", () => {
-    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r2.js");
+    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r3.js");
     expect(manager).toContain("downloadCount");
     expect(manager).toContain("totalDownloads");
     expect(manager).toContain("تحميل •");

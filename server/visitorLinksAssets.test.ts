@@ -76,7 +76,7 @@ describe("أصول مدير روابط الزوار", () => {
     expect(manager).toContain("admin.createVisitorLink");
     expect(manager).toContain("await verifyAvailability(token, input)");
     expect(
-      [projectFile("client/public/admin-dashboard.html"), projectFile("client/public/admin.html")].some(content => content.includes("admin-app-r28.js?v=merge-r2")),
+      [projectFile("client/public/admin-dashboard.html"), projectFile("client/public/admin.html")].some(content => content.includes("admin-app-r29.js?v=merge-r2")),
     ).toBe(true);
   });
 

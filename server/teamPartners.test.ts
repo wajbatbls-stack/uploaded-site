@@ -54,10 +54,10 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
     const adminHtml = projectFile("client/public/admin.html");
     const dashboard = projectFile("client/public/admin-dashboard.html");
     expect(adminHtml).toContain("admin-team-manager-r1.js");
-    expect(adminHtml).toContain("admin-partners-manager-r2.js");
+    expect(adminHtml).toContain("admin-partners-manager-r3.js");
     expect(dashboard).toContain("admin-team-manager-r1.js");
-    expect(dashboard).toContain("admin-partners-manager-r2.js");
-    const app = projectFile("client/public/assets/js/admin-app-r28.js");
+    expect(dashboard).toContain("admin-partners-manager-r3.js");
+    const app = projectFile("client/public/assets/js/admin-app-r29.js");
     expect(app).toContain("mountCompatibleTeamManager");
     expect(app).toContain("mountCompatiblePartnersManager");
     expect(app).toContain("[data-team-workspace]");
@@ -66,7 +66,7 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
 
   it("يدعم رفع الصور من الجهاز داخل مديرَي الفريق والشركاء", () => {
     const team = projectFile("client/public/assets/js/admin-team-manager-r1.js");
-    const partners = projectFile("client/public/assets/js/admin-partners-manager-r2.js");
+    const partners = projectFile("client/public/assets/js/admin-partners-manager-r3.js");
     expect(team).toContain("admin.team.uploadPhoto");
     expect(team).toContain("fileToDataUrl");
     expect(team).toContain("WajbatTeamManager");

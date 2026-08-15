@@ -165,3 +165,5 @@
   .partner-pro-card { padding: 1.4rem 0.8rem 1.1rem; }
   .partners-hero-banner { padding: 2rem 1rem 1.8rem; }
 }
+/* حماية أرقام التواصل في شريط الأخبار من تشوه الاتجاه: + قبل الرقم دائماً */
+.ticker-num { direction: ltr; unicode-bidi: embed; font-variant-numeric: tabular-nums; letter-spacing: 0; white-space: nowrap; }

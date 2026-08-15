@@ -15,9 +15,9 @@ describe("أصول قسم إدارة التحميلات الحديث", () => {
 
   it("يحمل تطبيق الزائر المبصّم site-app-r19 ويعيد رسم صفحة التحميلات بعد التحميل الديناميكي", () => {
     const indexHtml = projectFile("client/public/index.html");
-    expect(indexHtml).toContain("site-app-r25.js");
-    expect(projectFile("client/public/assets/js/site-app-r25.js")).toContain("loadSiteDownloads()"), expect(projectFile("client/public/assets/js/site-app-r23.js")).toContain("location.hash.startsWith(\"#/downloads\")");
-    expect(projectFile("client/public/assets/js/site-app-r25.js")).not.toContain("site-app-r11.js");
+    expect(indexHtml).toContain("site-app-r26.js");
+    expect(projectFile("client/public/assets/js/site-app-r26.js")).toContain("loadSiteDownloads()"), expect(projectFile("client/public/assets/js/site-app-r23.js")).toContain("location.hash.startsWith(\"#/downloads\")");
+    expect(projectFile("client/public/assets/js/site-app-r26.js")).not.toContain("site-app-r11.js");
   });
 
   it("يركّب مدير التحميلات الحديث داخل مساحة عمل قسم التحميلات بعد اعتراض structured editor", () => {

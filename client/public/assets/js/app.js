@@ -23,10 +23,28 @@ let activeDesign = {};
 let socialLinks = { facebook: "", instagram: "", twitter: "", youtube: "" };
 let managedAboutContent = null;
 let managedTeamMembers = null;
-const state = { sidebar: false, servicesOpen: false, selectedService: null, article: null };
+let managedContact = null;  // قنوات «اتصل بنا» الديناميكية من قاعدة البيانات
+let managedBlog = null;  // تصنيفات ومقالات المدونة الأكاديمية الديناميكية من قاعدة البيانات
+const state = { sidebar: false, servicesOpen: false, selectedService: null, article: null, blogArticleSlug: null, previewArticle: null };
 
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
-const wa = (message = "") => `https://wa.me/${SITE_CONFIG.whatsapp}?text=${encodeURIComponent(message)}`;
+const waNumber = (custom = null) => {
+  const raw = (custom != null ? String(custom) : (SITE_CONFIG && SITE_CONFIG.whatsapp) || "966542699518").toString();
+  // 1) Split on any non-digit separator; each piece is evaluated strictly
+  const pieces = raw.split(/[^0-9]+/).filter(Boolean);
+  for (const p of pieces) {
+    if (/^9665\d{8}$/.test(p)) return p;          // strictly 966 + 9 digits
+    if (/^5\d{8}$/.test(p)) return "966" + p;     // local 10-digit
+  }
+  // 2) Fallback on concatenated digits: find the LAST strictly valid 12-digit 966 sequence
+  const digits = raw.replace(/[^0-9]/g, "");
+  const m966 = digits.match(/(9665\d{8})(?!966)/);
+  if (m966) return m966[1];
+  const m5 = digits.match(/(5\d{8})(?!966)/);
+  if (m5) return "966" + m5[1];
+  return "966542699518";
+};
+const wa = (message = "", number = null) => `https://wa.me/${waNumber(number)}?text=${encodeURIComponent(message)}`;
 const link = (path, label, className = "") => `<a class="${className}" href="#${path}">${label}</a>`;
 const icon = (emoji) => `<span aria-hidden="true">${emoji}</span>`;
 const safeCss = (value = "") => String(value).replace(/[;{}<>]/g, "");
@@ -302,8 +320,19 @@ function logoMarkup(className = "brand-mark") {
   return `<span class="${className}"><img src="${logoUrl}" alt="واجبات بلس" onerror="this.remove();this.parentElement.textContent='و';" /></span>`;
 }
 
+function renderTickerText(text) {
+  // Wrap each phone/plus-prefixed token in dir=ltr spans so bidirectional
+  // text in a single-line RTL ticker never renders the "+" after the digits
+  // (e.g. "+966..." appearing as "966...+").
+  return String(text).split(/(\+\d[\d\s]{6,})/g).map(part => {
+    if (/^\+\d[\d\s]{6,}$/.test(part)) {
+      return '<span class="ticker-num" dir="ltr">' + esc(part) + '</span>';
+    }
+    return esc(part);
+  }).join('');
+}
 function header() {
-  return `<div class="ticker"><span>${esc(siteSettings.tickerText || "مرحباً بكم في واجبات بلس ⭐ نقدم أفضل الخدمات الأكاديمية ⭐ تواصل معنا على واتساب +966567680470")}</span></div>
+  return `<div class="ticker ticker-pro"><span>${renderTickerText(siteSettings.tickerText || "مرحباً بكم في واجبات بلس ⭐ نقدم أفضل الخدمات الأكاديمية ⭐ تواصل معنا على واتساب +966567680470")}</span></div>
     <header class="site-header">
       <div class="header-actions">
         <button class="btn-icon" data-action="toggle-sidebar" aria-label="فتح القائمة">☰</button>
@@ -341,10 +370,7 @@ function footer() {
   const quick = [["/", "الرئيسية"], ["/services", "الخدمات"], ["/subscriptions", "الاشتراكات"], ["/downloads", "التحميلات"], ["/blog", "المدونة"], ["/faq", "الأسئلة الشائعة"], ["/about", "من نحن"], ["/partners", "الشركاء"]];
   const services = ["حل الواجبات الدراسية", "حل التكاليف الجامعية", "إعداد التقارير", "مشاريع التخرج", "التحليل الإحصائي", "البحوث الأكاديمية"];
   return `<footer class="footer"><div class="container footer-grid">
-    <div><div class="brand">${logoMarkup()}<span class="brand-title">واجبات بلس</span></div><p>منصة تعليمية سعودية متكاملة تقدم أفضل الخدمات الأكاديمية ودعم الطلاب في حل الواجبات وإعداد البحوث والمشاريع.</p>
-      <form class="newsletter" data-form="newsletter"><input type="email" name="email" placeholder="البريد الإلكتروني" required /><button class="btn btn-primary" type="submit">➤</button></form><small class="text-muted">اشترك في النشرة البريدية</small></div>
-    <div><h3>روابط سريعة</h3><ul>${quick.map(([path, label]) => `<li>${link(path, `• ${label}`)}</li>`).join("")}</ul></div>
-    <div><h3>خدماتنا</h3><ul>${services.map((item) => `<li>${link("/services", `• ${item}`)}</li>`).join("")}</ul></div>
+</div>
   </div><div class="copyright">© ${new Date().getFullYear()} واجبات بلس — جميع الحقوق محفوظة</div></footer>`;
 }
 
@@ -483,15 +509,61 @@ function testimonialsPage() {
 }
 
 function blogPage() {
-  const active = new URLSearchParams(location.hash.split("?")[1] || "").get("category") || "الكل";
-  const cats = ["الكل", "البحث العلمي", "نصائح دراسية", "مشاريع تخرج"];
-  const filtered = active === "الكل" ? ARTICLES : ARTICLES.filter((a) => a.category === active);
-  return `<div class="container section"><div class="text-center"><h1 class="page-title">المدونة الأكاديمية</h1><p class="page-intro">مقالات ونصائح قيمة لدعم مسيرتك التعليمية وتطوير مهاراتك.</p></div><div class="category-pills">${cats.map((cat) => `<a class="btn ${cat === active ? "btn-primary" : "btn-outline"}" href="#/blog?category=${encodeURIComponent(cat)}">${cat}</a>`).join("")}</div><div class="grid grid-3">${filtered.map((a) => `<article class="card article-card"><div class="article-cover">▤</div><div class="article-body"><div class="article-meta"><span>◷ ${a.date}</span><span>◈ ${a.category}</span></div><h3>${a.title}</h3><p>${a.summary}</p><button class="btn btn-outline" data-action="open-article" data-article="${a.id}">اقرأ المزيد</button></div></article>`).join("")}</div>${articleModal()}</div>`;
+  const params = new URLSearchParams(location.hash.split("?")[1] || "");
+  const active = params.get("category") || "الكل";
+  const search = (managedBlogSearch || "").trim();
+  let categories = [];
+  let articles = [];
+  if (managedBlog && managedBlog.categories.length > 0) {
+    categories = ["الكل", ...managedBlog.categories.filter((c) => c.isVisible !== false).sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)).map((c) => c.name)];
+    articles = managedBlog.articles.filter((a) => a.isVisible !== false).map((a, index) => ({ id: a.id, slug: a.slug, title: a.title, category: a.categoryName || "عام", date: a.publishedText || a.publishedAt || "", summary: a.summary || "", content: a.body || a.summary || "", imageUrl: a.imageUrl || null, sortOrder: a.sortOrder, legacyId: index + 1 }));
+  }
+  if (articles.length === 0) {
+    categories = ["الكل", "البحث العلمي", "نصائح دراسية", "مشاريع تخرج"];
+    articles = ARTICLES.filter((a) => a.isVisible !== false).map((a, index) => ({ id: a.id, slug: null, title: a.title, category: a.category || "عام", date: a.date || "", summary: a.summary || "", content: a.content || "", imageUrl: null, sortOrder: index, legacyId: index + 1 }));
+  }
+  let filtered = active === "الكل" ? articles : articles.filter((a) => a.category === active);
+  if (search) filtered = filtered.filter((a) => `${a.title} ${a.summary} ${a.content}`.includes(search));
+  return `<div class="container section"><div class="text-center"><h1 class="page-title">المدونة الأكاديمية</h1><p class="page-intro">مقالات ونصائح قيمة لدعم مسيرتك التعليمية وتطوير مهاراتك.</p></div><div class="grid" style="grid-template-columns:1fr 280px;align-items:start;gap:1.5rem;margin-bottom:1.5rem"><div class="category-pills">${categories.map((cat) => `<a class="btn ${cat === active ? "btn-primary" : "btn-outline"}" href="#/blog?category=${encodeURIComponent(cat)}">${cat}</a>`).join("")}</div><div class="field"><input data-action="blog-search" placeholder="ابحث في المقالات..." /></div></div>${filtered.length ? `<div class="grid grid-3">${filtered.map((a) => `<article class="card article-card"><div class="article-cover">${a.imageUrl ? `<img src="${esc(a.imageUrl)}" alt="${esc(a.title)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px" loading="lazy" />` : "▤"}</div><div class="article-body"><div class="article-meta"><span>◷ ${esc(a.date)}</span><span>◈ ${esc(a.category)}</span></div><h3>${esc(a.title)}</h3><p>${esc(a.summary)}</p><button class="btn btn-outline" data-action="open-article" data-article="${a.id}">اقرأ المزيد</button></div></article>`).join("")}</div>` : `<div class="text-center text-muted" style="padding:3rem">لم نتمكن من العثور على مقالات تطابق بحثك أو تصنيفك. يرجى تجربة كلمات أخرى أو تصفح التصنيفات.</div>`}${articleModal()}</div>`;
+}
+let managedBlogSearch = "";
+function renderMarkdown(body) {
+  const safe = esc(String(body || ""));
+  const lines = safe.split(/\r?\n/);
+  const blocks = [];
+  let buffer = [];
+  const flush = () => { if (buffer.length) { blocks.push(`<p>${buffer.join("<br/>")}</p>`); buffer = []; } };
+  let inList = false;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^#{1,6}\s/.test(trimmed)) { const level = /^#+/.exec(trimmed)[0].length; flush(); blocks.push(`<h${Math.min(level + 2, 5)} class="article-h">${trimmed.replace(/^#+\s*/, "")}</h${Math.min(level + 2, 5)}>`); continue; }
+    if (/^[\-\*]\s/.test(trimmed)) { flush(); if (!inList) { blocks.push("<ul class=\"article-ul\">"); inList = true; } blocks.push(`<li>${applyInline(trimmed.replace(/^[\-\*]\s/, ""))}</li>`); continue; }
+    if (/^\d+\.\s/.test(trimmed)) { flush(); if (!inList) { blocks.push("<ol class=\"article-ul\">"); inList = true; } blocks.push(`<li>${applyInline(trimmed.replace(/^\d+\.\s/, ""))}</li>`); continue; }
+    if (inList) { blocks.push("</ul>"); inList = false; }
+    if (trimmed === "" || /^\*{3,}$/.test(trimmed)) { flush(); continue; }
+    buffer.push(applyInline(trimmed));
+  }
+  flush();
+  if (inList) blocks.push("</ul>");
+  return blocks.join("");
+}
+function applyInline(text) {
+  return text.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<i>$1</i>").replace(/`([^`]+)`/g, "<code>$1</code>");
 }
 function articleModal() {
   if (!state.article) return "";
   const a = state.article;
-  return `<div class="modal open" data-action="close-modal"><article class="modal-card" data-modal-card><div class="modal-head"><div><span class="btn btn-muted" style="min-height:auto;padding:.25rem .5rem;font-size:.7rem">${a.category}</span><small class="text-muted" style="display:block;margin-top:.4rem">◷ ${a.date}</small><h2>${a.title}</h2></div><button class="modal-close" data-action="close-modal">×</button></div><div class="modal-content"><p>${a.content}</p><div class="share-row"><b>شارك المقال:</b><span><a class="btn btn-outline" href="https://twitter.com/intent/tweet?text=${encodeURIComponent(a.title)}" target="_blank" rel="noopener">تويتر</a> <a class="btn btn-outline" href="${wa(a.title)}" target="_blank" rel="noopener">واتساب</a></span></div></div></article></div>`;
+  const shareUrl = location.origin + "/#/blog/article/" + encodeURIComponent(a.slug || String(a.id));
+  const shareTitle = encodeURIComponent(String(a.title || ""));
+  return `<div class="modal open" data-action="close-modal"><article class="modal-card" data-modal-card style="max-width:720px"><div class="modal-head"><div><span class="btn btn-muted" style="min-height:auto;padding:.25rem .5rem;font-size:.7rem">${esc(a.category)}</span><small class="text-muted" style="display:block;margin-top:.4rem">◷ ${esc(a.date)}</small><h2>${esc(a.title)}</h2></div><button class="modal-close" data-action="close-modal">×</button></div>${a.imageUrl ? `<img src="${esc(a.imageUrl)}" alt="${esc(a.title)}" style="width:100%;border-radius:12px;max-height:300px;object-fit:cover" loading="lazy" />` : ""}<div class="modal-content">${a.body || a.content ? renderMarkdown(a.body || a.content) : `<p>${esc(a.summary || a.content || "")}</p>`}<div class="share-row" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:1.5rem"><b>شارك المقال:</b><span><a class="btn btn-outline" href="https://twitter.com/intent/tweet?text=${shareTitle}" target="_blank" rel="noopener">تويتر</a> <a class="btn btn-outline" href="${wa(a.title)}" target="_blank" rel="noopener">واتساب</a> <a class="btn btn-outline" href="https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${shareTitle}" target="_blank" rel="noopener">تيليجرام</a> <button class="btn btn-outline" data-action="copy-article-link" data-article-link="${shareUrl}">⧉ نسخ الرابط</button></span></div></div></article></div>`;
+}
+function blogArticlePage() {
+  const slug = decodeURIComponent(currentPath().replace(/^\/blog\/article\//, ""));
+  const article = managedBlog?.articles?.find((a) => a.slug === slug) || managedBlog?.articles?.find((a) => String(a.id) === slug);
+  if (!article) return notFound();
+  const shareUrl = location.origin + "/#/blog/article/" + encodeURIComponent(String(article.slug || article.id));
+  const shareTitle = encodeURIComponent(String(article.title || ""));
+  return `<div class="container section" style="max-width:880px"><article class="card card-pad" style="padding:2rem"><div class="article-meta" style="margin-bottom:1rem"><span>◷ ${esc(article.publishedText || "")}</span><span>◈ ${esc(article.categoryName || "عام")}</span></div>${article.imageUrl ? `<img src="${esc(article.imageUrl)}" alt="${esc(article.title)}" style="width:100%;border-radius:12px;max-height:380px;object-fit:cover;margin-bottom:1.5rem" loading="lazy" />` : ""}<h1 class="page-title" style="font-size:1.7rem">${esc(article.title)}</h1>${article.summary ? `<p class="text-muted" style="font-size:1.02rem;margin:1rem 0">${esc(article.summary)}</p>` : ""}<div class="article-body-full">${renderMarkdown(article.body || article.summary || "")}</div><div class="share-row" style="display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:2rem"><b>شارك المقال:</b><span><a class="btn btn-outline" href="https://twitter.com/intent/tweet?text=${shareTitle}" target="_blank" rel="noopener">تويتر</a> <a class="btn btn-outline" href="${wa(article.title)}" target="_blank" rel="noopener">واتساب</a> <a class="btn btn-outline" href="https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${shareTitle}" target="_blank" rel="noopener">تيليجرام</a> <button class="btn btn-outline" data-action="copy-article-link" data-article-link="${shareUrl}">⧉ نسخ الرابط</button></span></div><a class="btn btn-muted" href="#/blog" style="margin-top:1.5rem;display:inline-block">← العودة للمدونة</a></article></div>`;
 }
 
 function faqPage() {
@@ -505,20 +577,207 @@ function assignmentPage() {
   return `<div class="container section" style="max-width:950px"><div class="text-center"><div class="round-icon">🎓</div><h1 class="page-title">نموذج تسليم الواجب</h1><p class="page-intro">أكمل البيانات أدناه لحفظ طلبك بأمان، وسيتواصل معك الفريق فور مراجعته.</p></div><div class="card form-shell"><div class="form-banner">▣ تعبئة بيانات الطلب</div><form class="form-body" data-form="assignment"><section class="form-section"><h3>👤 بيانات الطالب</h3><div class="grid grid-2"><div class="field"><label>اسم الطالب *</label><input name="studentName" required placeholder="محمد أحمد العمري" /></div><div class="field"><label>الرقم الجامعي *</label><input name="studentId" required placeholder="123456789" /></div><div class="field"><label>رقم الجوال</label><input name="phone" inputmode="tel" placeholder="05XXXXXXXX" /></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" dir="ltr" placeholder="example@email.com" /></div></div></section><section class="form-section"><h3>🏛️ البيانات الأكاديمية</h3><div class="grid grid-2"><div class="field"><label>اسم الجامعة *</label><select name="university" required><option value="">اختر جامعتك...</option>${UNIVERSITIES.map((u) => `<option>${u}</option>`).join("")}<option>جامعة أخرى</option></select></div><div class="field"><label>الكلية *</label><input name="college" required placeholder="مثال: كلية الحاسب والمعلومات" /></div><div class="field"><label>القسم</label><input name="department" placeholder="مثال: قسم علوم الحاسب" /></div><div class="field"><label>اسم المقرر *</label><input name="course" required placeholder="مثال: برمجة 1 - CS101" /></div><div class="field"><label>دكتور المقرر *</label><input name="professor" required placeholder="مثال: د. عبدالله محمد" /></div></div></section><section class="form-section"><h3>📋 تفاصيل الطلب</h3><div class="grid grid-2"><div class="field"><label>نوع الخدمة المطلوبة *</label><select name="serviceType" required><option value="">اختر نوع الخدمة...</option>${SERVICE_TYPES.map((s, i) => `<option>${i + 1}. ${s}</option>`).join("")}</select></div><div class="field"><label>الموعد النهائي للتسليم *</label><input type="date" name="deadline" required min="${isoDay()}" /></div><div class="field"><label>وصف الواجب بالتفصيل *</label><textarea name="description" required placeholder="اكتب هنا جميع تفاصيل الواجب والشروط المطلوبة بدقة لضمان أعلى جودة ممكنة..."></textarea></div><div class="field"><label>إرفاق ملف <small class="text-muted">(اختياري)</small></label><label class="file-drop">⇧<span>اضغط لرفع ملف (PDF, Word, صورة)</span><input name="attachment" type="file" hidden accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp" /></label><small class="text-muted text-center">الحد الأقصى: 8 ميغابايت للملف و3 ميغابايت للصورة</small></div></div></section><button class="btn btn-green" style="width:100%;min-height:3.5rem;font-size:1.05rem" type="submit">➤ حفظ وإرسال الطلب</button></form></div></div>`;
 }
 
-let contactItems = [["◉", "واتساب", "+966 56 768 0470", wa()], ["☎", "جوال", "+966 56 768 0470", "tel:+966567680470"], ["✉", "البريد الإلكتروني", "wajbatbls@gmail.com", "mailto:wajbatbls@gmail.com"], ["◷", "ساعات العمل", "متواجدون 24/7", ""], ["⌖", "العنوان", "الرياض، المملكة العربية السعودية", ""]];
-function contactPage() {
-  return `<div class="container section" style="max-width:1200px"><div class="text-center"><h1 class="page-title">اتصل بنا</h1><p class="page-intro">نحن هنا دائماً لخدمتك والإجابة على جميع استفساراتك الأكاديمية.</p></div><div class="grid grid-2" style="grid-template-columns:2fr 3fr;align-items:start"><div class="grid">${contactItems.map(([ico, label, value, href]) => `<div class="card contact-item"><span class="contact-icon">${ico}</span><div><small class="text-muted">${label}</small>${href ? `<a class="contact-value" href="${href}" ${href.startsWith("http") ? 'target="_blank" rel="noopener"' : ""}>${value}</a>` : `<div class="contact-value">${value}</div>`}</div></div>`).join("")}<div class="card card-pad"><h3>وسائل التواصل الاجتماعي</h3><div class="social-row"><a class="social" href="${wa()}" target="_blank" rel="noopener">◉</a><a class="social" href="#" aria-label="فيسبوك">f</a><a class="social" href="#" aria-label="إنستغرام">◎</a><a class="social" href="#" aria-label="تويتر">𝕏</a><a class="social" href="#" aria-label="يوتيوب">▶</a></div></div><a class="btn btn-green" href="${wa("أريد التواصل مع فريق واجبات بلس")}" target="_blank" rel="noopener">◉ تواصل فوري عبر واتساب</a></div><div class="grid"><div class="card card-pad"><h2>أرسل لنا رسالة</h2><form data-form="contact" class="grid"><div class="grid grid-2"><div class="field"><label>الاسم الكريم *</label><input name="name" required placeholder="محمد أحمد" /></div><div class="field"><label>رقم الجوال *</label><input name="phone" required placeholder="05XXXXXXXX" /></div></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" placeholder="example@email.com" dir="ltr" /></div><div class="field"><label>الموضوع *</label><input name="subject" required placeholder="استفسار عن خدمة..." /></div><div class="field"><label>الرسالة *</label><textarea name="message" required placeholder="اكتب رسالتك أو استفسارك هنا..."></textarea></div><button class="btn btn-primary" type="submit">➤ إرسال الرسالة</button></form></div><div class="card" style="overflow:hidden"><div class="card-pad" style="padding-bottom:.6rem"><b>⌖ موقعنا — الرياض، المملكة العربية السعودية</b></div><iframe class="map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3624.674!2d46.6753!3d24.7136!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3e2f03890d489399%3A0xba974d1c98e79fd5!2sRiyadh%2C%20Saudi%20Arabia!5e0!3m2!1sen!2ssa!4v1234567890" loading="lazy" title="موقعنا على الخريطة"></iframe></div></div></div></div>`;
+function buildContactCards() {
+  const cards = [];
+  const channels = (managedContact?.channels || []).filter((c) => c.type !== "social");
+  if (channels.length > 0) {
+    for (const channel of channels) {
+      const ico = { whatsapp: "◉", mobile: "☎", email: "✉", address: "⌖" }[channel.type] || "•";
+      let value = "";
+      let href = "";
+      if (channel.type === "whatsapp") {
+        const number = (channel.number || "").replace(/\s/g, "");
+        value = "+" + number; href = wa("");
+      } else if (channel.type === "mobile") {
+        const number = (channel.number || "").replace(/\s/g, "");
+        const tel = number.startsWith("+") ? number : "+" + number;
+        value = tel; href = "tel:" + tel;
+      } else if (channel.type === "email") {
+        value = channel.email || ""; href = "mailto:" + (channel.email || "");
+      } else if (channel.type === "address") {
+        value = channel.address || ""; href = "";
+      }
+      if (!value) continue;
+      cards.push([ico, channel.label || value, value, href, channel.imageUrl || null]);
+    }
+  }
+  if (cards.length === 0) {
+    const phone = siteSettings.phone || "+966 56 768 0470";
+    cards.push(
+      ["◉", "واتساب", phone, wa(), null],
+      ["☎", "جوال", phone, "tel:" + phone.replace(/\s/g, ""), null],
+      ["✉", "البريد الإلكتروني", siteSettings.email || "wajbatbls@gmail.com", "mailto:" + (siteSettings.email || "wajbatbls@gmail.com"), null],
+      ["⌖", "العنوان", siteSettings.address || "الرياض، المملكة العربية السعودية", "", null],
+    );
+  }
+  return cards;
 }
 
+function fallbackSocialRow() {
+  return `<a class="social" href="${wa()}" target="_blank" rel="noopener">◉</a><a class="social" href="#" aria-label="فيسبوك">f</a><a class="social" href="#" aria-label="إنستغرام">◎</a><a class="social" href="#" aria-label="تويتر">𝕏</a><a class="social" href="#" aria-label="يوتيوب">▶</a>`;
+}
+
+function dynamicSocialRow() {
+  const channels = (managedContact?.channels || []).filter((c) => c.type === "social").sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+  if (channels.length > 0) {
+    return channels.map((channel) => {
+      const accent = safeCss(channel.accentColor || "");
+      const bg = safeCss(channel.backgroundColor || "");
+      const border = safeCss(channel.borderColor || "");
+      const text = safeCss(channel.textColor || "");
+      const platformKey = (channel.platform || "").toLowerCase();
+      const PLATFORM_SYMBOLS = { twitter: "𝕏", x: "𝕏", facebook: "f", instagram: "◉", snapchat: "◧", tiktok: "♪", youtube: "▶", linkedin: "in", telegram: "✈", whatsapp: "◉" };
+      const storedIcon = (channel.icon || "").trim();
+      const iconChar = PLATFORM_SYMBOLS[platformKey] || (storedIcon.length === 1 ? storedIcon : (storedIcon || channel.platformName || channel.platform || "🔗").slice(0, 2));
+      const showName = ["rectangle", "card", "large-card"].includes(channel.shape);
+      const layout = channel.shape === "circle" ? "border-radius:50%;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;"
+        : channel.shape === "square" ? "border-radius:10px;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;"
+        : channel.shape === "rectangle" ? "border-radius:10px;padding:8px 14px;display:inline-flex;align-items:center;gap:8px;height:44px;"
+        : channel.shape === "card" ? "border-radius:12px;padding:8px 16px;display:inline-flex;align-items:center;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,.08);height:44px;"
+        : channel.shape === "large-card" ? "border-radius:16px;padding:12px 20px;display:inline-flex;align-items:center;gap:12px;box-shadow:0 3px 12px rgba(0,0,0,.1);"
+        : "border-radius:50%;width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;";
+      const colors = `${accent ? "color:" + accent + ";" : ""}${bg ? "background:" + bg + ";" : ""}${border ? "border:1px solid " + border + ";" : ""}${text && !accent ? "color:" + text + ";" : ""}`;
+      return `<a class="social social-dynamic" href="${safeHref(channel.link || "#")}" target="_blank" rel="noopener" aria-label="${esc(channel.platformName || channel.platform || "")}" style="${colors}${layout}">${esc(iconChar)}${showName ? `<span style="font-weight:600">${esc((channel.platformName || channel.platform || "").slice(0, 30))}</span>` : ""}</a>`;
+    }).join("");
+  }
+  return "";
+}
+
+async function loadSiteContact() {
+  try {
+    const result = await rpcQuery("site.contact.publicList");
+    managedContact = result || { channels: [] };
+  } catch {
+    managedContact = { channels: [] };
+  }
+  if (currentPath() === "/contact") render();
+}
+
+let contactItems = [["◉", "واتساب", "+966 56 768 0470", wa()], ["☎", "جوال", "+966 56 768 0470", "tel:+966567680470"], ["✉", "البريد الإلكتروني", "wajbatbls@gmail.com", "mailto:wajbatbls@gmail.com"], ["◷", "ساعات العمل", "متواجدون 24/7", ""], ["⌖", "العنوان", "الرياض، المملكة العربية السعودية", ""]];
+function contactPage() {
+  const waLink = wa("أريد التواصل مع فريق واجبات بلس");
+  const cards = buildContactCards();
+  const [waCard, mobCard, emailCard, addrCard] = [
+    cards.find((c) => c[0] === "◉"),
+    cards.find((c) => c[0] === "☎"),
+    cards.find((c) => c[0] === "✉"),
+    cards.find((c) => c[0] === "⌖"),
+  ];
+  const chip = (card, kind) => {
+    if (!card) return "";
+    const [, label, value, href] = card;
+    const inner = href ? `<a class="contact-chip-link" href="${href}" ${href.startsWith("http") ? 'target="_blank" rel="noopener"' : ""}>${esc(value)}</a>` : `<span class="contact-chip-value">${esc(value)}</span>`;
+    return `<div class="contact-chip ${kind}"><span class="contact-chip-icon">${card[0]}</span><div class="contact-chip-body"><small class="contact-chip-label">${esc(label)}</small>${inner}</div></div>`;
+  };
+  const SOCIAL_META = { whatsapp: { icon: "◉", color: "#25D366", aria: "واتساب" }, telegram: { icon: "✈", color: "#26A5E4", aria: "تيليجرام" }, facebook: { icon: "f", color: "#1877F2", aria: "فيسبوك" }, twitter: { icon: "𝕏", color: "#1D9BF0", aria: "تويتر" } };
+  const socialIcons = (() => {
+    const socials = (managedContact?.channels || []).filter((c) => c.type === "social").sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+    if (!socials.length) return "";
+    return socials.map((ch) => {
+      const key = (ch.platform || "").toLowerCase();
+      const meta = SOCIAL_META[key];
+      const icon = (meta ? meta.icon : (ch.icon || "🔗")).trim();
+      const color = ch.backgroundColor || (meta ? meta.color : "#64748b");
+      const aria = meta ? meta.aria : esc(ch.platformName || key || "رابط");
+      return `<a class="contact-social-icon" href="${safeHref(ch.link || "#")}" target="_blank" rel="noopener" aria-label="${aria}" style="background:${color}">${esc(icon)}</a>`;
+    }).join("");
+  })();
+  const waChip = waCard
+    ? chip(waCard, "wa")
+    : `<a class="contact-chip wa" href="${waLink}" target="_blank" rel="noopener"><span class="contact-chip-icon">◉</span><div class="contact-chip-body"><small class="contact-chip-label">واتساب</small><span class="contact-chip-value">${esc(siteSettings.phone || "+966 56 768 0470")}</span></div></a>`;
+  const phoneNum = (siteSettings.phone || "+966 56 768 0470").replace(/\s/g, "");
+  const mobChip = mobCard
+    ? chip(mobCard, "mob")
+    : `<a class="contact-chip mob" href="tel:+${phoneNum}"><span class="contact-chip-icon">☎</span><div class="contact-chip-body"><small class="contact-chip-label">رقم الجوال</small><span class="contact-chip-value">+${phoneNum}</span></div></a>`;
+  const emailChip = emailCard
+    ? chip(emailCard, "email")
+    : `<a class="contact-chip email" href="mailto:${esc(siteSettings.email || "wajbatbls@gmail.com")}"><span class="contact-chip-icon">✉</span><div class="contact-chip-body"><small class="contact-chip-label">البريد الإلكتروني</small><span class="contact-chip-value">${esc(siteSettings.email || "wajbatbls@gmail.com")}</span></div></a>`;
+  const addrChip = addrCard
+    ? chip(addrCard, "addr")
+    : `<div class="contact-chip addr"><span class="contact-chip-icon">⌖</span><div class="contact-chip-body"><small class="contact-chip-label">العنوان</small><span class="contact-chip-value">${esc(siteSettings.address || "الرياض، المملكة العربية السعودية")}</span></div></div>`;
+  return `<div class="container section contact-page">
+    <div class="text-center"><h1 class="page-title">اتصل بنا</h1><p class="page-intro">نحن هنا دائماً لخدمتك والإجابة على جميع استفساراتك الأكاديمية.</p></div>
+    <div class="card card-pad contact-info-card"><h2 class="contact-info-title">معلومات التواصل المباشرة</h2><div class="contact-chips">${waChip}${mobChip}${emailChip}${addrChip}</div><div class="contact-social-strip">${socialIcons || `<span class="text-muted" style="font-size:.85rem">لا توجد روابط تواصل اجتماعي بعد</span>`}</div><a class="btn btn-primary contact-send-btn" href="javascript:void(0)" data-action="contact-scroll">أرسل لنا رسالة</a></div>
+    <div class="contact-main-grid">
+      <div class="contact-form-col">
+        <div class="card card-pad"><h2 class="contact-form-title">أرسل لنا رسالة</h2><p class="text-muted contact-form-hint">املأ النموذج أدناه وسنرد عليك في أقرب وقت ممكن.</p><form data-form="contact" class="contact-form"><div class="grid grid-2"><div class="field"><label>الاسم الكريم *</label><input name="name" required placeholder="محمد أحمد" /></div><div class="field"><label>رقم الجوال *</label><input name="phone" required placeholder="05XXXXXXXX" /></div></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" placeholder="example@email.com" dir="ltr" /></div><div class="field"><label>الموضوع *</label><input name="subject" required placeholder="استفسار عن خدمة..." /></div><div class="field"><label>الرسالة *</label><textarea name="message" required placeholder="اكتب رسالتك أو استفسارك هنا..."></textarea></div><button class="btn btn-primary" type="submit">➤ إرسال الرسالة</button></form></div>
+      </div>
+      <div class="contact-side-col">
+        <div class="card card-pad contact-side-card"><h3 class="contact-side-title">تواصل فوري</h3><p class="text-muted" style="font-size:.85rem;margin-bottom:.8rem">للاستجابة الأسرع يفضل التواصل عبر الواتساب مباشرة.</p><div class="social-row" style="margin-bottom:1rem">${dynamicSocialRow() || fallbackSocialRow()}</div><a class="btn btn-green contact-wa-btn" href="${waLink}" target="_blank" rel="noopener">◉ تواصل فوري عبر واتساب</a></div>
+      </div>
+    </div>
+    
+  </div>`;
+}
+let managedTeam = null; // فريق الإدارة من قاعدة البيانات (team_members)
+let managedPartners = null; // شركاء النجاح من قاعدة البيانات (partners)
+async function loadSiteTeamPartners() {
+  try {
+    const team = await rpcQuery("site.team.listPublic");
+    if (Array.isArray(team)) managedTeam = team;
+  } catch { managedTeam = null; }
+  try {
+    const partnersList = await rpcQuery("site.partners.listPublic");
+    if (Array.isArray(partnersList)) managedPartners = partnersList.filter(p => p && p.name && String(p.link || "") !== "NULL" && String(p.logoUrl || "") !== "NULL");
+  } catch { managedPartners = null; }
+  if (currentPath() === "/about" || currentPath() === "/partners") render();
+}
 function aboutPage() {
   const goals = [["🛡", "جودة المخرجات", "ضمان أعلى معايير الجودة الأكاديمية في جميع الخدمات المقدمة."], ["♟", "رضا الطلاب", "تحقيق أعلى معدلات الرضا لعملائنا من الطلاب والطالبات."], ["🏆", "التميز المهني", "استقطاب أفضل الكفاءات الأكاديمية لتقديم خدماتنا."], ["▤", "التطور المستمر", "مواكبة أحدث التطورات في المناهج وأساليب التعليم."]];
-  const team = [["أحمد عبدالله", "المدير التنفيذي"], ["سارة محمد", "مدير الشؤون الأكاديمية"], ["محمد فهد", "مدير التقنية"], ["نورة خالد", "مدير خدمة العملاء"]];
-  return `<div class="container section"><div class="text-center"><h1 class="page-title">من نحن</h1><p class="page-intro">واجبات بلس هي منصة تعليمية سعودية رائدة، تأسست بهدف تقديم الدعم الأكاديمي الشامل للطلاب والطالبات في مختلف المراحل الدراسية، من خلال نخبة من الخبراء والأكاديميين المتخصصين.</p></div><div class="grid grid-2"><div class="card about-box" style="border-top:4px solid var(--primary)"><div class="round-icon">◉</div><h2>رؤيتنا</h2><p class="text-muted">أن نكون المنصة الأكاديمية الرائدة والموثوقة الأولى في المملكة العربية السعودية، والوجهة المفضلة لكل طالب يبحث عن التميز والنجاح الأكاديمي.</p></div><div class="card about-box" style="border-top:4px solid var(--accent)"><div class="round-icon">◎</div><h2>رسالتنا</h2><p class="text-muted">تقديم خدمات أكاديمية احترافية وعالية الجودة تدعم مسيرة الطلاب العلمية، وتساهم في تذليل الصعاب التي تواجههم، بأسعار تنافسية وبسرية تامة.</p></div></div><section class="section"><h2 class="text-center">أهدافنا الاستراتيجية</h2><div class="grid grid-4" style="margin-top:2rem">${goals.map(([ico, title, desc]) => `<div class="card goal-card"><div class="goal-icon">${ico}</div><h3>${title}</h3><p>${desc}</p></div>`).join("")}</div></section><section class="section"><h2 class="text-center">فريق الإدارة</h2><div class="grid grid-4" style="margin-top:2rem">${team.map(([name, role]) => `<div class="team"><div class="team-avatar">♟</div><h3>${name}</h3><p style="color:var(--accent);font-size:.85rem;font-weight:700">${role}</p></div>`).join("")}</div></section></div>`;
+  const fallbackTeam = [["أحمد عبدالله", "المدير التنفيذي"], ["سارة محمد", "مدير الشؤون الأكاديمية"], ["محمد فهد", "مدير التقنية"], ["نورة خالد", "مدير خدمة العملاء"]];
+  const managedTeam = Array.isArray(managedTeam) && managedTeam.length ? managedTeam : fallbackTeam.map(([name, role]) => ({ name, role, description: "", photoUrl: "" }));
+  return `<div class="container section"><div class="text-center"><h1 class="page-title">من نحن</h1><p class="page-intro">واجبات بلس هي منصة تعليمية سعودية رائدة، تأسست بهدف تقديم الدعم الأكاديمي الشامل للطلاب والطالبات في مختلف المراحل الدراسية، من خلال نخبة من الخبراء والأكاديميين المتخصصين.</p></div><div class="grid grid-2"><div class="card about-box" style="border-top:4px solid var(--primary)"><div class="round-icon">◉</div><h2>رؤيتنا</h2><p class="text-muted">أن نكون المنصة الأكاديمية الرائدة والموثوقة الأولى في المملكة العربية السعودية، والوجهة المفضلة لكل طالب يبحث عن التميز والنجاح الأكاديمي.</p></div><div class="card about-box" style="border-top:4px solid var(--accent)"><div class="round-icon">◎</div><h2>رسالتنا</h2><p class="text-muted">تقديم خدمات أكاديمية احترافية وعالية الجودة تدعم مسيرة الطلاب العلمية، وتساهم في تذليل الصعاب التي تواجههم، بأسعار تنافسية وبسرية تامة.</p></div></div><section class="section"><h2 class="text-center">أهدافنا الاستراتيجية</h2><div class="grid grid-4" style="margin-top:2rem">${goals.map(([ico, title, desc]) => `<div class="card goal-card"><div class="goal-icon">${ico}</div><h3>${title}</h3><p>${desc}</p></div>`).join("")}</div></section><section class="section"><h2 class="text-center">فريق الإدارة</h2><div class="grid grid-4" style="margin-top:2rem">${managedTeam.map(member => `<div class="team"><div class="team-avatar">${member.photoUrl ? `<img src="${esc(member.photoUrl)}" alt="${esc(member.name)}" />` : "♟"}</div><h3>${esc(member.name)}</h3><p style="color:var(--accent);font-size:.85rem;font-weight:700">${esc(member.role)}</p>${member.description ? `<p class="text-muted" style="font-size:.8rem;margin-top:.4rem">${esc(member.description)}</p>` : ""}</div>`).join("")}</div></section></div>`;
 }
 
 function partnersPage() {
-  const section = (title, emoji, data, countLabel) => `<section class="download-section"><div class="section-heading"><span>${emoji}</span><h2>${title}</h2><span class="count">${data.length} ${countLabel}</span></div><div class="grid grid-5">${data.map((item) => { const [name, location] = item.split(" - "); return `<div class="card partner-card"><div><div class="partner-icon">${emoji}</div><h3>${name}</h3><p>${location || ""}</p></div></div>`; }).join("")}</div></section>`;
-  return `<div class="container section"><div class="text-center"><h1 class="page-title">شركاء النجاح</h1><p class="page-intro">نفخر بخدمة طلاب وطالبات أعرق الجامعات السعودية والمعاهد التعليمية ونسعى دائماً لدعم مسيرتهم الأكاديمية.</p></div>${section("الجامعات السعودية", "▣", UNIVERSITIES, "جامعة")}${section("المعاهد التعليمية", "▤", INSTITUTES, "معهد")}${section("جهات أخرى", "🤝", OTHERS, "جهات")}<div class="card card-pad text-center" style="max-width:800px;margin:2rem auto;background:linear-gradient(to right,var(--primary-soft),color-mix(in srgb,var(--accent) 8%,transparent))"><h2>هل جامعتك غير مدرجة؟</h2><p class="text-muted">نحن نقدم خدماتنا لجميع الطلاب في مختلف الجامعات والكليات داخل وخارج المملكة. لا تتردد في التواصل معنا.</p><a class="btn btn-primary" href="${wa("أريد الاستفسار عن خدماتكم")}" target="_blank" rel="noopener">تواصل معنا الآن</a></div></div>`;
+  const shapeStyles = (item) => ({
+    "--partner-bg": item.backgroundColor || "#eef1f8",
+    "--partner-text": item.textColor || "#3f4254",
+    "--partner-accent": item.accentColor || "#4966d6",
+    "--partner-border": item.borderColor || item.accentColor || "#4966d6",
+  });
+  const initialOf = (name) => (name || "؟").split(" ").map(w => w.charAt(0)).filter(Boolean).slice(0, 2).join("");
+  const isWebsiteUrl = (v) => /^https?:\/\/[^\s]+$/i.test(String(v || ""));
+  const isWhatsAppNumber = (v) => /^(\+?[\d][\d\s\-]{7,24})$/.test(String(v || ""));
+  const partnerCard = (item) => {
+    const rawLink = String(item.link || "").trim();
+    const hasWebsite = isWebsiteUrl(rawLink);
+    /* لا واتساب إطلاقًا من بطاقة الجامعة — الموقع الرسمي فقط */
+    const href = hasWebsite ? esc(rawLink) : "javascript:void(0)";
+    const styles = Object.entries(shapeStyles(item)).map(([k, v]) => k + ":" + v).join(";");
+    const logoUrlStr = String(item.logoUrl || "");
+    const logoUrlOk = item.logoUrl && (/^https?:\/\//i.test(logoUrlStr) || /^\/manus-storage\//.test(logoUrlStr));
+    const logo = logoUrlOk
+      ? `<img src="${esc(item.logoUrl)}" alt="${esc(item.name)}" loading="lazy" />`
+      : `<span class="partner-pro-initial">${esc(initialOf(item.name))}</span>`;
+    const hasDescription = Boolean(item.description);
+    const noLinkNote = hasWebsite ? "" : `<span class="partner-pro-nolink">لم يتوفر رابط الموقع بعد</span>`;
+    const buttons = hasWebsite
+      ? `<span class="partner-pro-actions"><a class="partner-pro-btn partner-pro-btn-site" href="${esc(rawLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🌐 زيارة موقع الجامعة</a></span>`
+      : "";
+    return `<a class="partner-pro-card ${hasWebsite ? "" : "partner-pro-card-nolink"}" href="${href}" target="${hasWebsite ? "_blank" : "_self"}" rel="noopener" style="${styles}" ${hasWebsite ? "" : 'onclick="return false"'}>
+      <span class="partner-pro-badge">${logo}</span>
+      <span class="partner-pro-name">${esc(item.name)}</span>
+      <span class="partner-pro-meta">${[item.city, item.kind].filter(Boolean).join(" · ") || "شريك نجاح"}</span>
+      ${hasDescription ? `<span class="partner-pro-desc">${esc(item.description)}</span>` : ""}
+      ${noLinkNote}
+      ${buttons}
+    </a>`;
+  };
+  const dynamicPartners = Array.isArray(managedPartners) && managedPartners.length ? managedPartners : null;
+  const rows = dynamicPartners ? dynamicPartners.map(partnerCard).join("") : "";
+  const count = dynamicPartners ? dynamicPartners.length : 0;
+  const empty = `<div class="empty-state" style="padding:3rem 1rem"><div class="round-icon" style="width:4.5rem;height:4.5rem;font-size:2rem">🤝</div><h3 style="margin-top:1rem">لم تُضف الجهات بعد</h3><p class="text-muted">تتولى إدارة الموقع إضافة الجامعات والشركاء من لوحة الإدارة.</p></div>`;
+  return `<div class="container section">
+    <div class="partners-hero-banner"><h1 class="page-title" style="color:#fff">شركاء النجاح</h1><p class="page-intro">نفخر بخدمة طلاب وطالبات أعرق الجامعات السعودية والمعاهد التعليمية ونسعى دائماً لدعم مسيرتهم الأكاديمية.</p></div>
+    <div class="partners-stats-strip">
+      <div class="partners-stat"><div class="partners-stat-num">${count}</div><div class="partners-stat-label">جهة تعليمية شريكة</div></div>
+      <div class="partners-stat"><div class="partners-stat-num">كلها</div><div class="partners-stat-label">جامعات ومناطق المملكة</div></div>
+      <div class="partners-stat"><div class="partners-stat-num">+24</div><div class="partners-stat-label">ساعة دعم يومي</div></div>
+    </div>
+    ${dynamicPartners ? `<div class="partner-grid-pro">${rows}</div>` : empty}
+    <div class="card card-pad text-center" style="max-width:800px;margin:2rem auto;background:linear-gradient(to right,var(--primary-soft),color-mix(in srgb,var(--accent) 8%,transparent))"><h2>هل جامعتك غير مدرجة؟</h2><p class="text-muted">نحن نقدم خدماتنا لجميع الطلاب في مختلف الجامعات والكليات داخل وخارج المملكة. لا تتردد في التواصل معنا.</p><a class="btn btn-primary" href="${wa("أريد الاستفسار عن خدماتكم")}" target="_blank" rel="noopener">تواصل معنا الآن</a></div>
+  </div>`;
 }
 
 function notFound() {
@@ -538,24 +797,29 @@ function pageContent() {
     case "/contact": return contactPage();
     case "/about": return managedAboutPage();
     case "/partners": return partnersPage();
-    default: return notFound();
+    default: if (currentPath().startsWith("/blog/article/")) return blogArticlePage(); return notFound();
   }
 }
 
 function render() {
   const path = currentPath();
   if (path === "/") syncSeoMetadata();
-  else document.title = ({ "/services": "الخدمات الأكاديمية | واجبات بلس", "/subscriptions": "باقات الاشتراك | واجبات بلس", "/downloads": "مركز التحميلات | واجبات بلس", "/blog": "المدونة الأكاديمية | واجبات بلس", "/contact": "اتصل بنا | واجبات بلس" }[path] || "واجبات بلس");
+  else document.title = (path.startsWith("/blog/article/") ? "المقال | المدونة الأكاديمية | واجبات بلس" : { "/services": "الخدمات الأكاديمية | واجبات بلس", "/subscriptions": "باقات الاشتراك | واجبات بلس", "/downloads": "مركز التحميلات | واجبات بلس", "/blog": "المدونة الأكاديمية | واجبات بلس", "/contact": "اتصل بنا | واجبات بلس" }[path] || "واجبات بلس");
   document.querySelector("#app").innerHTML = layout(pageContent());
   applyRenderedDesign();
   if (currentPath() === "/contact") {
+    const socialAnchors = Array.from(document.querySelectorAll(".social[aria-label]"));
     const managedSocial = { "فيسبوك": socialLinks.facebook, "إنستغرام": socialLinks.instagram, "تويتر": socialLinks.twitter, "يوتيوب": socialLinks.youtube };
     Object.entries(managedSocial).forEach(([label, href]) => {
-      const anchor = document.querySelector(`.social[aria-label="${label}"]`);
+      const anchor = socialAnchors.find((a) => a.getAttribute("aria-label") === label);
       if (!anchor) return;
       if (href) { anchor.href = href; anchor.target = "_blank"; anchor.rel = "noopener"; }
       else anchor.remove();
     });
+    if ((managedContact?.channels || []).some((c) => c.type === "social")) {
+      const row = document.querySelector(".social-row");
+      if (row && !row.querySelector(".social-dynamic")) row.innerHTML = dynamicSocialRow() || row.innerHTML;
+    }
   }
   window.scrollTo({ top: 0, behavior: "instant" });
   if (currentPath() === "/") { startClock(); startTyping(); }
@@ -596,10 +860,6 @@ function fileToDataUrl(file) {
 
 async function handleForm(form) {
   const data = Object.fromEntries(new FormData(form).entries());
-  if (form.dataset.form === "newsletter") {
-    const result = await saveRecord("newsletter_subscribers", { email: data.email });
-    toast("تم الاشتراك بنجاح!", result.error ? "تعذر الحفظ السحابي، لكن يمكنك المتابعة." : "شكراً لاشتراكك في نشرتنا البريدية."); form.reset(); return;
-  }
   if (form.dataset.form === "review") {
     await rpcMutation("site.submitReview", { name: data.name, university: data.university, review: data.review, rating: 5 });
     toast("تم إرسال تقييمك", "شكراً لمشاركتك رأيك معنا، سيتم مراجعته ونشره قريباً."); form.reset(); return;
@@ -638,10 +898,23 @@ document.addEventListener("click", (event) => {
   if (action === "toggle-theme") { document.body.classList.toggle("dark"); localStorage.setItem("wajbat-theme", document.body.classList.contains("dark") ? "dark" : "light"); render(); }
   if (action === "select-service") { state.selectedService = Number(target.dataset.service); recordContentView(`/services/${encodeURIComponent(String(state.selectedService))}`); go(`/services?category=${state.selectedService}`); }
   if (action === "back-services") { state.selectedService = null; go("/services"); }
-  if (action === "open-article") { state.article = ARTICLES.find((a) => a.id === Number(target.dataset.article)); recordContentView(`/blog/articles/${encodeURIComponent(String(target.dataset.article || ""))}`); render(); }
+  if (action === "open-article") {
+    const articleId = Number(target.dataset.article);
+    state.article = (managedBlog?.articles || []).find((a) => a.id === articleId) || ARTICLES.find((a) => a.id === articleId) || null;
+    if (state.article) {
+      const articleSlug = state.article.slug || String(state.article.id);
+      go(`/blog/article/${encodeURIComponent(articleSlug)}`);
+    }
+  }
   if (action === "track-download") { const fileId = target.dataset.fileId; if (fileId) void trackPublicDownload(fileId).catch(() => {}); else recordContentView(`/downloads/files/${String(target.dataset.download || "")}`); }
   if (action === "close-modal" && (target.classList.contains("modal-close") || !target.closest("[data-modal-card]"))) { state.article = null; render(); }
   if (action === "toggle-faq") { target.parentElement.classList.toggle("open"); }
+  if (action === "copy-article-link") {
+    const url = target.dataset.articleLink || "";
+    const copy = () => { if (navigator.clipboard) return navigator.clipboard.writeText(url); return Promise.resolve().then(() => { const ta = document.createElement("textarea"); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }); };
+    copy().then(() => toast("تم نسخ رابط المقال", "يمكنك الآن مشاركته مع الآخرين.")).catch(() => toast("تعذر النسخ", "يرجى النسخ يدويًا من شريط العنوان."));
+  }
+  if (action === "contact-scroll") { const fc = document.querySelector("[data-form=contact]"); if (fc) fc.scrollIntoView({ behavior: "smooth", block: "center" }); }
   if (action === "top") window.scrollTo({ top: 0, behavior: "smooth" });
 });
 document.addEventListener("submit", (event) => { const form = event.target.closest("form[data-form]"); if (form) { event.preventDefault(); handleForm(form).catch((error) => {
@@ -650,10 +923,24 @@ document.addEventListener("submit", (event) => { const form = event.target.close
   toast("تعذر الإرسال", validationFailure ? "يرجى التحقق من جميع الحقول المطلوبة وإكمال وصف الواجب بالتفصيل." : "تعذر حفظ الطلب حالياً. يرجى المحاولة مرة أخرى.");
 }); } });
 document.addEventListener("input", (event) => {
-  if (event.target.dataset.action !== "faq-search") return;
-  const query = event.target.value.trim();
-  const list = document.querySelector("#faq-list");
-  if (list) list.innerHTML = faqItems(FAQS.filter((faq) => `${faq.q} ${faq.a}`.includes(query)));
+  if (event.target.dataset.action === "faq-search") {
+    const query = event.target.value.trim();
+    const list = document.querySelector("#faq-list");
+    if (list) list.innerHTML = faqItems(FAQS.filter((faq) => `${faq.q} ${faq.a}`.includes(query)));
+  }
+  if (event.target.dataset.action === "blog-search") {
+    managedBlogSearch = event.target.value;
+    const grid = event.target.closest(".container.section, .section")?.querySelector(".grid.grid-3");
+    if (grid) {
+      const params = new URLSearchParams(location.hash.split("?")[1] || "");
+      const active = params.get("category") || "الكل";
+      const search = (managedBlogSearch || "").trim();
+      let articles = (managedBlog?.articles || []).filter((a) => a.isVisible !== false).map((a, index) => ({ id: a.id, slug: a.slug, title: a.title, category: a.categoryName || "عام", date: a.publishedText || a.publishedAt || "", summary: a.summary || "", content: a.body || a.summary || "", imageUrl: a.imageUrl || null, sortOrder: a.sortOrder, legacyId: index + 1 }));
+      if (articles.length === 0) articles = ARTICLES.filter((a) => a.isVisible !== false).map((a, index) => ({ id: a.id, slug: null, title: a.title, category: a.category || "عام", date: a.date || "", summary: a.summary || "", content: a.content || "", imageUrl: null, sortOrder: index, legacyId: index + 1 }));
+      const filtered = (active === "الكل" ? articles : articles.filter((a) => a.category === active)).filter((a) => `${a.title} ${a.summary} ${a.content}`.includes(search));
+      grid.outerHTML = filtered.length ? `<div class="grid grid-3">${filtered.map((a) => `<article class="card article-card"><div class="article-cover">${a.imageUrl ? `<img src="${esc(a.imageUrl)}" alt="${esc(a.title)}" style="width:100%;height:100%;object-fit:cover;border-radius:8px" loading="lazy" />` : "▤"}</div><div class="article-body"><div class="article-meta"><span>◷ ${esc(a.date)}</span><span>◈ ${esc(a.category)}</span></div><h3>${esc(a.title)}</h3><p>${esc(a.summary)}</p><button class="btn btn-outline" data-action="open-article" data-article="${a.id}">اقرأ المزيد</button></div></article>`).join("")}</div>` : `<div class="text-center text-muted" style="padding:3rem">لم نتمكن من العثور على مقالات تطابق بحثك. يرجى تجربة كلمات أخرى.</div>`;
+    }
+  }
 });
 window.addEventListener("hashchange", () => { state.article = null; state.sidebar = false; render(); recordVisit(); });
 window.addEventListener("scroll", () => document.querySelector(".back-top")?.classList.toggle("visible", window.scrollY > 300));
@@ -670,9 +957,19 @@ function managedAboutPage() {
   return `<div class="container section"><div class="text-center"><h1 class="page-title">من نحن</h1><p class="page-intro">${esc(intro)}</p></div><div class="grid grid-2"><div class="card about-box" style="border-top:4px solid var(--primary)"><div class="round-icon">◉</div><h2>رؤيتنا</h2><p class="text-muted">${esc(vision)}</p></div><div class="card about-box" style="border-top:4px solid var(--accent)"><div class="round-icon">◎</div><h2>رسالتنا</h2><p class="text-muted">${esc(mission)}</p></div></div><section class="section"><h2 class="text-center">أهدافنا الاستراتيجية</h2><div class="grid grid-4" style="margin-top:2rem">${goals.map(([emoji, title, description]) => `<div class="card goal-card"><div class="goal-icon">${esc(emoji)}</div><h3>${esc(title)}</h3><p>${esc(description)}</p></div>`).join("")}</div></section><section class="section"><h2 class="text-center">فريق الإدارة</h2><div class="grid grid-4" style="margin-top:2rem">${team.map(member => `<div class="team"><div class="team-avatar">${member.photoUrl ? `<img src="${esc(member.photoUrl)}" alt="${esc(member.name)}" />` : "♟"}</div><h3>${esc(member.name)}</h3><p style="color:var(--accent);font-size:.85rem;font-weight:700">${esc(member.role)}</p></div>`).join("")}</div></section></div>`;
 }
 
+
+async function loadSiteBlog() {
+  try {
+    const result = await rpcQuery("site.blog.publicList");
+    if (Array.isArray(result?.categories) && Array.isArray(result?.articles)) managedBlog = result;
+    else managedBlog = { categories: [], articles: [] };
+  } catch {
+    managedBlog = { categories: [], articles: [] };
+  }
+}
 async function bootSite() {
   try { applyManagedContent(await rpcQuery("site.publicContent")); } catch { /* تُستخدم البيانات الأصلية المرفقة إذا تعذر الاتصال. */ }
-  void loadSiteDownloads().then(() => { if (location.hash.startsWith("#/downloads")) render(); }).catch(() => {});
+  void Promise.all([loadSiteDownloads(), loadSiteContact(), loadSiteBlog(), loadSiteTeamPartners()]).then(() => { if (location.hash.startsWith("#/downloads") || location.hash.startsWith("#/blog") || location.hash.startsWith("#/about") || location.hash.startsWith("#/partners")) render(); }).catch(() => {});
   if (localStorage.getItem("wajbat-theme") === "dark") document.body.classList.add("dark");
   if (!(await resolveVisitorLinkAtEntry())) return;
   const hasInitialHash = Boolean(location.hash);

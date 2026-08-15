@@ -196,11 +196,11 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-blog-manager-r6.js", destination: "assets/js/admin-blog-manager-r6.js" },
         { source: "assets/js/admin-blog-manager-r7.js", destination: "assets/js/admin-blog-manager-r7.js" },
         { source: "assets/js/admin-blog-manager-r8.js", destination: "assets/js/admin-blog-manager-r8.js" },
-        { source: "assets/js/site-app-r14.js", destination: "assets/js/site-app-r14.js" },
-        { source: "assets/js/site-app-r17.js", destination: "assets/js/site-app-r17.js" },
-        { source: "assets/js/site-app-r19.js", destination: "assets/js/site-app-r19.js" },
-        { source: "assets/js/site-app-r18.js", destination: "assets/js/site-app-r18.js" },
-        { source: "assets/js/site-app-r30.js", destination: "assets/js/site-app-r30.js" },
+        { source: "assets/js/site-app-r14.js", destination: "assets/js/site-app-r31.js" },
+        { source: "assets/js/site-app-r17.js", destination: "assets/js/site-app-r31.js" },
+        { source: "assets/js/site-app-r19.js", destination: "assets/js/site-app-r31.js" },
+        { source: "assets/js/site-app-r18.js", destination: "assets/js/site-app-r31.js" },
+        { source: "assets/js/site-app-r30.js", destination: "assets/js/site-app-r31.js" },
         { source: "assets/js/admin-app-r28.js", destination: "assets/js/admin-app-r28.js" },
         { source: "assets/js/admin-app-r29.js", destination: "assets/js/admin-app-r29.js" },
         { source: "assets/js/admin-app-r30.js", destination: "assets/js/admin-app-r30.js" },
@@ -256,7 +256,7 @@ function copyAdminAssets(): Plugin {
 function publishVersionedEntryAssets(): Plugin {
   const sourceRoot = path.resolve(import.meta.dirname, "client", "public", "assets");
   const entries = [
-    { source: "js/app.js", destination: "js/site-app-r10.js" },
+    { source: "js/app.js", destination: "js/site-app-r31.js" },
     { source: "js/admin-app-r16.js", destination: "js/admin-app-r17.js" },
   ];
 
@@ -302,7 +302,7 @@ export default defineConfig({
       input: {
         site: path.resolve(import.meta.dirname, "client/public/index.html"),
         "js/site-app-r19": path.resolve(import.meta.dirname, "client/public/assets/js/site-app-r19.js"),
-        "js/site-app-r30": path.resolve(import.meta.dirname, "client/public/assets/js/site-app-r30.js"),
+        "js/site-app-r30": path.resolve(import.meta.dirname, "client/public/assets/js/site-app-r31.js"),
         "js/site-app-r18": path.resolve(import.meta.dirname, "client/public/assets/js/site-app-r18.js"),
       },
     },

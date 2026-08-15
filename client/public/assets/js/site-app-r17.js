@@ -28,7 +28,23 @@ let managedBlog = null;  // تصنيفات ومقالات المدونة الأ�
 const state = { sidebar: false, servicesOpen: false, selectedService: null, article: null, blogArticleSlug: null, previewArticle: null };
 
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
-const wa = (message = "") => `https://wa.me/${SITE_CONFIG.whatsapp}?text=${encodeURIComponent(message)}`;
+const waNumber = (custom = null) => {
+  const raw = (custom != null ? String(custom) : (SITE_CONFIG && SITE_CONFIG.whatsapp) || "966542699518").toString();
+  // 1) Split on any non-digit separator; each piece is evaluated strictly
+  const pieces = raw.split(/[^0-9]+/).filter(Boolean);
+  for (const p of pieces) {
+    if (/^9665\d{8}$/.test(p)) return p;          // strictly 966 + 9 digits
+    if (/^5\d{8}$/.test(p)) return "966" + p;     // local 10-digit
+  }
+  // 2) Fallback on concatenated digits: find the LAST strictly valid 12-digit 966 sequence
+  const digits = raw.replace(/[^0-9]/g, "");
+  const m966 = digits.match(/(9665\d{8})(?!966)/);
+  if (m966) return m966[1];
+  const m5 = digits.match(/(5\d{8})(?!966)/);
+  if (m5) return "966" + m5[1];
+  return "966542699518";
+};
+const wa = (message = "", number = null) => `https://wa.me/${waNumber(number)}?text=${encodeURIComponent(message)}`;
 const link = (path, label, className = "") => `<a class="${className}" href="#${path}">${label}</a>`;
 const icon = (emoji) => `<span aria-hidden="true">${emoji}</span>`;
 const safeCss = (value = "") => String(value).replace(/[;{}<>]/g, "");
@@ -304,8 +320,19 @@ function logoMarkup(className = "brand-mark") {
   return `<span class="${className}"><img src="${logoUrl}" alt="واجبات بلس" onerror="this.remove();this.parentElement.textContent='و';" /></span>`;
 }
 
+function renderTickerText(text) {
+  // Wrap each phone/plus-prefixed token in dir=ltr spans so bidirectional
+  // text in a single-line RTL ticker never renders the "+" after the digits
+  // (e.g. "+966..." appearing as "966...+").
+  return String(text).split(/(\+\d[\d\s]{6,})/g).map(part => {
+    if (/^\+\d[\d\s]{6,}$/.test(part)) {
+      return '<span class="ticker-num" dir="ltr">' + esc(part) + '</span>';
+    }
+    return esc(part);
+  }).join('');
+}
 function header() {
-  return `<div class="ticker"><span>${esc(siteSettings.tickerText || "مرحباً بكم في واجبات بلس ⭐ نقدم أفضل الخدمات الأكاديمية ⭐ تواصل معنا على واتساب +966567680470")}</span></div>
+  return `<div class="ticker ticker-pro"><span>${renderTickerText(siteSettings.tickerText || "مرحباً بكم في واجبات بلس ⭐ نقدم أفضل الخدمات الأكاديمية ⭐ تواصل معنا على واتساب +966567680470")}</span></div>
     <header class="site-header">
       <div class="header-actions">
         <button class="btn-icon" data-action="toggle-sidebar" aria-label="فتح القائمة">☰</button>
@@ -628,39 +655,129 @@ async function loadSiteContact() {
 
 let contactItems = [["◉", "واتساب", "+966 56 768 0470", wa()], ["☎", "جوال", "+966 56 768 0470", "tel:+966567680470"], ["✉", "البريد الإلكتروني", "wajbatbls@gmail.com", "mailto:wajbatbls@gmail.com"], ["◷", "ساعات العمل", "متواجدون 24/7", ""], ["⌖", "العنوان", "الرياض، المملكة العربية السعودية", ""]];
 function contactPage() {
-  return `<div class="container section" style="max-width:1200px"><div class="text-center"><h1 class="page-title">اتصل بنا</h1><p class="page-intro">نحن هنا دائماً لخدمتك والإجابة على جميع استفساراتك الأكاديمية.</p></div><div class="grid grid-2" style="grid-template-columns:2fr 3fr;align-items:start"><div class="grid">${buildContactCards().map(([ico, label, value, href, thumbUrl]) => `<div class="card contact-item">${thumbUrl ? `<img src="${esc(thumbUrl)}" alt="${esc(label)}" class="contact-thumb" />` : ""}<span class="contact-icon">${ico}</span><div><small class="text-muted">${label}</small>${href ? `<a class="contact-value" href="${href}" ${href.startsWith("http") ? 'target="_blank" rel="noopener"' : ""}>${value}</a>` : `<div class="contact-value">${value}</div>`}</div></div>`).join("")}<div class="card card-pad"><h3>وسائل التواصل الاجتماعي</h3><div class="social-row">${dynamicSocialRow() || fallbackSocialRow()}</div></div><a class="btn btn-green" href="${wa("أريد التواصل مع فريق واجبات بلس")}" target="_blank" rel="noopener">◉ تواصل فوري عبر واتساب</a></div><div class="grid"><div class="card card-pad"><h2>أرسل لنا رسالة</h2><form data-form="contact" class="grid"><div class="grid grid-2"><div class="field"><label>الاسم الكريم *</label><input name="name" required placeholder="محمد أحمد" /></div><div class="field"><label>رقم الجوال *</label><input name="phone" required placeholder="05XXXXXXXX" /></div></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" placeholder="example@email.com" dir="ltr" /></div><div class="field"><label>الموضوع *</label><input name="subject" required placeholder="استفسار عن خدمة..." /></div><div class="field"><label>الرسالة *</label><textarea name="message" required placeholder="اكتب رسالتك أو استفسارك هنا..."></textarea></div><button class="btn btn-primary" type="submit">➤ إرسال الرسالة</button></form></div><div class="card" style="overflow:hidden"><div class="card-pad" style="padding-bottom:.6rem"><b>⌖ موقعنا — الرياض، المملكة العربية السعودية</b></div><iframe class="map" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3624.674!2d46.6753!3d24.7136!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3e2f03890d489399%3A0xba974d1c98e79fd5!2sRiyadh%2C%20Saudi%20Arabia!5e0!3m2!1sen!2ssa!4v1234567890" loading="lazy" title="موقعنا على الخريطة"></iframe></div></div></div></div>`;
+  const waLink = wa("أريد التواصل مع فريق واجبات بلس");
+  const cards = buildContactCards();
+  const [waCard, mobCard, emailCard, addrCard] = [
+    cards.find((c) => c[0] === "◉"),
+    cards.find((c) => c[0] === "☎"),
+    cards.find((c) => c[0] === "✉"),
+    cards.find((c) => c[0] === "⌖"),
+  ];
+  const chip = (card, kind) => {
+    if (!card) return "";
+    const [, label, value, href] = card;
+    const inner = href ? `<a class="contact-chip-link" href="${href}" ${href.startsWith("http") ? 'target="_blank" rel="noopener"' : ""}>${esc(value)}</a>` : `<span class="contact-chip-value">${esc(value)}</span>`;
+    return `<div class="contact-chip ${kind}"><span class="contact-chip-icon">${card[0]}</span><div class="contact-chip-body"><small class="contact-chip-label">${esc(label)}</small>${inner}</div></div>`;
+  };
+  const SOCIAL_META = { whatsapp: { icon: "◉", color: "#25D366", aria: "واتساب" }, telegram: { icon: "✈", color: "#26A5E4", aria: "تيليجرام" }, facebook: { icon: "f", color: "#1877F2", aria: "فيسبوك" }, twitter: { icon: "𝕏", color: "#1D9BF0", aria: "تويتر" } };
+  const socialIcons = (() => {
+    const socials = (managedContact?.channels || []).filter((c) => c.type === "social").sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+    if (!socials.length) return "";
+    return socials.map((ch) => {
+      const key = (ch.platform || "").toLowerCase();
+      const meta = SOCIAL_META[key];
+      const icon = (meta ? meta.icon : (ch.icon || "🔗")).trim();
+      const color = ch.backgroundColor || (meta ? meta.color : "#64748b");
+      const aria = meta ? meta.aria : esc(ch.platformName || key || "رابط");
+      return `<a class="contact-social-icon" href="${safeHref(ch.link || "#")}" target="_blank" rel="noopener" aria-label="${aria}" style="background:${color}">${esc(icon)}</a>`;
+    }).join("");
+  })();
+  const waChip = waCard
+    ? chip(waCard, "wa")
+    : `<a class="contact-chip wa" href="${waLink}" target="_blank" rel="noopener"><span class="contact-chip-icon">◉</span><div class="contact-chip-body"><small class="contact-chip-label">واتساب</small><span class="contact-chip-value">${esc(siteSettings.phone || "+966 56 768 0470")}</span></div></a>`;
+  const phoneNum = (siteSettings.phone || "+966 56 768 0470").replace(/\s/g, "");
+  const mobChip = mobCard
+    ? chip(mobCard, "mob")
+    : `<a class="contact-chip mob" href="tel:+${phoneNum}"><span class="contact-chip-icon">☎</span><div class="contact-chip-body"><small class="contact-chip-label">رقم الجوال</small><span class="contact-chip-value">+${phoneNum}</span></div></a>`;
+  const emailChip = emailCard
+    ? chip(emailCard, "email")
+    : `<a class="contact-chip email" href="mailto:${esc(siteSettings.email || "wajbatbls@gmail.com")}"><span class="contact-chip-icon">✉</span><div class="contact-chip-body"><small class="contact-chip-label">البريد الإلكتروني</small><span class="contact-chip-value">${esc(siteSettings.email || "wajbatbls@gmail.com")}</span></div></a>`;
+  const addrChip = addrCard
+    ? chip(addrCard, "addr")
+    : `<div class="contact-chip addr"><span class="contact-chip-icon">⌖</span><div class="contact-chip-body"><small class="contact-chip-label">العنوان</small><span class="contact-chip-value">${esc(siteSettings.address || "الرياض، المملكة العربية السعودية")}</span></div></div>`;
+  return `<div class="container section contact-page">
+    <div class="text-center"><h1 class="page-title">اتصل بنا</h1><p class="page-intro">نحن هنا دائماً لخدمتك والإجابة على جميع استفساراتك الأكاديمية.</p></div>
+    <div class="card card-pad contact-info-card"><h2 class="contact-info-title">معلومات التواصل المباشرة</h2><div class="contact-chips">${waChip}${mobChip}${emailChip}${addrChip}</div><div class="contact-social-strip">${socialIcons || `<span class="text-muted" style="font-size:.85rem">لا توجد روابط تواصل اجتماعي بعد</span>`}</div><a class="btn btn-primary contact-send-btn" href="javascript:void(0)" data-action="contact-scroll">أرسل لنا رسالة</a></div>
+    <div class="contact-main-grid">
+      <div class="contact-form-col">
+        <div class="card card-pad"><h2 class="contact-form-title">أرسل لنا رسالة</h2><p class="text-muted contact-form-hint">املأ النموذج أدناه وسنرد عليك في أقرب وقت ممكن.</p><form data-form="contact" class="contact-form"><div class="grid grid-2"><div class="field"><label>الاسم الكريم *</label><input name="name" required placeholder="محمد أحمد" /></div><div class="field"><label>رقم الجوال *</label><input name="phone" required placeholder="05XXXXXXXX" /></div></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" placeholder="example@email.com" dir="ltr" /></div><div class="field"><label>الموضوع *</label><input name="subject" required placeholder="استفسار عن خدمة..." /></div><div class="field"><label>الرسالة *</label><textarea name="message" required placeholder="اكتب رسالتك أو استفسارك هنا..."></textarea></div><button class="btn btn-primary" type="submit">➤ إرسال الرسالة</button></form></div>
+      </div>
+      <div class="contact-side-col">
+        <div class="card card-pad contact-side-card"><h3 class="contact-side-title">تواصل فوري</h3><p class="text-muted" style="font-size:.85rem;margin-bottom:.8rem">للاستجابة الأسرع يفضل التواصل عبر الواتساب مباشرة.</p><div class="social-row" style="margin-bottom:1rem">${dynamicSocialRow() || fallbackSocialRow()}</div><a class="btn btn-green contact-wa-btn" href="${waLink}" target="_blank" rel="noopener">◉ تواصل فوري عبر واتساب</a></div>
+      </div>
+    </div>
+    
+  </div>`;
 }
-
-let managedManagedTeam = null; // فريق الإدارة من قاعدة البيانات (team_members)
-let managedManagedPartners = null; // شركاء النجاح من قاعدة البيانات (partners)
+let managedTeam = null; // فريق الإدارة من قاعدة البيانات (team_members)
+let managedPartners = null; // شركاء النجاح من قاعدة البيانات (partners)
 async function loadSiteTeamPartners() {
   try {
     const team = await rpcQuery("site.team.listPublic");
-    if (Array.isArray(team)) managedManagedTeam = team;
-  } catch { managedManagedTeam = null; }
+    if (Array.isArray(team)) managedTeam = team;
+  } catch { managedTeam = null; }
   try {
     const partnersList = await rpcQuery("site.partners.listPublic");
-    if (Array.isArray(partnersList)) managedManagedPartners = partnersList;
-  } catch { managedManagedPartners = null; }
+    if (Array.isArray(partnersList)) managedPartners = partnersList.filter(p => p && p.name && String(p.link || "") !== "NULL" && String(p.logoUrl || "") !== "NULL");
+  } catch { managedPartners = null; }
   if (currentPath() === "/about" || currentPath() === "/partners") render();
 }
 function aboutPage() {
   const goals = [["🛡", "جودة المخرجات", "ضمان أعلى معايير الجودة الأكاديمية في جميع الخدمات المقدمة."], ["♟", "رضا الطلاب", "تحقيق أعلى معدلات الرضا لعملائنا من الطلاب والطالبات."], ["🏆", "التميز المهني", "استقطاب أفضل الكفاءات الأكاديمية لتقديم خدماتنا."], ["▤", "التطور المستمر", "مواكبة أحدث التطورات في المناهج وأساليب التعليم."]];
   const fallbackTeam = [["أحمد عبدالله", "المدير التنفيذي"], ["سارة محمد", "مدير الشؤون الأكاديمية"], ["محمد فهد", "مدير التقنية"], ["نورة خالد", "مدير خدمة العملاء"]];
-  const managedTeam = Array.isArray(managedManagedTeam) && managedManagedTeam.length ? managedManagedTeam : fallbackTeam.map(([name, role]) => ({ name, role, description: "", photoUrl: "" }));
+  const managedTeam = Array.isArray(managedTeam) && managedTeam.length ? managedTeam : fallbackTeam.map(([name, role]) => ({ name, role, description: "", photoUrl: "" }));
   return `<div class="container section"><div class="text-center"><h1 class="page-title">من نحن</h1><p class="page-intro">واجبات بلس هي منصة تعليمية سعودية رائدة، تأسست بهدف تقديم الدعم الأكاديمي الشامل للطلاب والطالبات في مختلف المراحل الدراسية، من خلال نخبة من الخبراء والأكاديميين المتخصصين.</p></div><div class="grid grid-2"><div class="card about-box" style="border-top:4px solid var(--primary)"><div class="round-icon">◉</div><h2>رؤيتنا</h2><p class="text-muted">أن نكون المنصة الأكاديمية الرائدة والموثوقة الأولى في المملكة العربية السعودية، والوجهة المفضلة لكل طالب يبحث عن التميز والنجاح الأكاديمي.</p></div><div class="card about-box" style="border-top:4px solid var(--accent)"><div class="round-icon">◎</div><h2>رسالتنا</h2><p class="text-muted">تقديم خدمات أكاديمية احترافية وعالية الجودة تدعم مسيرة الطلاب العلمية، وتساهم في تذليل الصعاب التي تواجههم، بأسعار تنافسية وبسرية تامة.</p></div></div><section class="section"><h2 class="text-center">أهدافنا الاستراتيجية</h2><div class="grid grid-4" style="margin-top:2rem">${goals.map(([ico, title, desc]) => `<div class="card goal-card"><div class="goal-icon">${ico}</div><h3>${title}</h3><p>${desc}</p></div>`).join("")}</div></section><section class="section"><h2 class="text-center">فريق الإدارة</h2><div class="grid grid-4" style="margin-top:2rem">${managedTeam.map(member => `<div class="team"><div class="team-avatar">${member.photoUrl ? `<img src="${esc(member.photoUrl)}" alt="${esc(member.name)}" />` : "♟"}</div><h3>${esc(member.name)}</h3><p style="color:var(--accent);font-size:.85rem;font-weight:700">${esc(member.role)}</p>${member.description ? `<p class="text-muted" style="font-size:.8rem;margin-top:.4rem">${esc(member.description)}</p>` : ""}</div>`).join("")}</div></section></div>`;
 }
 
 function partnersPage() {
-  const section = (title, emoji, data, countLabel) => `<section class="download-section"><div class="section-heading"><span>${emoji}</span><h2>${title}</h2><span class="count">${data.length} ${countLabel}</span></div><div class="grid grid-5">${data.map((item) => { const [name, location] = item.split(" - "); return `<div class="card partner-card"><div><div class="partner-icon">${emoji}</div><h3>${name}</h3><p>${location || ""}</p></div></div>`; }).join("")}</div></section>`;
-  const dynamicPartners = Array.isArray(managedManagedPartners) && managedManagedPartners.length ? managedManagedPartners : null;
-  const partnerRows = dynamicPartners ? dynamicPartners.map((item) => `<div class="card partner-card">${item.logoUrl ? `<img src="${esc(item.logoUrl)}" alt="${esc(item.name)}" class="partner-logo" />` : ""}<div><div class="partner-icon">${item.kind === "معهد" ? "▤" : "▣"}</div><h3>${esc(item.name)}</h3><p>${[item.city, item.kind].filter(Boolean).join(" · ")}</p>${item.description ? `<p class="text-muted" style="font-size:.8rem;margin-top:.3rem">${esc(item.description)}</p>` : ""}${item.link ? `<a class="partner-link" href="${esc(item.link)}" target="_blank" rel="noopener">🔗 الموقع الرسمي</a>` : ""}</div></div>`).join("") : "";
-  if (dynamicPartners) {
-    const byKind = { "جامعة": [], "معهد": [], "جهات تعليمية": [] };
-    dynamicPartners.forEach(item => { (byKind[item.kind] || byKind["جهات تعليمية"]).push(item); });
-    return `<div class="container section"><div class="text-center"><h1 class="page-title">شركاء النجاح</h1><p class="page-intro">نفخر بخدمة طلاب وطالبات أعرق الجامعات السعودية والمعاهد التعليمية ونسعى دائماً لدعم مسيرتهم الأكاديمية.</p></div>${dynamicPartners.length ? `<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1.2rem">${partnerRows}</div>` : ""}<div class="card card-pad text-center" style="max-width:800px;margin:2rem auto;background:linear-gradient(to right,var(--primary-soft),color-mix(in srgb,var(--accent) 8%,transparent))"><h2>هل جامعتك غير مدرجة؟</h2><p class="text-muted">نحن نقدم خدماتنا لجميع الطلاب في مختلف الجامعات والكليات داخل وخارج المملكة. لا تتردد في التواصل معنا.</p><a class="btn btn-primary" href="${wa("أريد الاستفسار عن خدماتكم")}" target="_blank" rel="noopener">تواصل معنا الآن</a></div></div>`;
-  }
-  return `<div class="container section"><div class="text-center"><h1 class="page-title">شركاء النجاح</h1><p class="page-intro">نفخر بخدمة طلاب وطالبات أعرق الجامعات السعودية والمعاهد التعليمية ونسعى دائماً لدعم مسيرتهم الأكاديمية.</p></div>${section("الجامعات السعودية", "▣", UNIVERSITIES, "جامعة")}${section("المعاهد التعليمية", "▤", INSTITUTES, "معهد")}${section("جهات أخرى", "🤝", OTHERS, "جهات")}<div class="card card-pad text-center" style="max-width:800px;margin:2rem auto;background:linear-gradient(to right,var(--primary-soft),color-mix(in srgb,var(--accent) 8%,transparent))"><h2>هل جامعتك غير مدرجة؟</h2><p class="text-muted">نحن نقدم خدماتنا لجميع الطلاب في مختلف الجامعات والكليات داخل وخارج المملكة. لا تتردد في التواصل معنا.</p><a class="btn btn-primary" href="${wa("أريد الاستفسار عن خدماتكم")}" target="_blank" rel="noopener">تواصل معنا الآن</a></div></div>`;
+  const shapeStyles = (item) => ({
+    "--partner-bg": item.backgroundColor || "#eef1f8",
+    "--partner-text": item.textColor || "#3f4254",
+    "--partner-accent": item.accentColor || "#4966d6",
+    "--partner-border": item.borderColor || item.accentColor || "#4966d6",
+  });
+  const initialOf = (name) => (name || "؟").split(" ").map(w => w.charAt(0)).filter(Boolean).slice(0, 2).join("");
+  const isWebsiteUrl = (v) => /^https?:\/\/[^\s]+$/i.test(String(v || ""));
+  const isWhatsAppNumber = (v) => /^(\+?[\d][\d\s\-]{7,24})$/.test(String(v || ""));
+  const partnerCard = (item) => {
+    const rawLink = String(item.link || "").trim();
+    const hasWebsite = isWebsiteUrl(rawLink);
+    /* لا واتساب إطلاقًا من بطاقة الجامعة — الموقع الرسمي فقط */
+    const href = hasWebsite ? esc(rawLink) : "javascript:void(0)";
+    const styles = Object.entries(shapeStyles(item)).map(([k, v]) => k + ":" + v).join(";");
+    const logoUrlStr = String(item.logoUrl || "");
+    const logoUrlOk = item.logoUrl && (/^https?:\/\//i.test(logoUrlStr) || /^\/manus-storage\//.test(logoUrlStr));
+    const logo = logoUrlOk
+      ? `<img src="${esc(item.logoUrl)}" alt="${esc(item.name)}" loading="lazy" />`
+      : `<span class="partner-pro-initial">${esc(initialOf(item.name))}</span>`;
+    const hasDescription = Boolean(item.description);
+    const noLinkNote = hasWebsite ? "" : `<span class="partner-pro-nolink">لم يتوفر رابط الموقع بعد</span>`;
+    const buttons = hasWebsite
+      ? `<span class="partner-pro-actions"><a class="partner-pro-btn partner-pro-btn-site" href="${esc(rawLink)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">🌐 زيارة موقع الجامعة</a></span>`
+      : "";
+    return `<a class="partner-pro-card ${hasWebsite ? "" : "partner-pro-card-nolink"}" href="${href}" target="${hasWebsite ? "_blank" : "_self"}" rel="noopener" style="${styles}" ${hasWebsite ? "" : 'onclick="return false"'}>
+      <span class="partner-pro-badge">${logo}</span>
+      <span class="partner-pro-name">${esc(item.name)}</span>
+      <span class="partner-pro-meta">${[item.city, item.kind].filter(Boolean).join(" · ") || "شريك نجاح"}</span>
+      ${hasDescription ? `<span class="partner-pro-desc">${esc(item.description)}</span>` : ""}
+      ${noLinkNote}
+      ${buttons}
+    </a>`;
+  };
+  const dynamicPartners = Array.isArray(managedPartners) && managedPartners.length ? managedPartners : null;
+  const rows = dynamicPartners ? dynamicPartners.map(partnerCard).join("") : "";
+  const count = dynamicPartners ? dynamicPartners.length : 0;
+  const empty = `<div class="empty-state" style="padding:3rem 1rem"><div class="round-icon" style="width:4.5rem;height:4.5rem;font-size:2rem">🤝</div><h3 style="margin-top:1rem">لم تُضف الجهات بعد</h3><p class="text-muted">تتولى إدارة الموقع إضافة الجامعات والشركاء من لوحة الإدارة.</p></div>`;
+  return `<div class="container section">
+    <div class="partners-hero-banner"><h1 class="page-title" style="color:#fff">شركاء النجاح</h1><p class="page-intro">نفخر بخدمة طلاب وطالبات أعرق الجامعات السعودية والمعاهد التعليمية ونسعى دائماً لدعم مسيرتهم الأكاديمية.</p></div>
+    <div class="partners-stats-strip">
+      <div class="partners-stat"><div class="partners-stat-num">${count}</div><div class="partners-stat-label">جهة تعليمية شريكة</div></div>
+      <div class="partners-stat"><div class="partners-stat-num">كلها</div><div class="partners-stat-label">جامعات ومناطق المملكة</div></div>
+      <div class="partners-stat"><div class="partners-stat-num">+24</div><div class="partners-stat-label">ساعة دعم يومي</div></div>
+    </div>
+    ${dynamicPartners ? `<div class="partner-grid-pro">${rows}</div>` : empty}
+    <div class="card card-pad text-center" style="max-width:800px;margin:2rem auto;background:linear-gradient(to right,var(--primary-soft),color-mix(in srgb,var(--accent) 8%,transparent))"><h2>هل جامعتك غير مدرجة؟</h2><p class="text-muted">نحن نقدم خدماتنا لجميع الطلاب في مختلف الجامعات والكليات داخل وخارج المملكة. لا تتردد في التواصل معنا.</p><a class="btn btn-primary" href="${wa("أريد الاستفسار عن خدماتكم")}" target="_blank" rel="noopener">تواصل معنا الآن</a></div>
+  </div>`;
 }
 
 function notFound() {
@@ -797,6 +914,7 @@ document.addEventListener("click", (event) => {
     const copy = () => { if (navigator.clipboard) return navigator.clipboard.writeText(url); return Promise.resolve().then(() => { const ta = document.createElement("textarea"); ta.value = url; document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove(); }); };
     copy().then(() => toast("تم نسخ رابط المقال", "يمكنك الآن مشاركته مع الآخرين.")).catch(() => toast("تعذر النسخ", "يرجى النسخ يدويًا من شريط العنوان."));
   }
+  if (action === "contact-scroll") { const fc = document.querySelector("[data-form=contact]"); if (fc) fc.scrollIntoView({ behavior: "smooth", block: "center" }); }
   if (action === "top") window.scrollTo({ top: 0, behavior: "smooth" });
 });
 document.addEventListener("submit", (event) => { const form = event.target.closest("form[data-form]"); if (form) { event.preventDefault(); handleForm(form).catch((error) => {

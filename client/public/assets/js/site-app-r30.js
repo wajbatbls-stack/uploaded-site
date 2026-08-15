@@ -745,7 +745,8 @@ function partnersPage() {
     /* لا واتساب إطلاقًا من بطاقة الجامعة — الموقع الرسمي فقط */
     const href = hasWebsite ? esc(rawLink) : "javascript:void(0)";
     const styles = Object.entries(shapeStyles(item)).map(([k, v]) => k + ":" + v).join(";");
-    const logoUrlOk = item.logoUrl && /^https?:\/\//i.test(String(item.logoUrl || ""));
+    const logoUrlStr = String(item.logoUrl || "");
+    const logoUrlOk = item.logoUrl && (/^https?:\/\//i.test(logoUrlStr) || /^\/manus-storage\//.test(logoUrlStr));
     const logo = logoUrlOk
       ? `<img src="${esc(item.logoUrl)}" alt="${esc(item.name)}" loading="lazy" />`
       : `<span class="partner-pro-initial">${esc(initialOf(item.name))}</span>`;

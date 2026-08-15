@@ -237,3 +237,39 @@ admin-partners-manager-r10.js موجود في client/public/assets/js/ (32626 ب
 3. المتبقي: تشغيل pnpm test + حفظ checkpoint مع رسالة r10، ثم فحص صفحة الزائر في الإنتاج (partners تظهر بالشعار المرفوع + زر موقع الجامعة فقط) عبر browser على uploadplus-47dkogbk.manus.space/partners (أو رابط صفحة الشركاء)، ثم تسليم.
 4. ملاحظة: حقل رابط الجامعة في نموذج التعديل يعرض placeholder "https://example.edu.sa" (قيمة فاضية نظيفة بعد تنظيف NULL — صحيح).
 5. رابط الإنتاج: https://uploadplus-47dkogbk.manus.space/admin
+
+## حالة حذف شعار الاختبار (20:23 UTC)
+- DB: logoUrl لجامعة طيبة (id=1) صُفّر إلى NULL بنجاح عبر scripts/remove-test-logo.mjs. الشعار الاختباري لن يظهر للزائر أبدًا.
+- S3: presign delete غير مدعوم (404) — الملف wajbat-plus/partners/1_eef5288b.png بقي في S3 لكنه غير مرجوع من أي شريك، فلا يظهر. الحذف الاختياري.
+- checkpoint 3938673e حُفظ ونُشر (auto-publish) على uploadplus-47dkogbk.manus.space.
+- المتبقي فقط: (1) التحقق النهائي من صفحة الشركاء للزائر على الإنتاج بدون واتساب، (2) تحديث todo.md وتسليم.
+
+## مشكلة الإنتاج: partners للزائر يعرض «لم تُضف الجهات بعد» (20:21 UTC)
+الإنتاج يعرض partnersPartners فارغًا رغم وجود 33 شريكًا في DB و isVisible=true. السبب المرشح: production root html (client/public/index.html) يستورد site-app-r28 أو wrapper قديمًا، أو أن production build لم يدمج آخر r30/شركاء. يجب فحص curl للإنتاج + partnerSection في site-app-r30 (هل يستخدم isVisible؟ kind؟).
+
+## تشخيص صفحة الشركاء الفارغة في الإنتاج (20:22 UTC)
+- API المنشور يرجع 33 شريكًا isVisible=true بشكل سليم (curl + fetch من المتصفح).
+- الرمز سليم: loadSiteTeamPartners يستدعي site.partners.listPublic ثم filter للـNULL وif currentPath()===/partners يعيد render.
+- عند /#/partners عبر hashchange تُستدعى render مرة ثانية بعد اكتمال Promise.all — لذا يجب أن تعمل.
+- الفرضية المتبقية: في السكربت المنشور render() بعد Promise.all لا يعيد رسم /partners إذا كانت state/records لا تطابق؟ أو أن empty يظهر لأن render() يُستدعى قبل الاكتمال مرة واحدة فقط (عند load الأولي) وhashchange يعيد الرسم — أي أن الزيارة المباشرة لـ/#/partners عبر الضغط على الرابط تعرض partnersPartners فارغة في اللحظة الأولى ثم تعيد الرسم بعد ثوانٍ. المستخدم رأى اللقطة قبل إعادة الرسم. يجب إعادة اختبار بنفس المتصفح: انتظر 5 ثوانٍ وراقب عدد البطاقات.
+
+## التحقق النهائي من الإنتاج — نجح (20:23 UTC)
+صفحة الشركاء على الإنتاج (uploadplus-47dkogbk.manus.space/#/partners) تعرض الآن 33 جهة بشبكة بطاقات احترافية: شعارات أحرف (لا أيقونات افتراضية مزيفة)، زر «🌐 زيارة موقع الجامعة» فقط متى وُجد رابط، وسطر «لم يتوفر رابط الموقع بعد» للبطاقات بلا رابط، ولا أي زر واتساب في البطاقات. الشعار المرفوع تجريبيًا لجامعة طيبة أُزيل من قاعدة البيانات (logoUrl=NULL) فلا يظهر للزائر — الشعارات ستظهر فقط بعد أن يرفعها المالك فعلًا من لوحة r10 الجديدة. سبب اللقطة السابقة الفارغة هو أن أول render حدث قبل اكتمال جلب البيانات (fetch سريع يعيد الرسم عبر hashchange).
+
+## جذر مشكلة عدم ظهور الشعار للزائر (20:35 UTC — تقرير المستخدم + صورة)
+المستخدم رفع شعارًا جديدًا لجامعة طيبة من لوحة r10: DB فيها الآن logoUrl=/manus-storage/wajbat-plus/partners/1_dff2e8f9.jpg (مسار نسبي) و link=https://www.taibahu.edu.sa/ (الرابط الرسمي). الشعار ظهر في لوحة الإدارة لكن بطاقة الزائر في prod (site-app-r30.js) ترفضه لأن logoUrlOk يشترط /^https?:\/\//i فقط — المسار النسبي /manus-storage/ يُرفض فيسقط على partner-pro-initial (حرف «جط»).
+الإصلاح: في site-app (r31 جديد): قبول المسارات النسبية /manus-storage/ أيضًا (logoUrlOk = http(s) أو يبدأ بـ /manus-storage/) — يجب إصلاحها أيضًا في site-app dev (client/public/assets/js/site-app-r31.js) + index.html ×2 + vite.config + redirect r30→r31. ملاحظة: على الهاتف المستخدم قد يكون كاش r30 — redirect على الخادم يحل ذلك.
+
+## آلية النشر في vite.config (مهم قبل أي تعديل — 20:40 UTC)
+closeBundle الأول (copyAdminAssets) ينسخ ملفات client/public إلى dist/public بنفس المسارات دون hashing (مثل assets/js/site-app-r31.js). closeBundle الثاني (publishVersionedEntryAssets) ينسخ entries إلى dist/public/assets مع hash (مثل site-app-r31-xyz.js). index.html المنشور يحمّل /assets/js/site-app-r31.js (مسار مباشر من dist/public) — لذا يجب التأكد من وجود assets/js/site-app-r31.js في dist بعد البناء. الملفات r14/r17/r18/r19 كcopies من r31 موجودة في dist (تُحمّل عبر redirects في dev).
+
+## تشخيص حاسم لآلية النشر (20:45 UTC)
+1. index.html المنشور (dist/public/index.html) هو React wrapper يحمل assets/site-MUpu_53B.js (من build Vite لـ client/src/App.tsx) — wrapper يستدعي صفحة الزائر عبر assets/js/site-app-r31.js.
+2. ملفات client/public/assets/js/site-app-r31.js وapp.js تُنسخ مباشرة إلى dist/public/assets/js/ (نفس الاسم) عبر closeBundle الأول copyAdminAssets.
+3. نقطة الدخول js/app.js في publishVersionedEntryAssets تُنتج dist/public/assets/js/site-app-r31.js (نسخة مصغرة من js/app.js).
+4. dist/public/pages/partners.html — صفحات أقسام الزائر القديمة في pages/، لكن الزائر يدخل عبر index.html → wrapper React → SPA hash routing داخل site-app-r31.js.
+5. الإصلاح: cp site-app-r31.js (المصحح) إلى app.js + rebuild → يجب أن ينتج r31-*.js جديد في dist (كانت مشكلة: آخر build لم يُنتج hash جديد لأن Vite cache من js/app.js؟ لا — تم cp قبل build، يجب التحقق الآن).
+6. ما تبقى: بناء، تحقق من أن dist/public/assets/js/site-app-r31.js (غير المحاطة بhash) يحتوي /manus-storage/ filter، ثم pnpm test، checkpoint، التحقق على الإنتاج (الشعار المرفوع للزائر).
+
+## سكرينشوت dev بعد إصلاح f31 (20:47 UTC)
+بطاقة جامعة طيبة لا تزال فارغة في dev (لا شعار) — هذا متوقع لأن شعار الاختبار أُزيل من DB. عند رفع المستخدم شعارًا حقيقيًا الآن يجب أن يظهر فورًا. الفلتر المصحح يقبل /manus-storage/ الآن. يبقى: checkpoint ثم التحقق من الإنتاج بعد رفع المستخدم للشعار.

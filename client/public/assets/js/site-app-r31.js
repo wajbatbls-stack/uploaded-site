@@ -29,20 +29,20 @@ const state = { sidebar: false, servicesOpen: false, selectedService: null, arti
 
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
 const waNumber = (custom = null) => {
-  const raw = (custom != null ? String(custom) : SITE_CONFIG.whatsapp || "966567680470").toString();
-  // Split on any non-digit separator (/, comma, space, letters...) then take the first valid number
+  const raw = (custom != null ? String(custom) : (SITE_CONFIG && SITE_CONFIG.whatsapp) || "966542699518").toString();
+  // 1) Split on any non-digit separator; each piece is evaluated strictly
   const pieces = raw.split(/[^0-9]+/).filter(Boolean);
   for (const p of pieces) {
-    if (/^966\d{9,12}$/.test(p)) return p;
-    if (/^5\d{8,9}$/.test(p)) return "966" + p;
+    if (/^9665\d{8}$/.test(p)) return p;          // strictly 966 + 9 digits
+    if (/^5\d{8}$/.test(p)) return "966" + p;     // local 10-digit
   }
-  // Fallback: join digits only
+  // 2) Fallback on concatenated digits: find the LAST strictly valid 12-digit 966 sequence
   const digits = raw.replace(/[^0-9]/g, "");
-  const n966 = digits.match(/966\d{9,12}$/)?.[0];
-  if (n966) return n966;
-  const n5 = digits.match(/5\d{8,9}$/)?.[0];
-  if (n5) return "966" + n5;
-  return "966567680470";
+  const m966 = digits.match(/(9665\d{8})(?!966)/);
+  if (m966) return m966[1];
+  const m5 = digits.match(/(5\d{8})(?!966)/);
+  if (m5) return "966" + m5[1];
+  return "966542699518";
 };
 const wa = (message = "", number = null) => `https://wa.me/${waNumber(number)}?text=${encodeURIComponent(message)}`;
 const link = (path, label, className = "") => `<a class="${className}" href="#${path}">${label}</a>`;
@@ -745,7 +745,8 @@ function partnersPage() {
     /* لا واتساب إطلاقًا من بطاقة الجامعة — الموقع الرسمي فقط */
     const href = hasWebsite ? esc(rawLink) : "javascript:void(0)";
     const styles = Object.entries(shapeStyles(item)).map(([k, v]) => k + ":" + v).join(";");
-    const logoUrlOk = item.logoUrl && /^https?:\/\//i.test(String(item.logoUrl || ""));
+    const logoUrlStr = String(item.logoUrl || "");
+    const logoUrlOk = item.logoUrl && (/^https?:\/\//i.test(logoUrlStr) || /^\/manus-storage\//.test(logoUrlStr));
     const logo = logoUrlOk
       ? `<img src="${esc(item.logoUrl)}" alt="${esc(item.name)}" loading="lazy" />`
       : `<span class="partner-pro-initial">${esc(initialOf(item.name))}</span>`;

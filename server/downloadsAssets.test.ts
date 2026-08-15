@@ -77,14 +77,26 @@ describe("أصول قسم إدارة التحميلات الحديث (r10)", () 
     expect(manager).toContain("admin.downloads.moveFile");
   });
 
-  it("يوجّه كل نسخ مدير التحميلات والمحرر القديمة إلى النسخ الجديدة عبر redirects", () => {
+  it("النسخ القديمة من مدير التحميلات محذوفة نهائيًا وr14 هو الوحيد المتبقي", () => {
     const vite = projectFile("vite.config.ts");
-    // كل النسخ القديمة تُوجَّه إلى مدير التحميلات الحديث r11
-    for (const old of ["r1.js", "r2.js", "r3.js", "r10.js", "r11.js"]) {
-      expect(vite).toContain(`admin-downloads-manager-${old}`, `يجب توجيه ${old} إلى r14`);
+    // لا توجد أي إحالات للنسخ القديمة r1-r13 (حُذفت الملفات نهائيًا)
+    for (let i = 1; i <= 13; i++) {
+      expect(vite).not.toContain(`admin-downloads-manager-r${i}.js`, `يجب ألا توجد إحالة للنسخة القديمة r${i}`);
     }
-    // كل النسخ القديمة (r1-r3 وr10 وr11) تُوجَّه إلى r14 وهو الإصدار الحالي
-    expect(vite).toContain('destination: "assets/js/admin-downloads-manager-r14.js"');
+    // r14 هو الإصدار الوحيد المتبقي (نسخة + سطر copyAdminAssets واحد)
+    const r14Count = (vite.match(/admin-downloads-manager-r14\.js/g) || []).length;
+    expect(r14Count).toBeGreaterThanOrEqual(1);
+    // صفحات الإدارة تشير إلى r14 حصريًا
+    for (const page of ["client/public/admin.html", "client/public/admin-dashboard.html"]) {
+      const html = projectFile(page);
+      expect(html).toContain("admin-downloads-manager-r14.js");
+      for (let i = 1; i <= 13; i++) {
+        expect(html).not.toContain(`admin-downloads-manager-r${i}.js`);
+      }
+    }
+    // ملف المصدر r14 موجود فعليًا في المشروع
+    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r14.js");
+    expect(manager).toContain("WajbatDownloadsManager");
     // كل نسخ المحرر العام القديمة تُوجَّه إلى r6 الذي أعفي قسم التحميلات
     expect(vite).toContain('"assets/js/admin-structured-editor-r6.js"');
     expect(vite).toContain('"assets/js/admin-structured-editor-r5.js"');

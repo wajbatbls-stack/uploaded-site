@@ -157,3 +157,51 @@ dist r14 size=20810 بينما المصدر 32635 وr13=32633 — dist ليس r1
 - الاستنتاج: dist المنشور على الإنتاج بُني قبل تعديلات النسخ الأخيرة في closeBundle، أو أن closeBundle في build النشر لا يعمل. لكن site-app متطابق... يعني البناء المنشور حديث (نفس الوقت) لكن r14 لم يدخله!
 - فحص محتمل: vite.config في commit 1e4ab85 (المنشور) قد يكون أحدث من 22:45؟ dist محلي من 23:03.
 - الإجراء: إعادة بناء محلي والتأكد copyAdminAssets يعمل في كلتا الحالتين، ثم حفظ checkpoint جديد (auto-publish) ليتبع نشر جديد من dist المبنية.
+
+## تشخيص ليلة 16/8 (بعد checkpoint b1812938): المنشور ما زال قديمًا
+- المنشور: dl r14 = bc3b833d (50048 بايت) ≠ المحلي c91c6bf (51857 بايت) — يحتوي فقط 'typeof'×2، لا إصلاحات كاملة
+- المنشور: pm r14 = 7ac5c5bb (22059 بايت) ≠ المحلي b975bb9c — pm-grid 0 في المنشور
+- checkpoint b1812938 نُشر (auto-publish) لكن CDN يخدم المحتوى القديم
+- فرضية: النشر يأخذ من dist/ لكن ملفي r14 في dist كانا يُكتَبا قبل أن تستبدلهم redirects r2→r14؟ لا — اختبرنا md5 متطابق محليًا
+- فرضية أقوى: النشر المنشور يُبنى من dist الذي كان قبل إزالة سطر r14 المكرر/الترتيب — لكن b1812938 نُشر بعد التعديلات النهائية!
+- يجب فحص: هل النشر يخدم من كاش قديم على CDN (stale) أو أن build النشر يختلف عن buildنا (نسخة أقدم من git checkout)
+
+## تحقق ما بعد نشر b1812938 (نجاح النشر وصل الإخطار)
+- dl r14 المنشور الآن = c91c6bf (متطابق محليًا) ✓ — الإصلاحات حية: typeof imageKey ×2، saveCategory ×4
+- pm r14 المنشور = b975bb9c (متطابق محليًا) ✓ — الرأس يؤكد r14: "إصدار r14 — تصميم بطاقات محسّن"
+- المشكلة المتبقية الوحيدة: pm-grid غير موجود في الر14 المنشور! يجب فحص: هل pm-grid هي بنية class في r10 القديم أم r14 الجديد؟ — pm المحلي 34258 بايت vs r10 34254 — الفرق 4 بايت فقط. هذا يعني أن r14 الحالي = r10 تقريبًا بدون تصميم بطاقات جديد فعليًا!
+- استنتاج: "نسخة r14 من partners" التي أُنشئت كانت cp من r10 مع تعديلات طفيفة (ربما فقط إحالات query param)، والتصميم البطاقي الذي رآه المستخدم سابقًا (pm-pro-card و pm-grid) كان في r10 بالفعل؟ لكن لقطة المستخدم للشركاء كانت تعرض الجدول القديم r8/r9 — لا، كانت r10 تعرض البطاقات. اللقطة الأخيرة (الجدول القديم) كانت كاش r10 قديم من جلسة أخرى؟
+- الإجراء: فحص هل pm-grid موجود في r14 محليًا أصلًا — grep كان 0 في r14 محلي و0 في المنشور. إذا كان التصميم القديم الذي أعجب المستخدم يستخدم class مختلفة (pm-card) فهي سليمة.
+
+## تشخيص نهائي (16/8 ليلًا) — حالة مستقرة
+r14 المنشور سليم الآن بالكامل: dl (c91c6bf) وpm (b975bb9c) متطابقان مع المصدر، والتصميم البطاقي (.pm-grid/.pm-card) موجود فعلًا في r14 (سطر 339 pm-card، 436 pm-grid). لقطة المستخدم التي أظهرت الجدول القديم كانت من كاش نسخة r10/r9 قديمة جدًا على هاتفه.
+
+النسخة b1812938 منشورة على https://uploadplus-47dkogbk.manus.space مع:
+- admin-downloads-manager-r14.js: إصلاح typeof imageKey (لا يرسل null)، زر إضافة الملف مع رسائل تحقق واضحة، إعادة جلب الأقسام عند فتح drawer
+- admin-partners-manager-r14.js: تصميم بطاقات pm-grid + رفع شعار فوري مع pm-upload-ok
+- جميع النسخ القديمة r1..r13 redirects إلى r14 عبر serve middleware
+- الاختبارات 93/93، وبناء dist سليم
+
+تعليمات للمستخدم: استخدام وضع التصفح المتخفي (لقطاته السابقة كلها كانت كاش قديم).
+
+## حذف النسخ القديمة (جلسة 2026-08-16 متأخرًا)
+- حُذفت جميع النسخ القديمة admin-downloads-manager-r1..r13 وadmin-partners-manager-r1..r13 من client/public/assets/js/
+- بقيت فقط: admin-downloads-manager-r14.js وadmin-partners-manager-r14.js
+- ls | grep 'downloads|partners' لا يعرض شيئًا بعد الحذف... يجب التحقق: هل الر14 حُذفت بالخطأ؟ (glob admin-downloads-manager-r[0-9]*.js يطابق r10-r19 لكن [0-9] واحد فقط + * = أي شيء بعده، أي يطابق r1, r10, r11, r12, r13, r14, r2..r9! لذا r14 حُذفت أيضًا!)
+- **إصلاح فوري**: إعادة r14 من git (git checkout -- client/public/assets/js/admin-downloads-manager-r14.js client/public/assets/js/admin-partners-manager-r14.js)
+- الخطوات المتبقية: إزالة redirects النسخ القديمة من vite.config (downloads r1-r13→r14، partners r1-r13→r14)، تحديث الاختبارات التي تشير لنسخ قديمة (downloadsAssets.test، ownerLoginR13Assets، teamPartners)، بناء + اختبار + checkpoint
+
+## [23:40 UTC] تقدم الحذف
+نجح الحذف الصريح (أسماء r1-r13 فقط، بدون glob): client/public/assets/js/ يحتوي الآن admin-downloads-manager-r14.js (51857) وadmin-partners-manager-r14.js (34258) فقط. r14 لم تُحذف هذه المرة.
+التالي: فحص vite.config لإزالة أسطر copyAdminAssets التي تشير إلى مصادر r1-r13 المحذوفة (ستكسر البناء ENOENT)، ثم الاختبارات، ثم البناء، ثم checkpoint.
+
+## [23:45 UTC] خطة تنظيف vite.config — تفاصيل الأسطر
+أسطر downloads في vite.config.ts (كتلة copyAdminAssets):
+- S189-195: مصادر قديمة r1,r2,r3,r10,r12→r14، r12→r13، r11→r14 — كلها يجب حذفها (المصادر محذوفة)
+- S196: r14→r14 — الإبقاء عليها (الوحيدة الناجية)
+- S219: partners r14→r14 — الإبقاء
+- S225: partners r1→r1 — يجب حذفها (المصدر محذوف)
+ملاحظة مهمة: serve middleware redirects (نحو r14) يمكن إبقاؤها — لا تسبب مشاكل لأن middleware يحول الطلب بدلًا من قراءة الملف. لكن copyAdminAssets تقرأ من الملفات المحلية وستفشل البناء ENOENT.
+الاختبارات: يجب فحص server/*.test.ts بإحالات r1..r13 للدل/الشركاء (downloadsAssets.test، ownerLoginR13Assets، teamPartners).
+بعد التنظيف: pnpm test → pnpm run build → التحقق من dist (r14 فقط، md5 = 51857/c91c6bf للدل و34258/b975bb9c للشركاء) → webdev_save_checkpoint → curl من الإنتاج.
+معلومات: الإنتاج https://uploadplus-47dkogbk.manus.space | admin: /admin | auto-publish مفعل.

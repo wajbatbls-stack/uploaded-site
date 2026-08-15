@@ -167,3 +167,12 @@
 }
 /* حماية أرقام التواصل في شريط الأخبار من تشوه الاتجاه: + قبل الرقم دائماً */
 .ticker-num { direction: ltr; unicode-bidi: embed; font-variant-numeric: tabular-nums; letter-spacing: 0; white-space: nowrap; }
+/* أزرار بطاقة الشريك: زر الموقع وزر واتساب المنفصل */
+.partner-pro-actions { display:flex; gap:.5rem; width:100%; margin-top:.55rem; }
+.partner-pro-btn { display:inline-flex; align-items:center; justify-content:center; gap:.35rem; font-size:.78rem; font-weight:700; padding:.45rem .7rem; border-radius:.6rem; text-decoration:none; line-height:1.2; transition:transform .16s cubic-bezier(.23,1,.32,1), opacity .16s; }
+.partner-pro-btn:active { transform:scale(.97); }
+.partner-pro-btn-site { background:color-mix(in srgb, var(--partner-accent, #4966d6) 14%, transparent); color:var(--partner-accent, #4966d6); border:1px solid color-mix(in srgb, var(--partner-border, #4966d6) 45%, transparent); }
+.partner-pro-btn-site:hover { background:var(--partner-accent, #4966d6); color:#fff; }
+.partner-pro-btn-wa { background:#0d9c5a; color:#fff; }
+.partner-pro-btn-wa:hover { background:#0b834c; }
+.partner-pro-card:hover .partner-pro-link { opacity:1; }

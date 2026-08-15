@@ -28,7 +28,12 @@ let managedBlog = null;  // تصنيفات ومقالات المدونة الأ�
 const state = { sidebar: false, servicesOpen: false, selectedService: null, article: null, blogArticleSlug: null, previewArticle: null };
 
 const esc = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[char]));
-const wa = (message = "") => `https://wa.me/${SITE_CONFIG.whatsapp}?text=${encodeURIComponent(message)}`;
+const waNumber = () => {
+  const raw = (SITE_CONFIG.whatsapp || "966567680470").toString();
+  const digits = raw.replace(/[^0-9]/g, "");
+  return digits.match(/966\d{9,}/)?.[0] || digits || "966567680470";
+};
+const wa = (message = "") => `https://wa.me/${waNumber()}?text=${encodeURIComponent(message)}`;
 const link = (path, label, className = "") => `<a class="${className}" href="#${path}">${label}</a>`;
 const icon = (emoji) => `<span aria-hidden="true">${emoji}</span>`;
 const safeCss = (value = "") => String(value).replace(/[;{}<>]/g, "");

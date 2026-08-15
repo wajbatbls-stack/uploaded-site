@@ -1,3 +1,6 @@
+import "../css/style-r4.css";
+import "../css/style-r5.css";
+import "../css/style-r6.css";
 import { SITE_CONFIG } from "./config.js";
 import { saveRecord, recordCloudVisit } from "./supabase.js";
 import {

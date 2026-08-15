@@ -54,9 +54,9 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
     const adminHtml = projectFile("client/public/admin.html");
     const dashboard = projectFile("client/public/admin-dashboard.html");
     expect(adminHtml).toContain("admin-team-manager-r1.js");
-    expect(adminHtml).toContain("admin-partners-manager-r7.js");
+    expect(adminHtml).toContain("admin-partners-manager-r8.js");
     expect(dashboard).toContain("admin-team-manager-r1.js");
-    expect(dashboard).toContain("admin-partners-manager-r7.js");
+    expect(dashboard).toContain("admin-partners-manager-r8.js");
     const app = projectFile("client/public/assets/js/admin-app-r30.js");
     expect(app).toContain("mountCompatibleTeamManager");
     expect(app).toContain("mountCompatiblePartnersManager");
@@ -66,7 +66,7 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
 
   it("يدعم رفع الصور من الجهاز داخل مديرَي الفريق والشركاء", () => {
     const team = projectFile("client/public/assets/js/admin-team-manager-r1.js");
-    const partners = projectFile("client/public/assets/js/admin-partners-manager-r7.js");
+    const partners = projectFile("client/public/assets/js/admin-partners-manager-r8.js");
     expect(team).toContain("admin.team.uploadPhoto");
     expect(team).toContain("fileToDataUrl");
     expect(team).toContain("WajbatTeamManager");
@@ -86,7 +86,7 @@ describe("زر بطاقة الشريك ومعالجة القيم النصية NU
   const file = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
   it("يفتح موقع الجامعة الرسمي في البطاقة ولا يفتح واتساب إطلاقًا", () => {
-    const app = file("client/public/assets/js/site-app-r28.js");
+    const app = file("client/public/assets/js/site-app-r29.js");
     const cardStart = app.lastIndexOf("partnerCard = (item) =>");
     const fn = app.slice(cardStart, app.indexOf("\n  };\n  const dynamicPartners", cardStart));
     expect(app).toContain("isWebsiteUrl");
@@ -104,27 +104,48 @@ describe("زر بطاقة الشريك ومعالجة القيم النصية NU
   });
 
   it("يُظهر سطرًا توضيحيًا عند غياب رابط الموقع، والوصف عند وجوده", () => {
-    const app = file("client/public/assets/js/site-app-r28.js");
+    const app = file("client/public/assets/js/site-app-r29.js");
     expect(app).toContain("لم يتوفر رابط الموقع بعد");
     expect(app).toContain("hasDescription");
     expect(app).toContain("partner-pro-desc");
   });
 
   it("يرفض القيم النصية NULL عند بناء قائمة الشركاء الظاهرة للزائر", () => {
-    const app = file("client/public/assets/js/site-app-r28.js");
+    const app = file("client/public/assets/js/site-app-r29.js");
     expect(app).toContain('String(p.link || "") !== "NULL"');
     expect(app).toContain('String(p.logoUrl || "") !== "NULL"');
   });
 
   it("يتجاهل الشعارات النصية NULL في بطاقة الشريك ويعرض الأحرف الأولى", () => {
-    const app = file("client/public/assets/js/site-app-r28.js");
+    const app = file("client/public/assets/js/site-app-r29.js");
     expect(app).toContain("logoUrlOk");
     expect(app).toContain('logoUrl && /^https?:\\/\\//i.test(String(item.logoUrl || ""))');
   });
 
   it("يعترض القيم النصية NULL في مدير الشركاء عند الحفظ", () => {
-    const manager = file("client/public/assets/js/admin-partners-manager-r7.js");
+    const manager = file("client/public/assets/js/admin-partners-manager-r8.js");
     expect(manager).toContain('=== "NULL"');
     expect(manager).toContain("رابط موقع الجامعة (الموقع الرسمي)");
+  });
+
+  it("waNumber في النسخة المنشورة يفصل الأرقام الملتصقة ويعيد رقمًا واحدًا صالحًا", () => {
+    const app = file("client/public/assets/js/site-app-r29.js");
+    expect(app).toContain("raw.split(/[^0-9]+/)");
+    const evalJs = (src, custom) => {
+      const m = src.match(/const waNumber = \([\s\S]*?\};/);
+      return new Function("cfg", `const SITE_CONFIG={};${m[0]}\nSITE_CONFIG.whatsapp = ${JSON.stringify(custom)};\nreturn waNumber();`)(undefined);
+    };
+    expect(evalJs(app, "  966542699518        /     966567680470")).toBe("966542699518");
+    expect(evalJs(app, "966567680470")).toBe("966567680470");
+    expect(evalJs(app, "0542699518")).toBe("966542699518");
+    expect(evalJs(app, "966542699518,966567680470")).toBe("966542699518");
+  });
+  it("رابط wa.me في waNumber المنشورة لا يجمع رقمين ملتصقين", () => {
+    const app = file("client/public/assets/js/site-app-r29.js");
+    const m = app.match(/const waNumber = \([\s\S]*?\};/);
+    const fn = new Function(`const SITE_CONFIG={};${m[0]}\nreturn waNumber();`);
+    const n = fn(undefined, { whatsapp: "966542699518966567680470" });
+    expect(n.length).toBeLessThanOrEqual(12);
+    expect(/^966\d{9,12}$/.test(n)).toBe(true);
   });
 });

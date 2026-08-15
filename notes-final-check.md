@@ -273,3 +273,35 @@ closeBundle الأول (copyAdminAssets) ينسخ ملفات client/public إل�
 
 ## سكرينشوت dev بعد إصلاح f31 (20:47 UTC)
 بطاقة جامعة طيبة لا تزال فارغة في dev (لا شعار) — هذا متوقع لأن شعار الاختبار أُزيل من DB. عند رفع المستخدم شعارًا حقيقيًا الآن يجب أن يظهر فورًا. الفلتر المصحح يقبل /manus-storage/ الآن. يبقى: checkpoint ثم التحقق من الإنتاج بعد رفع المستخدم للشعار.
+
+## إنتاج بعد نشر r31 (20:50 UTC)
+صفحة partners المنشورة تعرض 33 جهة بالشعارات الأحرف فقط (جط/جن/...) — لا يظهر شعار لجامعة طيبة رغم أن المستخدم رفع شعارًا من لوحة الإدارة قبل قليل. الاحتمالات: (1) الإنتاج ما زال يخدم site-app-r30 القديم الذي يرفض /manus-storage/ (wrapper منشور قديم)، (2) الشعار المرفوع جديد ولم يُحفظ بعد. يجب: فحص dist المنشور/production wrapper لتحديد أي نسخة يُحمَّل، ثم التحقق من وجود logoUrl نسبي في DB للجامعة، ثم إعادة الفحص.
+ملاحظة من الصفحة: الهيدر يحمل /manus-storage/wajbat-plus/admin-images/logo_bd7651eb.jpg بشكل صحيح — إذن خادم /manus-storage يعمل، لكن بطاقات الشركاء ما زالت بالأحرف الأولى.
+
+## حسم مشكلة الإنتاج (20:55 UTC)
+الإنتاج يخدم site-C2bxFoMe.js → r30 (نشر checkpoint 7bb408e9 السابق). dist المحلي يحمل site-MUpu_53B.js → r31 (من checkpoint c1840761 هذه الجلسة). إذن checkpoint c1840761 نشر بنجاح لكن CDN للإنتاج ما زال يقدم القديم؟ أو أن publish يعيد نشر dist لكن CDN كاش. يجب التحقق من index.html على الإنتاج بعد بضع دقائق (invalidate). البديل: إذا بقي C2bxFoMe — فحص: هل dist index.html يحتوي wrapper جديدًا فعلاً ولماذا لم يتغير عند النشر.
+ملاحظة: auto-publish يعمل على checkpoints — لا حاجة لضغط Publish يدويًا.
+
+## حسم نهائي (21:00 UTC)
+index.html المنشور الآن: site-MUpu_53B.js → يحمل r31. تم النشر بنجاح بعد checkpoint c1840761 (كان الكاش يحتاج بضع دقائق/كسر curl cache). يبقى التحقق من صفحة partners على الإنتاج لعرض الشعار النسبي، والتحقق من DB بأن جامعة طيبة تحمل logoUrl نسبيًا (المستخدم رفع شعارًا قبل قليل).
+
+## حسم 21:05 UTC
+المفاجأة: الإنتاج ينفّذ /assets/js/site-app-r30.js (رغم أن wrapper الجديد يحمل r31.js). يبدو أن vite redirects لا تعمل على الإنتاج (تنطبق فقط على dev server!) أو أن الرسل القديمة في dist تشير لـr30. الحل المطلوب: يجب أن يحمل الـwrapper المنشور r31 (يحمله فعليًا) وأن يُخزَّن r31 في dist باسم مختلف لا يتصادم مع redirect، وأن redirect الرسل القديمة يعمل إنتاجيًا — الأفضل: إعادة تسمية الإحالة إلى اسم جديد كليًا (site-app-v31.js) وتغيير vite.config alias ليُنسخ من المصدر الجديد، مع نسخ r31 إلى client/public/assets/js/site-app-v31.js يدويًا.
+
+## حسم 21:07 UTC
+الإنتاج يخدم /assets/js/site-app-r30.js = الملف القديم (100KB، لا يحتوي logoUrlOk ولا يحوّل إلى r31) — أي أن redirect في dist لم يُنشر أو لا يُطبَّق. wrapper المنشور يحمل r31.js لكن المسار /assets/js/site-app-r31.js قد لا يوجد! الحل الجذري: تسمية النسخة الجديدة باسم جديد كليًا (site-app-r31.js في client/public مباشرة) وتحديث الـwrapper المنشور ليشير إلى /assets/js/site-app-r31.js (بدون r30 إطلاقًا في index.html المنشور)، وضمان أن /assets/js/site-app-r31.js موجود في dist.
+ملاحظة: wrapper يستخدم import("./js/site-app-r31.js") نسبي — أي يُحمَّل من /assets/js/site-app-r31.js. الملف يجب أن يكون موجودًا في dist/public/assets/js/site-app-r31.js.
+
+## فشل حرج 21:10 UTC
+md5 لموقع r30.js وr31.js متطابقة (c3cfd1...) — أي أن file على القرص كلاهما القديم! التصحيح السابق (sed/python) إما فشل أو استُبدل بسكربت نسخ خاطئ. يجب: إعادة تطبيق التصحيح (فلتر يقبل /manus-storage/) على site-app-r31.js، والتحقق من logoUrlOk قبل أي شيء، ثم البناء وإعادة النشر، والتحقق md5 بعد البناء.
+
+## تصحيح 21:12 UTC — الحالة الصحيحة
+r31 على القرص سليم: الفلتر المصحح موجود (`^https?:\/\/i.test(logoUrlStr) || /^\/manus-storage\/.test(logoUrlStr)`). الملف r30 على القرص متطابق md5 (نفس المحتوى المصحح) لأن جلسة sed السابقة نسخته.
+المشكلة الحقيقية: الإنتاج ينفّذ /assets/js/site-app-r30.js = 100KB القديم (قبل cp أو من dist قديم). production wrapper يحمل r31 لكنه يحمل r31.js؟ wrapper MUpu_53B يحمل r31 — لكن index.html المنشور حمل قبل قليل C2bxFoMe→r30!
+الخلاصة: النسخة المنشورة حاليًا على الإنترنت index.html = site-MUpu_53B.js→r31، لكن /assets/js/site-app-r30.js يُخدم من CDN كملف قديم منفصل، والسكربت المنفذ في صفحة partners هو r30 (لأن بعض المتصفحات/كاش خدمته من قبل). r31.js المرفوع على الإنتاج هو 100KB القديم كذلك (لأن البناء القديم رفعه قبل التصحيح؟ لا — الرسل على cdn تُرفع من dist).
+الحل: checkpoint جديد مع dist نظيف (r31 صحيح) + إزالة site-app-r30.js من المجلد (إبقاء r31 فقط + redirect في vite). أو الأفضل: إعادة تسمية الإحالة الجديدة إلى اسم جديد كليًا لا يخدمه CDN القديم (site-app-v31.js).
+
+## حسم نهائي 21:13 UTC — الجذر الحقيقي
+صفحة الزائر المنشورة تُخدم index.html الذي يحمل wrapper site-C2bxFoMe.js (قديم، من checkpoint 7bb408e9 — يبدو أن checkpoint c1840761 لم يُدمج wrapper الجديد في الإنتاج!). site-C2bxFoMe.js يستدعي site-app-r30.js (القديم 100KB).
+سبب عدم تحديث wrapper: auto-publish نشر checkpoint لكن CDN قد يعيد استخدام wrapper قديم إذا لم يتغير index.html في dist! أو أن بناء dist فشل في إنتاج index.html جديد للزائر.
+الإجراء الآن: فحص dist/public/index.html حاليًا + كيف يُنشر index.html المنشور (هل من dist/client؟). ثم بناء نظيف (rm -rf dist) والبناء وإعادة الفحص، والتأكد أن index.html المنشور يحمل wrapper جديدًا يستدعي r31.

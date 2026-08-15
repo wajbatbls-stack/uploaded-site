@@ -139,3 +139,21 @@ dist r14 size=20810 بينما المصدر 32635 وr13=32633 — dist ليس r1
 - admin.html يحمّل managers عبر window managers (admin-app-r30 يستوردهم عبر script src مع v param) — إحالات HTML لـr14 تحققت سابقًا (v=downloads-r14, v=partners-r14).
 - المتبقي: webdev_save_checkpoint + تسليم للمستخدم مع تأكيد curl من الإنتاج أن md5 الصحيح يصل.
 - الإنتاج: https://uploadplus-47dkogbk.manus.space | لوحة الإدارة: /admin
+
+
+## mismatch المنشور (23:06 UTC)
+- admin.html المنشور ✓ يشير إلى r14 (v=downloads-r14, v=partners-r14) + &reload=
+- لكن GET للملف المنشور يعيد **50048 بايت = محتوى r11 القديم** (md5 مختلف عن dist المحلي 51857 c91c6bf و34258 b975bb)
+- dist محلي صحيح (c91c6bf/b975bb)
+- الاستنتاج: النسخة المنشورة على الإنتاج ما زالت نسخة checkpoint قديمة (قبل إصلاح copyAdminAssets) أو CDN يخدم كاش. checkpoint 1e4ab855 حُفظ — قد يكون لم يكتمل النشر بعد.
+- curl المنشور: `bc3b833d` (50048 بايت) — r11 القديم!
+- الإجراء التالي: التحقق من logs النشر، انتظار، إعادة curl مع bypass، إن بقي: فحص ما إذا كان auto-publish يعمل وcp dist في مكان آخر.
+
+
+## تشخيص mismatch (23:07 UTC)
+- site-app-r32 المنشور ✓ متطابق مع المحلي/المصدر (57d8bd3، 107321 بايت). النشر يعمل للملفات الأخرى.
+- لكن admin-downloads-manager-r14 المنشور = 50048 بايت = محتوى r11 القديم (bc3b833d)، بينما dist المحلي 51857 = c91c6bf صحيح.
+- Partners r14 المنشور = 22059 = محتوى r6 القديم (b975bb محلي = 34258).
+- الاستنتاج: dist المنشور على الإنتاج بُني قبل تعديلات النسخ الأخيرة في closeBundle، أو أن closeBundle في build النشر لا يعمل. لكن site-app متطابق... يعني البناء المنشور حديث (نفس الوقت) لكن r14 لم يدخله!
+- فحص محتمل: vite.config في commit 1e4ab85 (المنشور) قد يكون أحدث من 22:45؟ dist محلي من 23:03.
+- الإجراء: إعادة بناء محلي والتأكد copyAdminAssets يعمل في كلتا الحالتين، ثم حفظ checkpoint جديد (auto-publish) ليتبع نشر جديد من dist المبنية.

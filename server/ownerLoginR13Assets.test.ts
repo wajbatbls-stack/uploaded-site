@@ -43,10 +43,10 @@ describe("owner login current assets", () => {
     const site = projectFile("client/public/index.html");
     const css = projectFile("client/public/assets/css/site-design-r2.css");
     expect(site).toContain("site-design-r2.css");
-    expect(site).toContain("site-app-r29.js");
+    expect(site).toContain("site-app-r30.js");
     expect(site).toContain("style-r3.css");
     expect(projectFile("client/public/assets/css/style-r3.css")).toContain(".contact");
-    const app = projectFile("client/public/assets/js/site-app-r29.js");
+    const app = projectFile("client/public/assets/js/site-app-r30.js");
     expect(app).toContain("contact-social-strip");
     expect(app).toContain("contact-social-icon");
     expect(app).toContain('data-action="contact-scroll"');

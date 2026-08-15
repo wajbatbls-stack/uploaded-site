@@ -176,3 +176,8 @@
 .partner-pro-btn-wa { background:#0d9c5a; color:#fff; }
 .partner-pro-btn-wa:hover { background:#0b834c; }
 .partner-pro-card:hover .partner-pro-link { opacity:1; }
+
+/* بطاقة الشريك بدون رابط: غير قابلة للنقر، بلا واتساب إطلاقًا */
+.partner-pro-card-nolink { cursor: default; pointer-events: none; }
+.partner-pro-card-nolink:hover { transform: none; box-shadow: 0 8px 24px rgba(20, 40, 90, 0.08); }
+.partner-pro-nolink { display: block; color: #8a93a5; font-size: 0.8rem; margin-top: 0.4rem; }

@@ -85,24 +85,39 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
 describe("زر بطاقة الشريك ومعالجة القيم النصية NULL", () => {
   const file = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
-  it("يفتح موقع الجامعة الرسمي في البطاقة ولا يسقط إلى واتساب إلا لرقم صالح", () => {
-    const app = file("client/public/assets/js/site-app-r27.js");
+  it("يفتح موقع الجامعة الرسمي في البطاقة ولا يفتح واتساب إطلاقًا", () => {
+    const app = file("client/public/assets/js/site-app-r28.js");
+    const cardStart = app.lastIndexOf("partnerCard = (item) =>");
+    const fn = app.slice(cardStart, app.indexOf("\n  };\n  const dynamicPartners", cardStart));
     expect(app).toContain("isWebsiteUrl");
-    expect(app).toContain("isWhatsAppNumber");
-    expect(app).toContain("partner-pro-btn-site");
-    expect(app).toContain("partner-pro-btn-wa");
-    expect(app).toContain("partner-pro-actions");
-    expect(app).not.toContain('hasLink ? esc(String(item.link).trim()) : wa("أريد الاستفسار عن " + item.name)');
+    expect(fn).toContain("javascript:void(0)");
+    expect(fn).toContain("partner-pro-btn-site");
+    expect(fn).toContain("partner-pro-actions");
+    expect(fn).toContain("🌐 زيارة موقع الجامعة");
+    expect(fn).toContain("partner-pro-card-nolink");
+    expect(fn).toContain("partner-pro-nolink");
+    // لا واتساب إطلاقًا من بطاقة الجامعة
+    expect(fn).not.toContain("partner-pro-btn-wa");
+    expect(fn).not.toContain('wa("أريد الاستفسار عن " + item.name)');
+    // الموقع الرسمي فقط عبر rawLink
+    expect(fn).toContain('href="${esc(rawLink)}"');
+  });
+
+  it("يُظهر سطرًا توضيحيًا عند غياب رابط الموقع، والوصف عند وجوده", () => {
+    const app = file("client/public/assets/js/site-app-r28.js");
+    expect(app).toContain("لم يتوفر رابط الموقع بعد");
+    expect(app).toContain("hasDescription");
+    expect(app).toContain("partner-pro-desc");
   });
 
   it("يرفض القيم النصية NULL عند بناء قائمة الشركاء الظاهرة للزائر", () => {
-    const app = file("client/public/assets/js/site-app-r27.js");
+    const app = file("client/public/assets/js/site-app-r28.js");
     expect(app).toContain('String(p.link || "") !== "NULL"');
     expect(app).toContain('String(p.logoUrl || "") !== "NULL"');
   });
 
   it("يتجاهل الشعارات النصية NULL في بطاقة الشريك ويعرض الأحرف الأولى", () => {
-    const app = file("client/public/assets/js/site-app-r27.js");
+    const app = file("client/public/assets/js/site-app-r28.js");
     expect(app).toContain("logoUrlOk");
     expect(app).toContain('logoUrl && /^https?:\\/\\//i.test(String(item.logoUrl || ""))');
   });

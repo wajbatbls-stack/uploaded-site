@@ -107,3 +107,18 @@
 
 ## التحقق النهائي (بعد تصحيح NULL — checkpoint 350d66cd)
 صفحة "من نحن" تعرض الرؤيا والرسالة والأهداف الاستراتيجية وسجل الفريق من قاعدة البيانات (أيقونة افتراضية لأن البيانات الأصلية لم تكن تحمل صورًا). صفحة "شركاء النجاح" تعرض الجامعات من جدول partners عبر publicList مع المدن. شاشة دخول الإدارة تعمل (Passkey ظاهر). جميع بنود todo.md مكتملة، 85/85 اختبار. checkpoint منشور تلقائيًا: https://uploadplus-47dkogbk.manus.space
+
+## مهمة النسخة الاحتياطية الشاملة (2026-08-15) — طلب المستخدم
+- المستخدم يريد حفظ نسخة كاملة عنده: كود + قاعدة بيانات + صور (خوفه من فقدان حساب Manus أو مسح بالخطأ).
+- المرحلة 1 (SQL): تم ✅ — سكربت /home/ubuntu/full-backup/export_db.mjs صدّر 31 جدول / ~2223 صف إلى /home/ubuntu/full-backup/wajbatplus_database.sql
+- المرحلة 2: تصدير الصور من S3 — يجب استخدام storageGet/list (server/storage.ts helpers) لجلب كل الصور المدرجة في الجداول (media/mediaUrls في content_collections، photoUrl في team_members، logoUrl في partners، postImage في blog...) + تنزيلها عبر presigned URLs
+- المرحلة 3: ZIP شامل في /home/ubuntu/full-backup/wajbatplus-full-backup.zip = كود المشروع (git archive أو tar client/server/drizzle/shared/package.json/vite.config...) + sql + media/ + ملف إرشادات restore-guide.md (بالعربي)
+- المرحلة 4: تسليم الملف للمستخدم (message result مع attachment)
+- ملاحظة: DATABASE_URL في env: tidbcloud.com:4000/47DkogBKT8NjmDhwkhVpm8 (mysql2/promise، ssl rejectUnauthorized true)
+- جداول فيها روابط صور S3: content_collections (محتوى media)، team_members (photoUrl)، partners (logoUrl)، blog (postImage)، media table إن وجدت
+
+## حذف النشرة البريدية (2026-08-15)
+- حُذف نموذج النشرة البريدية من فوتر site-app + handler النشرة (4 أسطر في handleForm) من r15
+- تم إنشاء site-app-r16.js وتحديث client/index.html + client/public/index.html + vite.config.ts (copy + rollupOptions)
+- التحقق: newsletter=0 في r16، node --check OK، build OK، لقطة شاشة الهاتف تؤكد اختفاء قسم الاشتراك والفوتر سليم
+- متبقٍ: checkpoint + نشر تلقائي + تحديث todo.md

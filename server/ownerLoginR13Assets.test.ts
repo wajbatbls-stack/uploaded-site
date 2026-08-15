@@ -10,7 +10,7 @@ describe("owner login current assets", () => {
     expect(adminHtml).toContain("admin-r14.css");
     expect(adminHtml).toContain("admin-owner-login-r13-mobile.css");
     expect(adminHtml).toContain("admin-app-r30.js");
-    expect(adminHtml).toContain("admin-downloads-manager-r12.js");
+    expect(adminHtml).toContain("admin-downloads-manager-r14.js");
     expect(adminHtml).toContain("admin-design-studio-r2.js");
     expect(adminHtml).toContain("admin-services-manager-r2.js");
     expect(adminHtml).toContain("admin-services-r2.css");

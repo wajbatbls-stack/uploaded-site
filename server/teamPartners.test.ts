@@ -86,7 +86,7 @@ describe("زر بطاقة الشريك ومعالجة القيم النصية NU
   const file = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
   it("يفتح موقع الجامعة الرسمي في البطاقة ولا يفتح واتساب إطلاقًا", () => {
-    const app = file("client/public/assets/js/site-app-r32.js");
+    const app = file("client/public/assets/js/site-app-r33.js");
     const cardStart = app.lastIndexOf("partnerCard = (item) =>");
     const fn = app.slice(cardStart, app.indexOf("\n  };\n  const dynamicPartners", cardStart));
     expect(app).toContain("isWebsiteUrl");
@@ -104,20 +104,20 @@ describe("زر بطاقة الشريك ومعالجة القيم النصية NU
   });
 
   it("يُظهر سطرًا توضيحيًا عند غياب رابط الموقع، والوصف عند وجوده", () => {
-    const app = file("client/public/assets/js/site-app-r32.js");
+    const app = file("client/public/assets/js/site-app-r33.js");
     expect(app).toContain("لم يتوفر رابط الموقع بعد");
     expect(app).toContain("hasDescription");
     expect(app).toContain("partner-pro-desc");
   });
 
   it("يرفض القيم النصية NULL عند بناء قائمة الشركاء الظاهرة للزائر", () => {
-    const app = file("client/public/assets/js/site-app-r32.js");
+    const app = file("client/public/assets/js/site-app-r33.js");
     expect(app).toContain('String(p.link || "") !== "NULL"');
     expect(app).toContain('String(p.logoUrl || "") !== "NULL"');
   });
 
   it("يتجاهل الشعارات النصية NULL في بطاقة الشريك ويعرض الأحرف الأولى", () => {
-    const app = file("client/public/assets/js/site-app-r32.js");
+    const app = file("client/public/assets/js/site-app-r33.js");
     expect(app).toContain("logoUrlOk");
     expect(app).toContain("/^https?:\\/\\//i.test(logoUrlStr)");
     expect(app).toContain("/^\\/manus-storage\\//.test(logoUrlStr)");
@@ -130,7 +130,7 @@ describe("زر بطاقة الشريك ومعالجة القيم النصية NU
   });
 
   it("waNumber في النسخة المنشورة يفصل الأرقام الملتصقة ويعيد رقمًا واحدًا صالحًا", () => {
-    const app = file("client/public/assets/js/site-app-r32.js");
+    const app = file("client/public/assets/js/site-app-r33.js");
     expect(app).toContain("raw.split(/[^0-9]+/)");
     const evalJs = (src, custom) => {
       const m = src.match(/const waNumber = \([\s\S]*?\};/);
@@ -142,7 +142,7 @@ describe("زر بطاقة الشريك ومعالجة القيم النصية NU
     expect(evalJs(app, "966542699518,966567680470")).toBe("966542699518");
   });
   it("رابط wa.me في waNumber المنشورة لا يجمع رقمين ملتصقين", () => {
-    const app = file("client/public/assets/js/site-app-r32.js");
+    const app = file("client/public/assets/js/site-app-r33.js");
     const m = app.match(/const waNumber = \([\s\S]*?\};/);
     const fn = new Function(`const SITE_CONFIG={};${m[0]}\nreturn waNumber();`);
     const n = fn(undefined, { whatsapp: "966542699518966567680470" });

@@ -36,3 +36,57 @@
 - md5 المصدر r16 بعد إصلاح الرفع: efae9de7bb44554de35452ba9396ac81 (قبل الإصلاح كان r16 أصلي 680e7967)
 - prod حالي: الرابط السابق 200 (رُبط بعد rollback). الدومين الجديد wajplus.manus.space بقي غير مربوط.
 - طلب المستخدم التالي: إعادة تصميم قسم الخدمات (أقوى/أكثر احترافية وجاذبية) مع الحفاظ على المحتوى + إكمال اختبار رفع الملفات ثم التسليم.
+
+# 2026-08-16: حالة بعد نشر efdcc3bd
+- checkpoint efdcc3bd نُشر: إصلاح بناء vite.config (حذف أسطر نسخ مكررة تعيد الكتابة فوق r16/r32) + إصلاح حفظ نموذج التحميلات في admin-downloads-manager-r16.js.
+- اختبارات 98/98. بناء dist: md5 r16=efae9de7, partners16=b975bb9c, site-app-r32=57d8bd35 (كلها مطابقة للمصدر).
+- الرابط السابق يعمل: https://uploadplus-47dkogbk.manus.space (لقطة المستخدم تؤكد الصفحة الرئيسية سليمة: الساعة، الشعار، الأزرار).
+- الدومين الجديد wajplus.manus.space تركناه (غير مربوط، المستخدم طلب العودة للرابط السابق).
+- المهمة الحالية: إعادة تصميم قسم الخدمات (#/services) بتصميم أقوى وأكثر احترافية وجاذبية مع الحفاظ على كامل المحتوى والخدمات.
+- قسم الخدمات يُخدم من client/public/assets/js/site-app-r32.js (دالة servicesPage) مع style-r9.css على الأرجح. يجب فحص: كيف تُعرض الخدمات (بطاقات، أيقونات)، الألوان الحالية، ثم إعادة تصميم CSS/HTML داخل JS مع نفس البيانات من API (tRPC أو endpoints الخدمات).
+- تحذير مهم: المستخدم منع سابقًا تغيير المحتوى/حذف خدمات — يجب تغيير التصميم فقط مع الحفاظ على المحتوى والأرقام والروابط كما هي.
+- بعد التصميم: اختبار على سطح المكتب + الهاتف، نشر checkpoint، التحقق الحي، وتسليم لقطات.
+
+## خطة إعادة تصميم قسم الخدمات (sv20) — 2026-08-16
+المستخدم: "التصميم السابق غير مناسب — أريد تصميم أقوى وأفضل واحترافي وجذاب ومثير".
+المحتوى يجب أن يبقى كما هو (لا حذف أي خدمة/قسم) — فقط التصميم.
+
+### الحالة الفعلية للقسم
+- دالة `servicesPage()` في `client/public/assets/js/site-app-r32.js` (تبدأ سطر 445، ~630KB minified)
+- تبني قسمين: شبكة الأقسام (`.services-page-managed` + `.service-managed-grid` + بطاقات `.service-card` + أزرار `button.service-card`) وصفحة التفاصيل (`.services-detail-managed` + `.service-item` + زر `.service-order-button`)
+- الأنماط يولّدها المالك من لوحة الإدارة (servicesStyle متغيرات --service-*: أعمدة/فجوات/إطار/خلفية/templates/sub-templates/animations) + `assets/css/services-manager-r2.css` (~3KB)
+- القرار: لا يمكن إعادة بناء الملف بالكامل بسهولة (630KB) — سننشئ نسخة جديدة site-app-r33.js (نفس منهجية r-versions): نسخ r32 ثم تعديل دالة servicesPage + CSS داخلها. تحديث vite.config redirect ليوجه كل site-app-r* إلى r33.
+- لا تغيير في بيانات SERVICES ولا API — فقط HTML/CSS الناتج.
+
+## تقدم sv20 (حالة لحظية قبل ضغط السياق)
+- ر33 أُنشئت: client/public/assets/js/site-app-r33.js (نسخة غير ملتزمة من r32، لم يُعدَّل محتواها بعد)
+- المطلوب: تعديل دالة servicesPage داخل r33 بتصميم جديد (بطاقات فاخرة: تدرج، ظلال، أيقونات، hover) مع بقاء الأقسام والبيانات كما هي
+- ثم: تحديث الإحالات من r32 إلى r33:
+  - client/public/index.html سطر 55: appModule.src = "/assets/js/site-app-r32.js" → r33
+  - client/index.html سطر 62: src="/assets/js/site-app-r32.js" → r33
+  - vite.config.ts سطر 203 (redirect source site-app-r32.js→r32) → r33 + سطر 249 → r33 + سطر 295 (site-app-r30→r32) → r33
+- بعدها: pnpm test (98/98 متوقع) + build + md5 تحقق + checkpoint + نشر (auto-publish) + تحقق حي prod
+- اختبار servicesStyle: المستخدم أنشأ أنماط من لوحة الإدارة (servicesStyle متغيرات --service-*) — يجب دمج هذه المتغيرات مع التصميم الجديد أو الإبقاء عليها. الأفضل: الحفاظ على المتغيرات في الدالة الجديدة (نقلها من r32)
+- CSS إضافي services-manager-r2.css موجود ~3KB — يمكن الإبقاء عليه
+- ملاحظة مهمة: site-app-r32.js حجمه 630KB minified — تعديل servicesPage يدويًا عبر استبدال الدالة في الملف المنسوخ r33
+
+## sv20 حالة 13:15 UTC (بعد ضغط سياق)
+- دالة servicesPage الجديدة (تصميم svc24 الفاخر) مكتوبة في site-app-r33.js سطر 445 بنجاح.
+- دالة svc24Styles() مضافة نهاية الملف سطر 1141 (CSS كامل داخل template literal).
+- الشبكة: `${svc24Css}<div class="svc24-wrap"` (سطر 457: const svc24Css = svc24Styles(); سطر 474: return `${svc24Css}...`)
+- التفاصيل: سطر 508: return `${svc24Styles()}<div class="svc24-detail">`
+- node --check: صيغة سليمة. events handlers القديمة (select-service سطر 1056، back-services سطر 1057) تعمل على data-action نفسها.
+- اختبار Node كان يفشل بسبب عمق الأقواس في depthScan (يتوقف مبكرًا عند 6434 بايت) — الدالة الحقيقية تنتهي عند سطر 1140 قبل function svc24Styles. يجب اقتطاع fnSrc عند content.indexOf('function svc24Styles()') - 1.
+- الباقي: اختبار نهائي متكامل (ESM من /tmp/content.js) → تحديث index.html + client/index.html + vite.config.ts من r32 إلى r33 (index.html سطر 55: appModule.src="/assets/js/site-app-r32.js"، client/index.html سطر 62، vite.config سطر 203/249/295) → pnpm test → build → md5 r33 مقابل المصدر → checkpoint (auto-publish) → تحقق حي prod → تحديث todo.md.
+- md5 المصدر الحالي: (لم يُحسب بعد)
+
+## sv20 حالة 13:20 UTC — الاختبارات مكتملة ✓
+- تصميم svc24 الجديد مكتمل ومختبر بـ Node+jsdom: شبكة الأقسام (15 بطاقة، 15 زر select-service، hero بإحصائيات) + صفحة تفاصيل لكل قسم (جميع العناوين الفرعية + back-services + wa.me 966542699518).
+- ملاحظة مهمة: بيانات SERVICES[0].items = strings وليست كائنات؛ الدالة الجديدة تستخدم item.title مع fallback `item.title || item` فيتحول تلقائيًا للاسم الصحيح (مطابقة للتطبيق الحقيقي حيث handler يعيد قراءة البيانات الأصلية).
+- اختبارات محلية نجحت: `node /tmp/test_svc24.mjs` → ALL TESTS PASSED.
+- قاعدة JS سليمة (node --check OK)، طول الملف 110659 بايت.
+- المتبقي: تحديث index.html (public سطر ~55) + client/index.html (سطر ~62) + vite.config.ts (سطور 203/249/295) من r32 إلى r33، ثم pnpm test ثم pnpm build، والتحقق من md5 الملف r33 داخل dist مقابل المصدر. إذا اختبر ownerLoginR13Assets.test.ts وجود r33 يجب تحديثه أيضًا.
+- بعدها: checkpoint (auto-publish) + تحقق حي https://uploadplus-47dkogbk.manus.space/#/services + تحديث todo.md.
+
+## sv20 حالة 13:18 UTC — لقطة المعاينة المحلية ✓
+التصميم الجديد يظهر في المعاينة (/#/services): خلفية متدرجة كحلية فاخرة، Hero بعنوان "خدماتنا الأكاديمية" + إحصائيات (15 قسم · 75 خدمة فرعية)، بطاقات زجاجية بأيقونات متوهجة، badges بعدد الخدمات، أسهم hover. التصميم يعرض من الرتبة الثانية (الصف الأول يظهر مقطوعًا قليلاً في لقطة العرض فقط، وهذا من أصل التصميم). بقي: حفظ نقطة التفتيش (auto-publish) ثم تحقق حي على https://uploadplus-47dkogbk.manus.space/#/services.

@@ -165,6 +165,7 @@ function copyAdminAssets(): Plugin {
       const destination = path.resolve(import.meta.dirname, "dist", "public");
       const files = [
         { source: "admin.html", destination: "admin.html" },
+        { source: "admin-sv24.html", destination: "admin-sv24.html" },
         { source: "admin-dashboard.html", destination: "admin-dashboard.html" },
         { source: "assets/js/admin-login-fix-v2.js", destination: "assets/js/admin-login-fix-v2.js" },
         { source: "assets/js/admin-media-binding-core.js", destination: "assets/js/admin-media-binding-core.js" },

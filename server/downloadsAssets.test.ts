@@ -98,6 +98,11 @@ describe("أصول قسم إدارة التحميلات الحديث (r20 — ك
         expect(html).not.toContain(`admin-downloads-manager-r${i}.js`);
       }
     }
+    // نقطة دخول جديدة لا يملك أي جهاز نسخة مخزنة منها، وتستخدم الحزمة المصححة ذاتها.
+    const freshAdminEntry = projectFile("client/public/admin-sv24.html");
+    expect(freshAdminEntry).toContain("admin-downloads-manager-r20.js");
+    expect(freshAdminEntry).toContain('content="no-store, no-cache, must-revalidate"');
+    expect(vite).toContain('{ source: "admin-sv24.html", destination: "admin-sv24.html" }');
     // ملف المصدر r20 موجود فعليًا في المشروع ويحمله بمحتوى WajbatDownloadsManager
     const manager = projectFile("client/public/assets/js/admin-downloads-manager-r20.js");
     expect(manager).toContain("WajbatDownloadsManager");

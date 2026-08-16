@@ -594,7 +594,9 @@
 - [x] checkpoint منشور تلقائيًا (d5bf3e51) — تسليم المستخدم مع تعليمات التجربة
 
 # جلسة 2026-08-16 (متابعة 4): حلقة إعادة التحميل
-- [ ] تشخيص حلقة "جاري التحقق من صلاحية الوصول" الظاهرة/المختفية: v16 يعيد reload عند كل دخول صفحة (رسالة sw-all-caches-cleared تصل في كل تحميل + controllerchange يتكرر)
-- [ ] إصلاح sw-forced v17: تنفيذ أمر التنظيف مرة واحدة فقط (flag في localStorage) ومنع reload بعد أول مرة، ورسائل لا تسبب حلقة
-- [ ] تحديث آليات التسجيل في admin.html + public/index.html + client/index.html لتتوافق مع v17 (بدون حلقة: no-reload-after flag)
-- [ ] اختبارات + بناء نظيف + checkpoint نشر + تحقق من عدم وجود حلقة على prod + تسليم
+- [x] تشخيص حلقة "جاري التحقق من صلاحية الوصول": v16 كان يعيد reload عند كل دخول (controllerchange + رسائل postMessage تسبب حلقة لا نهائية)
+- [x] إصلاح sw-forced v17-no-reload-loop: ينفذ التنظيف مرة واحدة فقط (__done flag) بلا أي reload ولا حلقات
+- [x] تحديث آليات التسجيل في admin.html + public/index.html + client/index.html: مرة واحدة لكل جلسة عبر sessionStorage.__sw17، يلغي كل SW قديم وكاشاته بلا إعادة تحميل
+- [x] اختبارات 93/93 + بناء نظيف (dist يحمل v17، لا reload في كتلة الـSW)
+- [x] checkpoint منشور (1fe255f4)
+- [ ] تحقق نهائي من الإنتاج + تسليم المستخدم مع تعليمات

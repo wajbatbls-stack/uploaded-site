@@ -455,3 +455,44 @@ prod admin.html يحتوي: admin-app-r30.js?v=merge-r3، downloads-manager-r14.
 ملاحظة prod مؤكدة (23:52): /sw.js و/service-worker.js على prod يعيدان HTML (fallback) — لا ملف SW قديم على الخادم الآن.
 production URL: https://uploadplus-47dkogbk.manus.space — auto-publish مفعّل.
 آخر checkpoint: 171a0f56 (sw-forced v15 — غير كافٍ لأنه لا يلغي SW قديم).
+
+## جلسة متابعة 4 — حالة طارئة (2026-08-16 00:08 UTC): الإنتاج 500 كليًا
+- الإنتاج كله يعيد HTTP 500 على كل المسارات (/ و/admin و/api/trpc) بعد checkpoint 1fe255f4 (sw-forced v17).
+- debug agent (ثقة عالية): مشكلة في build pipeline. عند تشغيل `node dist/index.js` محليًا:
+  `failed to resolve rollupOptions.input value: "/home/ubuntu/uploaded-site/dist/client/public/index.html"` (vite dependency scan) — input يشير إلى مسار dist/client/public بدل client!
+- محليًا dev يعمل (200 على /admin) لكن prod serverless bundle يفشل.
+- **الخطة**: فحص vite.config.ts (root/publicDir/build.outDir/rollupOptions.input) وإصلاح المسار إلى `client/index.html` كما كان يعمل، إعادة بناء، إعادة تشغيل dev، اختبار محلي، checkpoint (auto-publish).
+- لا rollback عشوائي — المشكلة في مسارات البناء بعد تعديلات اليوم.
+- checkpoints: 1fe255f4 (v17، معطوب)، d5bf3e51 (v16 قبله)، 171a0f56 (v15)، b1812938، 1e4ab855، 63e4e44d (r14 أصلي) — كل واحد ينشر فورًا.
+
+## تشخيص 00:15 — العثور على الجذر الفعلي
+- vite.config: root = client/public، publicDir = client/public، build.outDir = dist/public.
+- عند البناء: vite يحسب relative path بين root والـoutput → يكتب HTML داخل dist/public. بعدها copyAdminAssets closeBundle ينسخ client/public إلى dist/public (يتعارض). لكن البناء المحلي نجح EXIT=0 والمخرجات dist/public سليمة (sw-forced + r14 موجودة).
+- الخطأ الحقيقي الذي ظهر عند `node dist/index.js` محليًا: vite dependency scan يبحث عن input `/home/ubuntu/uploaded-site/dist/client/public/index.html` — أي أن prod server يستدعي vite dev server على مسار client/public لكن بعد البناء؟ لا — prod dist/index.js يستدعي serveStatic وربما vite middleware في production mode مع NODE_ENV مختلف.
+- الأرجح: production dist/index.js bundle يعمل بمسار مختلف في serverless (process.cwd قد يختلف) + vite plugin debug-collector أو copyAdminAssets يعمل في الإنتاج ويسقط.
+- **خطوة عملية**: اختبار `NODE_ENV=production node dist/index.js` محليًا لرؤية الخطأ الفعلي.
+
+## التشخيص النهائي لجذر الـ500 (00:18)
+- `serveStatic` في production يستخدم `import.meta.dirname + "public"` أي `dist/public`.
+- لكن `build.outDir = dist/public` وroot=client/public: Vite 7 يكتب `index.html` (نقطة دخول site) كـ `dist/public/index.html` فقط إذا كان input=client/public/index.html **نسبيًا إلى root**. لكن rollupOptions.input يحتوي "js/site-app-r19" (مسار JS خام في input!) — Vite يكتب المخرجات لكل input داخل outDir، والـhtml يكتب في جذر outDir.
+- **لكن** الخطأ الذي رأيناه في `node dist/index.js`: vite dependency scan يحاول resolve input "client/public/index.html" من مسار dist — أي أن Vite يعمل كـdependency scan في وقت البناء؟ لا، البناء نجح EXIT 0.
+- الأرجح بعد كل شيء: dist/public في الـcheckpoint القديم كان يحتوي **server bundle index.js**؟ لا.
+- الحل العملي الأضمن: التحقق الفوري محليًا عبر `NODE_ENV=production node dist/index.js`، أو فحص ما حدث فعلًا في dist بعد آخر بناء (dist/public/index.html موجود؟ حجمه؟ ومتى كُتب؟).
+
+## التشخيص الحاسم النهائي (00:25) — جذر الـ500
+- `dist/public/index.html` حجمه 369KB وهو **في الحقيقة SPA bundle كامل** (368KB من الكود داخل ملف index.html!)، والسبب: rollupOptions.input يحتوي نقاط دخول JS خام ("js/site-app-r19" → client/public/assets/js/site-app-r32.js) — عندما تكون نقطة الدخول JS وليست HTML، Vite 7 يكتب الـbundle داخل `index.html` (اسم افتراضي) داخل outDir=dist/public.
+- `site-Cy0Hofkh.js` في dist/public/assets حجمه 827 بايت فقط (ملف فارغ نسبيًا).
+- `dist/public/admin.html` (14KB) سليم مع سكريبت v17، وsw-forced.js سليم (971B، v17).
+- النتيجة على الإنتاج: أي طلب للمسارات التي تسقط على index.html (بما فيها SPA fallback) يُرجع هذا الملف الضخم أو يفشل؛ و/أو serverless runtime يواجه الملف الضخم فيخدم 500.
+- البناء EXIT=0 لأن vite لا يعتبر ذلك خطأ.
+- **الإصلاح الصحيح**: 
+  1. إزالة نقاط دخول JS الخام من rollupOptions.input (r19/r30/r18) — هي غير ضرورية الآن لأن الكاش كُسر والـredirects أزيلت للنسخ المحذوفة. يجب الإبقاء على input site فقط (client/public/index.html).
+  2. التأكد أن index.html المصدر في client/public لا يحتوي src="/src/main.tsx" في production؟ (dist index.html يشير /assets/site-Cy0Hofkh.js — صحيح لأنه SPA).
+  3. لكن wait — هل هذا dist قديم أم البناء الجديد صحيح؟ dist كُتب الساعة 00:02 = بناء الجلسة الحالية. إذن حتى البناء القديم (checkpoint 171a0f56 v15) كان ينتج هذا الـSPA داخل index.html! لكن prod كان يعمل قبل اليوم. يعني أن هذا السلوك كان موجودًا دومًا وprod كان يخدم dist/public/index.html كما هو (SPA) قبل اليوم؟ لا — prod كان يعمل. إذن الـ500 سببه شيء آخر أدخله البناء الجديد، أو أن هذا الـSPA في index.html كان يُخدم لكن الخادم الجديد يفشل لمصدر آخر.
+  4. فحص manus-webdev-logs: الـ500 على كل شيء حتى /api/trpc — يعني الخادم نفسه يعيد 500 قبل static. السبب المحتمل: serverless bundle index.js يحاول استدعاء setupVite (import meta.dirname يشير public بدل dist) أو fs.readFileSync يفشل. الخطأ السابق المرصود محليًا: vite dependency scan فشل عند resolve input `dist/client/public/index.html` — أي أن prod dist/index.js يستدعي vite dev مرة أخرى في production (NODE_ENV development في serverless؟).
+  - **الحل الفوري**: تشغيل NODE_ENV=production node dist/index.js محليًا لرؤية الخطأ المحدد.
+
+## النتيجة (00:32): bundle الإنتاج سليم 100%
+NODE_ENV=production node dist/index.js محليًا: /admin=200، /api/trpc يعمل (FORBIDDEN طبيعي بدون جلسة)، لا استثناءات. إذن البناء محليًا سليم والخادم سليم. لكن الإنتاج يعيد 500. الفرق الوحيد: serverless runtime يشغّل dist/index.js بـ env مختلف — على الأرجح يستخدم vite dev fallback (NODE_ENV غير production) أو أن المسار import.meta.dirname يشير مكانًا خاطئًا في serverless. ملاحظة: في bundle، serveStatic يستخدم process.cwd()؟ لا — يستخدم import.meta.dirname/public. serverless ينفّذ من dist لذا /dist/public سليم.
+السبب المتبقي المحتمل: serverless framework يمرر المنفذ عبر env PORT — الكود يستخدم process.env.PORT، وهذا سليم. ربما الـ500 عابر من نشر قديم ما زال ينتشر (checkpoint منشور 00:00 والنشر يكتمل بعد دقائق). انتظر وأعد الفحص.
+ملاحظة أخرى غير مهمة: dist/public/index.html 369KB هو SPA bundle كامل (vite حوّل input JS إلى index.html) — لكن الخادم يخدم admin.html مباشرة، والزائر يحصل على index.html من root → الذي صار SPA bundle وليس index.html الأصلي! هذا كسر صفحة الزائر: الزائر يرى SPA فارغة بدل صفحة واجبات بلاس الحقيقية! يجب إصلاح rollupOptions.input.

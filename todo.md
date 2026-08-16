@@ -588,7 +588,13 @@
 - [x] إعادة إنتاج على prod بمحاكاة هاتف: صفحة prod المعروضة تعرض «آخر الملفات» بملفات اختبار من الأمس رغم أن DB نظيفة
 - [x] إثبات قاطع للسبب الجذري: tRPC admin.downloads.list على prod = 22 ملفًا أصليًا فقط؛ prod admin.html = r14 سليم؛ /sw.js على prod يعيد HTML (fallback) — لا SW قديم على الخادم؛ **السبب: SW قديم مسجل في كاش متصفحات المستخدمين منذ الأمس ما زال يخدم صفحاته المخزنة قديمًا**
 - [x] اكتشاف ضعف v15: sw-forced الحالي لا يستدعي registrations.forEach(unregister) ولا يحذف كل الكاشات (فقط أسماء مختلفة عن SW_VERSION)
-- [ ] إعادة كتابة sw-forced.js: في activate يحذف **كل** الكاشات بلا استثناء، وفي fetch يخدم من الشبكة فقط
-- [ ] تعديل تسجيل الـSW في client/public/admin.html + client/public/index.html + client/index.html: يلغي جميع التسجيلات القديمة عبر registrations.forEach(unregister) قبل التسجيل ثم يعيد التحميل بعد controllerchange
-- [ ] اختبارات + بناء نظيف
-- [ ] checkpoint ونشر + تحقق نهائي على prod + تسليم المستخدم مع تعليمات
+- [x] إعادة كتابة sw-forced.js v16-kill-old-sw: في activate يمحو كل الكاشات بلا استثناء ويرسل إشارة للعملاء؛ يعالج رسالة sw-kill-me بحذف الكاشات وإلغاء تسجيله نهائيًا؛ fetch بدون تخزين
+- [x] تعديل تسجيل الـSW في client/public/admin.html + client/public/index.html + client/index.html: يلغي جميع التسجيلات القديمة عبر getRegistrations/unregister قبل التسجيل، يرسل sw-kill-me للـSW الجديد، يعيد التحميل عند controllerchange أو الاستقبال
+- [x] اختبارات 93/93 + بناء نظيف (dist/public يحمل sw-forced.js v16 والـHTML يحتوي sw-kill-me)
+- [x] checkpoint منشور تلقائيًا (d5bf3e51) — تسليم المستخدم مع تعليمات التجربة
+
+# جلسة 2026-08-16 (متابعة 4): حلقة إعادة التحميل
+- [ ] تشخيص حلقة "جاري التحقق من صلاحية الوصول" الظاهرة/المختفية: v16 يعيد reload عند كل دخول صفحة (رسالة sw-all-caches-cleared تصل في كل تحميل + controllerchange يتكرر)
+- [ ] إصلاح sw-forced v17: تنفيذ أمر التنظيف مرة واحدة فقط (flag في localStorage) ومنع reload بعد أول مرة، ورسائل لا تسبب حلقة
+- [ ] تحديث آليات التسجيل في admin.html + public/index.html + client/index.html لتتوافق مع v17 (بدون حلقة: no-reload-after flag)
+- [ ] اختبارات + بناء نظيف + checkpoint نشر + تحقق من عدم وجود حلقة على prod + تسليم

@@ -45,20 +45,6 @@
     return fetch(url, { method, credentials: "same-origin", cache: "no-store", headers: method === "POST" ? { "content-type": "application/json" } : undefined, body: method === "POST" ? JSON.stringify({ json: input }) : undefined }).then(apiError);
   };
 
-  /* ===== رفع الملفات ===== */
-  const uploadFile = file => {
-    if (!file) throw new Error("اختر ملفًا من جهازك أولًا.");
-    if (file.size > 50 * 1024 * 1024) throw new Error(`الملف أكبر من الحد المسموح (50 م.ب): ${esc(file.name)}.`);
-    const fd = new FormData();
-    fd.append("file", file);
-    return fetch("/api/downloads/upload", { method: "POST", credentials: "same-origin", body: fd }).then(async res => {
-      if (!res.ok) {
-        const p = await res.json().catch(() => null);
-        throw new Error(p?.error || `تعذّر رفع الملف: ${esc(file.name)}`);
-      }
-      return await res.json();
-    });
-  };
 
   /* ===== تحميل القائمة ===== */
   const list = async () => {
@@ -184,7 +170,7 @@
   };
   const replaceFile = async (fileId, file) => {
     try {
-      const uploaded = await uploadFile(file);
+      const uploaded = await uploadFileLegacy(file);
       await request("admin.downloads.replaceFile", {
         id: fileId, fileKey: uploaded.fileKey, fileUrl: uploaded.fileUrl,
         mimeType: uploaded.mimeType, sizeBytes: uploaded.sizeBytes, originalName: uploaded.originalName,
@@ -198,7 +184,7 @@
       const ok = [], bad = [];
       for (const file of Array.from(files)) {
         try {
-          const uploaded = await uploadFile(file);
+          const uploaded = await uploadFileLegacy(file);
           await request("admin.downloads.createFile", {
             categoryId, fileName: uploaded.originalName.replace(/\.[^.]+$/, "") || uploaded.originalName,
             originalName: uploaded.originalName, fileKey: uploaded.fileKey, fileUrl: uploaded.fileUrl,
@@ -216,6 +202,47 @@
     request("admin.downloads.trackDownload", { id: file.id }).then(r => {
       window.open(r.fileUrl, "_blank", "noopener,noreferrer");
     }).catch(e => toast(e.message));
+  };
+
+  /* ===== رفع فعلي مع شريط تقدم ===== */
+  const uploadFileWithProgress = (file, onProgress) => {
+    if (!file) throw new Error("اختر ملفًا من جهازك أولًا.");
+    if (file.size > 50 * 1024 * 1024) throw new Error(`الملف أكبر من الحد المسموح (50 م.ب): ${esc(file.name)}.`);
+    return new Promise((resolve, reject) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/api/downloads/upload");
+      xhr.withCredentials = true;
+      xhr.upload.addEventListener("progress", e => {
+        if (e.lengthComputable) onProgress?.(Math.round((e.loaded / e.total) * 100));
+      });
+      xhr.addEventListener("load", async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try { resolve(JSON.parse(xhr.responseText)); } catch (err) { reject(new Error("استجابة غير صالحة من الخادم.")); }
+        } else {
+          let msg = `تعذّر رفع الملف: ${esc(file.name)}`;
+          try { const p = JSON.parse(xhr.responseText); if (p?.error) msg = p.error; } catch { /* ignore */ }
+          reject(new Error(msg));
+        }
+      });
+      xhr.addEventListener("error", () => reject(new Error(`انقطع الاتصال أثناء رفع: ${esc(file.name)} — تحقق من الإنترنت وأعد المحاولة.`)));
+      xhr.send(fd);
+    });
+  };
+  /* إبقاء المسار القديم كمرجع داخلي */
+  const uploadFileLegacy = file => {
+    if (!file) throw new Error("اختر ملفًا من جهازك أولًا.");
+    if (file.size > 50 * 1024 * 1024) throw new Error(`الملف أكبر من الحد المسموح (50 م.ب): ${esc(file.name)}.`);
+    const fd = new FormData();
+    fd.append("file", file);
+    return fetch("/api/downloads/upload", { method: "POST", credentials: "same-origin", body: fd }).then(async res => {
+      if (!res.ok) {
+        const p = await res.json().catch(() => null);
+        throw new Error(p?.error || `تعذّر رفع الملف: ${esc(file.name)}`);
+      }
+      return await res.json();
+    });
   };
 
   /* ===== طبقة التنبيهات ===== */
@@ -340,6 +367,7 @@
     });
   };
 
+  /* ===== نموذج «إضافة نموذج» — تصميم r15 فاخر ===== */
   const fileDrawer = async (file, categoryId) => {
     const isEdit = Boolean(file);
     /* إعادة جلب قائمة الأقسام قبل فتح النموذج لضمان ظهورها حتى لو فُتح النموذج قبل اكتمال التحميل الأول */
@@ -348,77 +376,111 @@
       state.categories = Array.isArray(data?.categories) ? data.categories : [];
     } catch (e) { /* تبقى القائمة كما هي من آخر تحميل ناجح */ }
     const cats = state.categories.filter(c => c.isVisible !== false);
-    const root = overlay(isEdit ? "تعديل الملف" : "ملف جديد", `
-      <form data-dl10-file-form class="dl10-form">
-        <div class="dl10-grid-2">
-          <div class="dl10-field">
-            <label>اسم الملف <b class="dl10-req">*</b></label>
-            <input name="fileName" required value="${esc(file?.fileName || "")}" placeholder="مثلًا: نموذج واجب نهائي" />
+
+    /* ========== تصميم جديد فاخر (r15) غير overlay القديم ========== */
+    closeOverlays();
+    const root = document.createElement("div");
+    root.className = "dl10-overlay dl15-overlay";
+    root.setAttribute("dir", "rtl");
+    const title = isEdit ? "تعديل النموذج" : "إضافة نموذج جديد";
+    const subtitle = isEdit ? "عدّل البيانات واستبدل الملف أو احفظ البيانات فقط" : "انشر نموذجًا جديدًا يظهر للزوار فور الحفظ";
+    root.innerHTML = `
+      <div class="dl10-backdrop" data-dl10-close></div>
+      <aside class="dl15-drawer" style="animation:dl15-pop .32s cubic-bezier(.23,1,.32,1)">
+        <header class="dl15-head">
+          <div class="dl15-head-bg"></div>
+          <div class="dl15-head-content">
+            <button type="button" class="dl15-x" data-dl10-close aria-label="إغلاق">✕</button>
+            <span class="dl15-head-badge">${isEdit ? "✎" : "📄"} ${esc(title)}</span>
+            <h3>${esc(title)}</h3>
+            <p>${esc(subtitle)}</p>
           </div>
-          <div class="dl10-field ${!isEdit ? "dl10-field-span" : ""}">
-            <label>القسم <b class="dl10-req">*</b></label>
-            <select name="categoryId" required ${isEdit ? "disabled" : ""}>
-              ${!isEdit && cats.length > 0 ? "<option value=\"\" disabled>— اختر القسم —</option>" : ""}
-              ${cats.length === 0 ? "<option value=\"\" selected>لا توجد أقسام — أغلق وأنشئ قسمًا جديدًا أولًا</option>" : cats.map(c => `<option value="${c.id}" ${Number(file?.categoryId ?? categoryId ?? cats[0].id) === Number(c.id) ? "selected" : ""}>${esc(c.emoji || "📁")} ${esc(c.name)}</option>`).join("")}
-            </select>
-          </div>
+        </header>
+        <div class="dl15-body">
+          <form id="dl15-form-internal" data-dl15-file-form class="dl15-form">
+            <div class="dl15-step">
+              <span class="dl15-step-num">1</span>
+              <span class="dl15-step-title">بيانات النموذج</span>
+            </div>
+            <div class="dl15-grid-2">
+              <div class="dl15-field dl15-field-span">
+                <label>اسم النموذج <b class="dl15-req">*</b></label>
+                <input name="fileName" required value="${esc(file?.fileName || "")}" placeholder="مثلًا: نموذج واجب نهائي" />
+              </div>
+              <div class="dl15-field">
+                <label>القسم <b class="dl15-req">*</b></label>
+                <select name="categoryId" required ${isEdit ? "disabled" : ""}>
+                  ${!isEdit && cats.length > 0 ? "<option value=\"\" disabled>— اختر القسم —</option>" : ""}
+                  ${cats.length === 0 ? "<option value=\"\" selected>لا توجد أقسام — أغلق وأنشئ قسمًا جديدًا أولًا</option>" : cats.map(c => `<option value="${c.id}" ${Number(file?.categoryId ?? categoryId ?? cats[0].id) === Number(c.id) ? "selected" : ""}>${esc(c.emoji || "📁")} ${esc(c.name)}</option>`).join("")}
+                </select>
+              </div>
+              <div class="dl15-field">
+                <label>الوصف (اختياري)</label>
+                <input name="description" placeholder="وصف قصير يظهر بجانب النموذج" value="${esc(file?.description || "")}" />
+              </div>
+            </div>
+            ${isEdit ? `` : `
+            <div class="dl15-step"><span class="dl15-step-num">2</span><span class="dl15-step-title">ملف النموذج</span></div>
+            <div class="dl15-drop" data-dl15-dropzone>
+              <input type="file" name="file" hidden multiple />
+              <div class="dl15-drop-inner">
+                <span class="dl15-drop-icon">📤</span>
+                <span class="dl15-drop-label">اضغط هنا أو اسحب النموذج من جهازك</span>
+                <span class="dl15-drop-hint">PDF · Word · Excel · صور · حتى 50 م.ب</span>
+              </div>
+              <div class="dl15-cards" data-dl15-cards></div>
+            </div>`}
+            ${isEdit ? `
+            <div class="dl15-step"><span class="dl15-step-num">2</span><span class="dl15-step-title">استبدال الملف (اختياري)</span></div>
+            <div class="dl15-replace">
+              <div class="dl15-replace-wrap">
+                <span class="dl15-replace-glyph">🔄</span>
+                <span class="dl15-replace-text">استبدل الملف الحالي بملف جديد من جهازك</span>
+              </div>
+              <input type="file" name="replace" hidden />
+              <button type="button" class="dl15-btn-ghost" data-dl15-replace-pick>اختر ملفًا من الجهاز</button>
+              <div class="dl15-replace-meta" data-dl15-replace-meta></div>
+            </div>` : ""}
+          </form>
         </div>
-        <div class="dl10-field">
-          <label>الوصف (اختياري)</label>
-          <textarea name="description" placeholder="وصف قصير يظهر بجانب الملف للزوار">${esc(file?.description || "")}</textarea>
-        </div>
-        ${isEdit ? `
-        <div class="dl10-field">
-          <label>استبدال الملف بملف جديد</label>
-          <div class="dl10-uploader">
-            <input type="file" name="replace" hidden />
-            <button type="button" class="dl10-up-btn" data-dl10-replace-pick>
-              <span class="dl10-up-icon">🔄</span>
-              <span class="dl10-up-label">اختر ملفًا من جهازك للاستبدال</span>
-            </button>
-            <span class="dl10-up-meta" data-dl10-replace-meta></span>
-          </div>
-        </div>` : `
-        <div class="dl10-field">
-          <label>الملف <b class="dl10-req">*</b></label>
-          <div class="dl10-uploader dl10-uploader-main">
-            <input type="file" name="file" required hidden multiple />
-            <button type="button" class="dl10-up-btn dl10-up-btn-lg" data-dl10-file-pick>
-              <span class="dl10-up-icon dl10-up-icon-lg">⬆</span>
-              <span class="dl10-up-label">اسحب الملفات أو اخترها من جهازك</span>
-              <span class="dl10-up-hint">PDF · Word · Excel · صور · حتى 50 م.ب — يمكن اختيار أكثر من ملف</span>
-            </button>
-            <ul class="dl10-queue" data-dl10-queue></ul>
-          </div>
-        </div>`}
-        <footer class="dl10-foot">
-          <button type="button" class="dl10-btn dl10-ghost" data-dl10-close>إلغاء</button>
-          <button type="submit" class="dl10-btn dl10-primary" ${isEdit ? "" : "disabled"}>${isEdit ? "حفظ التغييرات" : "إضافة الملف"}</button>
+        <footer class="dl15-foot">
+          <span class="dl15-foot-hint" data-dl15-hint>${isEdit ? "التغييرات تنعكس على الزوار فور الحفظ" : "النموذج يظهر للزوار فورًا بعد الإضافة"}</span>
+          <button type="button" class="dl15-btn dl15-ghost" data-dl10-close>إلغاء</button>
+          <button type="button" class="dl15-btn dl15-primary" data-dl15-submit ${isEdit ? "" : "disabled"}>${isEdit ? "حفظ التغييرات" : "📤 إضافة النموذج"}</button>
         </footer>
-      </form>`, isEdit ? "عدّل بيانات الملف وملفه أو استبدله" : "ارفع ملفًا جديدًا ليظهر للزوار فور الحفظ");
-    const form = root.querySelector("[data-dl10-file-form]");
-    const submit = form.querySelector("button[type=submit]");
+      </aside>`;
+    document.body.appendChild(root);
+    root.querySelectorAll("[data-dl10-close]").forEach(el => el.addEventListener("click", () => root.remove()));
+
+    const form = root.querySelector("[data-dl15-file-form]");
+    const submitBtn = root.querySelector("[data-dl15-submit]");
+    const hint = root.querySelector("[data-dl15-hint]");
+    const enableIfReady = () => {
+      if (isEdit) return;
+      submitBtn.disabled = !(pendingUploads.length > 0 && catSelect?.value);
+    };
     let pendingUploads = [];
 
     if (isEdit) {
       const replaceInput = root.querySelector("[name=replace]");
-      const meta = root.querySelector("[data-dl10-replace-meta]");
-      root.querySelector("[data-dl10-replace-pick]").addEventListener("click", () => replaceInput.click());
+      const meta = root.querySelector("[data-dl15-replace-meta]");
+      root.querySelector("[data-dl15-replace-pick]").addEventListener("click", () => replaceInput.click());
       replaceInput.addEventListener("change", () => {
         const f = replaceInput.files?.[0];
-        if (!f) { meta.textContent = ""; return; }
-        meta.textContent = `✓ تم اختيار: ${f.name} (${fmtSize(f.size)})`;
-        meta.className = "dl10-up-meta dl10-up-meta-ok";
-        showNotice("تم اختيار الملف بنجاح", "ok");
+        if (!f) { meta.innerHTML = ""; return; }
+        meta.innerHTML = `<span class="dl15-meta-ok">✓ جاهز: ${esc(f.name)} (${fmtSize(f.size)})</span>`;
+        showNotice("تم اختيار الملف بنجاح — احفظ لتطبيق الاستبدال", "ok");
       });
-      form.addEventListener("submit", async e => {
-        e.preventDefault();
-        submit.disabled = true;
+      submitBtn.addEventListener("click", async () => {
+        if (submitBtn.disabled || submitBtn.getAttribute("data-busy") === "1") return;
+        submitBtn.setAttribute("data-busy", "1");
+        submitBtn.disabled = true;
+        submitBtn.textContent = "⏳ جارٍ الحفظ…";
         try {
           const data = Object.fromEntries(new FormData(form).entries());
           const f = replaceInput.files?.[0];
           if (f) {
-            const uploaded = await uploadFile(f);
+            const uploaded = await uploadFileLegacy(f);
             await request("admin.downloads.replaceFile", {
               id: file.id, fileKey: uploaded.fileKey, fileUrl: uploaded.fileUrl,
               mimeType: uploaded.mimeType, sizeBytes: uploaded.sizeBytes, originalName: uploaded.originalName,
@@ -426,70 +488,115 @@
             showNotice("تم استبدال الملف بنجاح", "ok");
           } else {
             await request("admin.downloads.updateFile", { id: file.id, ...data, description: data.description || undefined });
-            showNotice("تم حفظ الملف بنجاح", "ok");
+            showNotice("تم حفظ التغييرات بنجاح", "ok");
           }
           root.remove(); await list();
-        } catch (err) { submit.disabled = false; }
+        } catch (err) {
+          submitBtn.disabled = false;
+          submitBtn.removeAttribute("data-busy");
+          submitBtn.textContent = "حفظ التغييرات";
+          showNotice(err?.message || "تعذّر الحفظ", "bad");
+        }
+      });
+      root.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !submitBtn.disabled && e.target.tagName === "INPUT") {
+          e.preventDefault(); submitBtn.click();
+        }
       });
       return;
     }
 
+    /* ========== رفع فعلي بشريط تقدم — r15 ========== */
+    const cardsRoot = root.querySelector("[data-dl15-cards]");
+    const dropzone = root.querySelector("[data-dl15-dropzone]");
     const fileInput = root.querySelector("[name=file]");
-    const queue = root.querySelector("[data-dl10-queue]");
-    root.querySelector("[data-dl10-file-pick]").addEventListener("click", () => fileInput.click());
-    const renderQueue = () => {
-      queue.innerHTML = pendingUploads.length === 0 ? "" : pendingUploads.map((f, i) => `
-        <li class="dl10-queue-item">
-          <span class="dl10-queue-glyph">${fileGlyph(f.file.type)}</span>
-          <div class="dl10-queue-info"><b>${esc(f.file.name)}</b><small>${fmtSize(f.file.size)}</small></div>
-          <button type="button" class="dl10-queue-rm" data-dl10-rm="${i}" title="إزالة">✕</button>
-        </li>`).join("");
-      submit.disabled = pendingUploads.length === 0;
-      queue.querySelectorAll("[data-dl10-rm]").forEach(btn => btn.addEventListener("click", () => {
-        pendingUploads.splice(Number(btn.dataset.dl10Rm), 1);
-        renderQueue();
+    const catSelect = root.querySelector("[name=categoryId]");
+    root.querySelector(".dl15-drop-inner").addEventListener("click", () => fileInput.click());
+    dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classList.add("dl15-drag"); });
+    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dl15-drag"));
+    dropzone.addEventListener("drop", e => {
+      e.preventDefault(); dropzone.classList.remove("dl15-drag");
+      addFiles(Array.from(e.dataTransfer?.files || []));
+    });
+    const addFiles = files => {
+      const valid = files.filter(f => f.size > 0 && f.size <= 50 * 1024 * 1024);
+      if (!valid.length) { showNotice("لم يتم تحديد ملفات صالحة (حتى 50 م.ب)", "bad"); return; }
+      pendingUploads = pendingUploads.concat(valid.map(file => ({ file, status: "idle", percent: 0 })));
+      renderCards();
+      showNotice(`تم اختيار ${valid.length} ملف — اضغط «إضافة النموذج» للرفع`, "ok");
+      fileInput.value = "";
+      enableIfReady();
+    };
+    fileInput.addEventListener("change", () => addFiles(Array.from(fileInput.files || [])));
+    if (catSelect) catSelect.addEventListener("change", () => { enableIfReady(); });
+
+    const percentOf = ({ status, percent }) => status === "done" ? 100 : status === "failed" ? 0 : percent;
+    const renderCards = () => {
+      cardsRoot.innerHTML = pendingUploads.map((e, i) => `
+        <div class="dl15-card ${e.status}">
+          <div class="dl15-card-main">
+            <span class="dl15-card-glyph">${fileGlyph(e.file.type)}</span>
+            <div class="dl15-card-info">
+              <b title="${esc(e.file.name)}">${esc(e.file.name)}</b>
+              <small>${fmtSize(e.file.size)}${e.status === "done" ? " · ✓ اكتمل" : e.status === "failed" ? " · ✗ فشل" : ""}</small>
+            </div>
+            ${e.status === "idle" ? `<button type="button" class="dl15-card-rm" data-dl15-rm="${i}" title="إزالة">✕</button>` : ""}
+          </div>
+          <div class="dl15-track" style="width:${percentOf(e)}%"></div>
+          ${e.status === "uploading" ? `<span class="dl15-pct">${e.percent}%</span>` : ""}
+        </div>`).join("");
+      cardsRoot.querySelectorAll("[data-dl15-rm]").forEach(btn => btn.addEventListener("click", () => {
+        pendingUploads.splice(Number(btn.dataset.dl15Rm), 1);
+        renderCards(); enableIfReady();
       }));
     };
-    /* تمكين الزر أيضًا متى تغيّرت قيمة القسم (حتى لو كان محددًا افتراضيًا) */
-    const syncSubmit = () => { submit.disabled = pendingUploads.length === 0; };
-    const catSelect = root.querySelector("[name=categoryId]");
-    if (catSelect) catSelect.addEventListener("change", syncSubmit);
-    fileInput.addEventListener("change", () => {
-      const files = Array.from(fileInput.files || []);
-      if (!files.length) return;
-      pendingUploads = pendingUploads.concat(files.map(file => ({ file })));
-      renderQueue();
-      showNotice(`تم اختيار ${files.length} ملف من جهازك`, "ok");
-      fileInput.value = "";
+    const setCard = (i, patch) => { Object.assign(pendingUploads[i], patch); renderCards(); };
+
+    /* أي ضغط على زر الإرسال (حتى Enter داخل حقول النص) يمر من هنا */
+    root.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !submitBtn.disabled && e.target.tagName === "INPUT") {
+        e.preventDefault(); submitBtn.click();
+      }
     });
-    form.addEventListener("submit", async e => {
-      e.preventDefault();
-      if (!pendingUploads.length) { showNotice("اختر ملفًا من جهازك أولًا", "bad"); return; }
-      if (!catSelect || !catSelect.value) { showNotice("اختر القسم الذي ينتمي إليه الملف أولًا", "bad"); return; }
-      submit.disabled = true;
+    submitBtn.addEventListener("click", async () => {
+      if (submitBtn.disabled || submitBtn.getAttribute("data-busy") === "1") return;
+      if (!pendingUploads.length) { showNotice("اختر ملف النموذج من جهازك أولًا", "bad"); return; }
+      if (!catSelect?.value) { showNotice("اختر القسم أولًا", "bad"); return; }
+      submitBtn.setAttribute("data-busy", "1");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "⏳ جارٍ الرفع…";
+      hint.textContent = "يُرفع الملف فعلًا الآن — لا تغلق الصفحة حتى ينتهي";
       const data = Object.fromEntries(new FormData(form).entries());
+      let done = 0;
       try {
-        let done = 0;
-        for (const entry of pendingUploads) {
-          const uploaded = await uploadFile(entry.file);
-          await request("admin.downloads.createFile", {
-            categoryId: Number(data.categoryId),
-            fileName: uploaded.originalName.replace(/\.[^.]+$/, "") || uploaded.originalName,
-            originalName: uploaded.originalName,
-            description: data.description || undefined,
-            fileKey: uploaded.fileKey, fileUrl: uploaded.fileUrl,
-            mimeType: uploaded.mimeType, sizeBytes: uploaded.sizeBytes,
-          });
-          done++;
-          showNotice(`جارٍ الحفظ… ${done}/${pendingUploads.length}`, "ok");
+        for (let i = 0; i < pendingUploads.length; i++) {
+          const entry = pendingUploads[i];
+          if (entry.status === "done") { done++; continue; }
+          setCard(i, { status: "uploading", percent: 0 });
+          try {
+            const uploaded = await uploadFileWithProgress(entry.file, pct => setCard(i, { percent: pct }));
+            setCard(i, { status: "done" });
+            await request("admin.downloads.createFile", {
+              categoryId: Number(data.categoryId),
+              fileName: uploaded.originalName.replace(/\.[^.]+$/, "") || uploaded.originalName,
+              originalName: uploaded.originalName,
+              description: data.description || undefined,
+              fileKey: uploaded.fileKey, fileUrl: uploaded.fileUrl,
+              mimeType: uploaded.mimeType, sizeBytes: uploaded.sizeBytes,
+            });
+            done++;
+            showNotice(`✓ تم حفظ «${esc(uploaded.originalName)}» (${done}/${pendingUploads.length})`, "ok");
+          } catch (upErr) {
+            setCard(i, { status: "failed" });
+            showNotice(upErr?.message || `فشل رفع: ${esc(entry.file.name)}`, "bad");
+          }
         }
-        showNotice(`تمت إضافة ${done} ملف بنجاح`, "ok");
+        if (done) showNotice(`✓ تمت إضافة ${done} نموذج بنجاح — يظهر الآن للزوار`, "ok");
         root.remove(); await list();
-      } catch (err) {
-        submit.disabled = false;
-        const msg = err && err.message ? String(err.message) : "تعذّر حفظ الملف. حاول مرة أخرى.";
-        showNotice(msg, "bad");
-        console.error("[downloads] createFile failed:", err);
+      } finally {
+        submitBtn.removeAttribute("data-busy");
+        submitBtn.textContent = "📤 إضافة النموذج";
+        enableIfReady();
       }
     });
   };
@@ -840,6 +947,73 @@
         .dl10-grid-2{grid-template-columns:1fr}
         .dl10-headbar{flex-direction:column;align-items:stretch}
         .dl10-head-actions{justify-content:flex-end}
+      }
+      /* ===== تصميم r15 الفاخر — نموذج إضافة النموذج ===== */
+      @keyframes dl15-pop{from{transform:translateY(18px) scale(.97);opacity:0}to{transform:none;opacity:1}}
+      .dl15-overlay{position:fixed;inset:0;z-index:85;display:flex;align-items:center;justify-content:center;padding:14px;overflow-y:auto}
+      .dl15-drawer{position:relative;width:100%;max-width:500px;background:#fff;border-radius:18px;box-shadow:0 24px 64px rgba(12,18,40,.32);display:flex;flex-direction:column;max-height:min(86vh, 760px)}
+      .dl15-head{position:relative;border-radius:18px 18px 0 0;overflow:hidden;padding:22px 22px 20px;background:linear-gradient(135deg, ${BRAND.accent} 0%, #6366f1 70%, #8b5cf6 100%)}
+      .dl15-head-content{position:relative;display:flex;flex-direction:column;gap:6px}
+      .dl15-head-badge{align-self:flex-start;background:rgba(255,255,255,.18);color:#fff;font-size:11px;font-weight:700;padding:4px 11px;border-radius:999px;backdrop-filter:blur(4px)}
+      .dl15-head h3{margin:0;font-size:17px;font-weight:800;color:#fff}
+      .dl15-head p{margin:0;font-size:12.5px;color:rgba(255,255,255,.85)}
+      .dl15-x{position:absolute;top:12px;left:12px;background:rgba(255,255,255,.22);border:none;color:#fff;width:32px;height:32px;border-radius:10px;font-size:14px;cursor:pointer;backdrop-filter:blur(4px);transition:background .15s}
+      .dl15-x:hover{background:rgba(255,255,255,.38)}
+      .dl15-body{flex:1;overflow-y:auto;padding:18px 22px}
+      .dl15-step{display:flex;align-items:center;gap:10px;margin:14px 0 10px}
+      .dl15-step:first-child{margin-top:2px}
+      .dl15-step-num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:8px;background:${BRAND.accent};color:#fff;font-size:12px;font-weight:800}
+      .dl15-step-title{font-size:12.5px;font-weight:800;color:${BRAND.ink};letter-spacing:.2px}
+      .dl15-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+      .dl15-field-span{grid-column:1 / -1}
+      .dl15-field label{display:block;font-size:12.5px;font-weight:700;color:${BRAND.ink};margin-bottom:6px}
+      .dl15-req{color:${BRAND.danger}}
+      .dl15-field input[type=text],.dl15-field select{width:100%;padding:10.5px 12px;border:1.5px solid ${BRAND.line};border-radius:11px;font-family:inherit;font-size:13.5px;background:#fff;color:${BRAND.ink};outline:none;transition:border-color .18s,box-shadow .18s}
+      .dl15-field input:focus,.dl15-field select:focus{border-color:${BRAND.accent};box-shadow:0 0 0 3px rgba(79,70,229,.11)}
+      .dl15-drop{border:1.8px dashed #b9c3e8;border-radius:14px;background:linear-gradient(180deg,#fafbfd,#f2f5fe);padding:16px;cursor:pointer;transition:border-color .18s,background .18s,transform .16s;display:flex;flex-direction:column;gap:8px}
+      .dl15-drop:hover{border-color:${BRAND.accent};background:#eef2fe}
+      .dl15-drop.dl15-drag{border-color:${BRAND.accent};background:#e7ecff;transform:scale(1.008)}
+      .dl15-drop-inner{display:flex;flex-direction:column;align-items:center;gap:7px;padding:14px 10px}
+      .dl15-drop-icon{font-size:28px}
+      .dl15-drop-label{font-size:13.5px;font-weight:800;color:${BRAND.ink}}
+      .dl15-drop-hint{font-size:11.5px;color:${BRAND.mist}}
+      .dl15-cards{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+      .dl15-card{position:relative;background:#fff;border:1.5px solid ${BRAND.line};border-radius:12px;overflow:hidden}
+      .dl15-card.done{border-color:#bfe9d5}
+      .dl15-card.failed{border-color:#f5c6c6}
+      .dl15-card-main{display:flex;align-items:center;gap:10px;padding:9px 11px}
+      .dl15-card-glyph{font-size:17px}
+      .dl15-card-info{flex:1;min-width:0}
+      .dl15-card-info b{display:block;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .dl15-card-info small{font-size:10.5px;color:${BRAND.mist}}
+      .dl15-card-rm{background:none;border:none;color:${BRAND.mist};cursor:pointer;font-size:13px;padding:2px 6px;border-radius:7px}
+      .dl15-card-rm:hover{background:#eef1f9;color:${BRAND.danger}}
+      .dl15-track{height:5px;background:linear-gradient(90deg,#4f46e5,#8b5cf6);transition:width .18s cubic-bezier(.23,1,.32,1);width:0}
+      .dl15-card.done .dl15-track{background:linear-gradient(90deg,#10b981,#34d399);width:100%}
+      .dl15-pct{position:absolute;bottom:6px;left:8px;font-size:10px;font-weight:800;color:#fff;background:rgba(79,70,229,.9);border-radius:6px;padding:1px 7px}
+      .dl15-replace{display:flex;align-items:center;gap:11px;border:1.5px solid ${BRAND.line};border-radius:13px;padding:12px 13px;background:#fafbfd}
+      .dl15-replace-wrap{display:flex;align-items:center;gap:9px;flex:1;min-width:0}
+      .dl15-replace-glyph{font-size:18px}
+      .dl15-replace-text{font-size:12px;color:${BRAND.slate};font-weight:600}
+      .dl15-replace-meta{width:100%;margin-top:6px;font-size:11.5px}
+      .dl15-meta-ok{color:${BRAND.ok};font-weight:700}
+      .dl15-btn-ghost{background:#f0f3fd;border:1.5px solid #d7ddf5;border-radius:10px;padding:8px 13px;font-family:inherit;font-size:12px;font-weight:700;color:${BRAND.accent};cursor:pointer;transition:background .15s;flex:0 0 auto}
+      .dl15-btn-ghost:hover{background:#e3e9ff}
+      .dl15-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 20px;border-top:1.5px solid ${BRAND.line};background:#fcfcfe}
+      .dl15-foot-hint{font-size:11px;color:${BRAND.mist};flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .dl15-btn{font-family:inherit;font-size:13px;font-weight:800;border-radius:11px;padding:11px 20px;cursor:pointer;transition:transform .14s cubic-bezier(.23,1,.32,1),background .15s,opacity .15s;border:none}
+      .dl15-btn:active{transform:scale(.96)}
+      .dl15-primary{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;box-shadow:0 8px 22px rgba(79,70,229,.28)}
+      .dl15-primary:hover:not(:disabled){background:linear-gradient(135deg,#4338ca,#5b55e8)}
+      .dl15-primary:disabled{opacity:.55;cursor:not-allowed}
+      .dl15-ghost{background:#f0f3fd;color:${BRAND.slate};border:1.5px solid #e2e7f5}
+      .dl15-ghost:hover{background:#e6ebfa}
+      .dl15-ghost.danger{color:${BRAND.danger}}
+      @media (max-width:560px){
+        .dl15-grid-2{grid-template-columns:1fr}
+        .dl15-overlay{padding:8px;align-items:flex-end}
+        .dl15-drawer{max-height:92vh;border-radius:18px 18px 0 0}
+        .dl15-head{border-radius:18px 18px 0 0}
       }`;
     document.head.appendChild(css);
   }

@@ -295,6 +295,9 @@ export default defineConfig({
     rollupOptions: {
       input: {
         site: path.resolve(import.meta.dirname, "client/public/index.html"),
+        "js/site-app-r19": path.resolve(import.meta.dirname, "client/public/assets/js/site-app-r19.js"),
+        "js/site-app-r30": path.resolve(import.meta.dirname, "client/public/assets/js/site-app-r32.js"),
+        "js/site-app-r18": path.resolve(import.meta.dirname, "client/public/assets/js/site-app-r18.js"),
       },
     },
   },

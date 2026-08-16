@@ -588,25 +588,7 @@
 - [x] إعادة إنتاج على prod بمحاكاة هاتف: صفحة prod المعروضة تعرض «آخر الملفات» بملفات اختبار من الأمس رغم أن DB نظيفة
 - [x] إثبات قاطع للسبب الجذري: tRPC admin.downloads.list على prod = 22 ملفًا أصليًا فقط؛ prod admin.html = r14 سليم؛ /sw.js على prod يعيد HTML (fallback) — لا SW قديم على الخادم؛ **السبب: SW قديم مسجل في كاش متصفحات المستخدمين منذ الأمس ما زال يخدم صفحاته المخزنة قديمًا**
 - [x] اكتشاف ضعف v15: sw-forced الحالي لا يستدعي registrations.forEach(unregister) ولا يحذف كل الكاشات (فقط أسماء مختلفة عن SW_VERSION)
-- [x] إعادة كتابة sw-forced.js v16-kill-old-sw: في activate يمحو كل الكاشات بلا استثناء ويرسل إشارة للعملاء؛ يعالج رسالة sw-kill-me بحذف الكاشات وإلغاء تسجيله نهائيًا؛ fetch بدون تخزين
-- [x] تعديل تسجيل الـSW في client/public/admin.html + client/public/index.html + client/index.html: يلغي جميع التسجيلات القديمة عبر getRegistrations/unregister قبل التسجيل، يرسل sw-kill-me للـSW الجديد، يعيد التحميل عند controllerchange أو الاستقبال
-- [x] اختبارات 93/93 + بناء نظيف (dist/public يحمل sw-forced.js v16 والـHTML يحتوي sw-kill-me)
-- [x] checkpoint منشور تلقائيًا (d5bf3e51) — تسليم المستخدم مع تعليمات التجربة
-
-# جلسة 2026-08-16 (متابعة 4): حلقة إعادة التحميل
-- [x] تشخيص حلقة "جاري التحقق من صلاحية الوصول": v16 كان يعيد reload عند كل دخول (controllerchange + رسائل postMessage تسبب حلقة لا نهائية)
-- [x] إصلاح sw-forced v17-no-reload-loop: ينفذ التنظيف مرة واحدة فقط (__done flag) بلا أي reload ولا حلقات
-- [x] تحديث آليات التسجيل في admin.html + public/index.html + client/index.html: مرة واحدة لكل جلسة عبر sessionStorage.__sw17، يلغي كل SW قديم وكاشاته بلا إعادة تحميل
-- [x] اختبارات 93/93 + بناء نظيف (dist يحمل v17، لا reload في كتلة الـSW)
-- [x] checkpoint منشور (1fe255f4)
-- [x] تحقق نهائي من الإنتاج + تسليم المستخدم مع تعليمات (بعد إصلاح 500)
-
-# جلسة 2026-08-16 (متابعة 5): انهيار الإنتاج 500 بعد v17
-
-- [x] إعادة إنتاج على prod: «جاري التحقق من صلاحية الوصول» حلقة لا نهائية (v16 reload loop) على هاتف المستخدم
-- [x] إصلاح v17 بلا حلقة reload: __done flag + once-per-session؛ تسجيل SW يلغي كل SW قديم بكاشاته بلا إعادة تحميل
-- [x] اختبارات 93/93 + بناء + checkpoint (1fe255f4) — لكن prod انهار كليًا (500 على كل المسارات)
-- [x] تشخيص 500: bundle الإنتاج يعمل سليمًا محليًا (/admin/200 وindex.html أصلي) — المشتبه: نقاط دخول JS خام في rollupOptions.input تسبب فشل بناء المنصة
-- [x] إزالة نقاط الدخول الخام من vite.config (الإبقاء على index.html فقط؛ JS تُنسخ raw عبر plugins)
-- [x] اختبارات 93/93 + بناء نظيف + اختبار bundle محلي سليم (/, /admin, /sw-forced.js = 200)
-- [ ] checkpoint + انتظار النشر + فحص prod = 200 + تسليم المستخدم مع تعليمات (فتح admin في متصفح جديد لتنظيف SW القديم ثم v17 ينظف نفسه)
+- [ ] إعادة كتابة sw-forced.js: في activate يحذف **كل** الكاشات بلا استثناء، وفي fetch يخدم من الشبكة فقط
+- [ ] تعديل تسجيل الـSW في client/public/admin.html + client/public/index.html + client/index.html: يلغي جميع التسجيلات القديمة عبر registrations.forEach(unregister) قبل التسجيل ثم يعيد التحميل بعد controllerchange
+- [ ] اختبارات + بناء نظيف
+- [ ] checkpoint ونشر + تحقق نهائي على prod + تسليم المستخدم مع تعليمات

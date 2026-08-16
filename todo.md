@@ -592,3 +592,9 @@
 - [ ] تعديل تسجيل الـSW في client/public/admin.html + client/public/index.html + client/index.html: يلغي جميع التسجيلات القديمة عبر registrations.forEach(unregister) قبل التسجيل ثم يعيد التحميل بعد controllerchange
 - [ ] اختبارات + بناء نظيف
 - [ ] checkpoint ونشر + تحقق نهائي على prod + تسليم المستخدم مع تعليمات
+
+- [x] v17: sw-forced.js — آلية no-reload-loop (تنظيف مرة لكل جلسة بلا reload)
+- [x] v17: تحديث بلوك تسجيل SW في admin.html / public/index.html / client/index.html
+- [x] اختبار vitest يتحقق من v17 وعدم وجود reload في بلوكات التسجيل (96/96)
+- [x] بناء إنتاج سليم (build + tests، md5 sw-forced متطابق في dist)
+- [ ] نشر checkpoint والتحقق الحي من prod (/, /admin, /sw-forced.js = 200 + محتوى v17)

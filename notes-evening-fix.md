@@ -455,3 +455,30 @@ prod admin.html يحتوي: admin-app-r30.js?v=merge-r3، downloads-manager-r14.
 ملاحظة prod مؤكدة (23:52): /sw.js و/service-worker.js على prod يعيدان HTML (fallback) — لا ملف SW قديم على الخادم الآن.
 production URL: https://uploadplus-47dkogbk.manus.space — auto-publish مفعّل.
 آخر checkpoint: 171a0f56 (sw-forced v15 — غير كافٍ لأنه لا يلغي SW قديم).
+
+## 00:32 — اكتشاف حاسم بعد rollback إلى d5bf3e51 (v16)
+
+prod ما زال 500 بعد rollback وبعد إشعار Deployment successful جديد. logs الإنتاج يظهر Server running بدون استثناءات.
+اختبار bundle محلي: dist/index.js يعمل 200 محليًا لكن **المحتوى الذي يُعاد من / هو محتوى dev proxy** (`<script type="module">import { injectIntoGlobalHook } from "/@react-refresh"`) — هذا محتوى تطوير وليس إنتاج!
+**السبب الحقيقي لـ500 على prod: البناء المحلي قديم منذ 23:05 (dist/index.js محدث 00:20 لكن المحتوى يعيد dev proxy) — والأرجح أن المنصة تعيد بناء المشروع بنفسها وتستخدم vite dev mode أو build يفشل**.
+تذكير: prod يعمل من dist الذي تبنيه المنصة. dist/local 200 لكن يعيد HTML dev = لأن البناء الأخير أُنتج في سياق مختلف أو أن dist/public/index.html قديم.
+الفحص الحقيقي: dist/public/index.html في حالة الـrollback — هل هو HTML أصلي أم dev؟
+ملاحظة: prod 500 مستمر منذ v17 وأول فشل نشر. prod آخر حالة عمل مؤكدة: قبل v17 (أي d5bf3e51 كان يعمل قبل أن نسجل 500؟ لا — 500 بدأ مع 1fe255f4 ثم استمر عبر a521ec6d والـrollback b3abb3dd).
+**نظرية أقوى الآن: المنصة تبني المشروع بنفسها بـvite build في بيئة خاصة، وvite.config يحتوي root=client/public + copyAdminAssets plugin الذي يتلاعب بالمسارات — ربما plugin يتعارض مع بيئة المنصة (مثل استخدام process.cwd أو writeFileSync في مسارات خارج dist أثناء build المنصة)**.
+فحص dist/public/index.html الحالي (في sandbox بعد rollback) لتحديد إن كان أصليًا.
+
+## 00:38 — prod تعافى بعد rollback (b3abb3dd = d5bf3e51/v16)
+
+/ → 500 حتى ITER 3، ثم ITER 4 → 200. prod الآن = 200 على / و/admin و/sw-forced.js. النشر يستغرق ~3-5 دقائق بعد إشعار النجاح (spin-up متأخر).
+الحالة الآن: prod يعمل بـv16 (sw-forced v16 مع حلقة kill لـSW القديم + تسجيل يلغي كل التسجيلات القديمة). v16 كانت المشكلة الوحيدة: حلقة reload لدى المستخدم.
+ملاحظة مهمة: الـ500 الشامل كان على الأرجح بسبب أن النشر كان جارٍ (transient) — لم يكن فشل دائم في الكود.
+**التالية**: v17 (no-reload-loop) يجب أن تُطبَّق بأمان: تعديل sw-forced.js + 3 ملفات HTML + checkpoint + انتظار 5 دقائق قبل الحكم.
+لكن يجب فهم: هل v16 نفسها (d5bf3e51) تسبب حلقة reload لدى المستخدم كما حدث سابقًا؟ v16 آلية تسجيلها: يلغي كل SW قديم بكاشاته بلا إعادة تحميل + __done flag. المشكلة السابقة (حلقة reload) ظهرت مع v16 المنشور الأول (d5bf3e51) — نعم، v16 كانت فيها حلقة reload («جاري التحقق من صلاحية الوصول» تظهر وتختفي).
+إذن prod يعمل الآن لكن المستخدم سيعاني حلقة reload من v16. الحل: تطبيق v17 الآن بسرعة.
+
+## 00:45 — خطة v17-no-reload-loop النهائية (بعد قراءة الملف كاملًا)
+
+**السبب الحقيقي لحلقة reload السابقة**: prod كان يخدم SW v15 القديم + كود صفحة قديم → حلقة kill/reload متبادلة. v17 بلا reload نهائيًا: تسجيل مرة لكل جلسة (sessionStorage.__sw17) + unregister فوري بدون postMessage ولا reload.
+v17 موجود بالكامل في commit 1fe255f4 (مسحوب). سنعيد تطبيقه يدويًا:
+1. sw-forced.js → v17-no-reload-loop. 2) admin.html (S19-46) + public/index.html (S31-56) + client/index.html → بلوك v17. 3) اختبار يتحقق من "v17-no-reload-loop" و"!sessionStorage" وعدم reload(). 4) checkpoint → انتظار 5 دقائق → تحقق prod.
+ملاحظة: v16 المنشورة الآن لا تسبب حلقة إلا إذا كان جهاز المستخدم يحمل SW v15 قديمًا — v17 سيلغيه بلا reload، آمن.

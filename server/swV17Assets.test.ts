@@ -8,38 +8,44 @@ function read(rel: string): string {
   return fs.readFileSync(path.join(ROOT, rel), "utf8");
 }
 
-const sw = read("client/public/sw-forced.js");
+const sw = read("client/public/sw-purgex-v19.js");
 const adminHtml = read("client/public/admin.html");
 const publicIndex = read("client/public/index.html");
 const clientIndex = read("client/index.html");
 
-describe("SW v17+v18 mechanism", () => {
-  it("sw-forced.js is v17 with single-run cleanup and self-unregister", () => {
-    expect(sw).toContain("v18-force-purge");
+describe("SW v19 purgex mechanism", () => {
+  it("sw-purgex-v19.js is a pure pass-through that wipes caches and self-unregisters", () => {
+    expect(sw).toContain("v19-purgex");
     expect(sw).toContain("sw-kill-me");
+    expect(sw).toContain("wp-purge-now");
     expect(sw).toContain("skipWaiting");
     // لا reload داخل الـSW
     expect(sw).not.toMatch(/location\.reload|clients\.clearCacheNames/);
   });
 
-  it("all three HTML entries register the SW once per session with no reload loop", () => {
+  it("all three HTML pages run the mandatory inline purge (v19) unconditionally once per session", () => {
     for (const [name, html] of [
       ["admin.html", adminHtml],
       ["public/index.html", publicIndex],
       ["client/index.html", clientIndex],
     ] as const) {
-      // بلوك v17 موجود
-      expect(html).toContain("SW نهائي v17");
-      expect(html).toContain('__sw17');
-      expect(html).toContain('!sessionStorage.getItem("__sw17")');
-      expect(html).toContain('navigator.serviceWorker.register("/sw-forced.js")');
-      // لا حلقة reload: لا controllerchange ولا reload داخل بلوك التسجيل
+      // بلوك v19 المباشر موجود: يمسح الكاشات ويلغي التسجيلات ويسجل purgex-v19
+      expect(html).toContain("__wpV19Purge");
+      expect(html).toContain("__wp_purge_v19");
+      expect(html).toContain('navigator.serviceWorker.register("/sw-purgex-v19.js');
+      expect(html).toContain("caches.keys()");
+      expect(html).toContain("getRegistrations()");
+      // لا حلقة reload: لا controllerchange ولا reload داخل بلوك التنظيف
       expect(html).not.toContain("controllerchange");
       expect(html).not.toMatch(/serviceWorker.*reload|reload.*serviceWorker/i);
+      // لم يعد هناك كتل v17/v18 القديمة
+      expect(html).not.toContain("__sw17");
+      expect(html).not.toContain("__sw18");
+      expect(html).not.toContain("sw-forced.js");
     }
   });
 
-  it("no leftover v15/v16 kill-loop SW code anywhere in public HTML", () => {
+  it("no leftover kill-loop SW code anywhere in public HTML", () => {
     for (const [name, html] of [
       ["admin.html", adminHtml],
       ["public/index.html", publicIndex],
@@ -50,6 +56,8 @@ describe("SW v17+v18 mechanism", () => {
       expect(html).not.toContain("sw-all-caches-cleared");
       expect(html).not.toContain("__killAllOldSW");
       expect(html).not.toContain("sw-unregistered");
+      expect(html).not.toContain("SW نهائي v17");
+      expect(html).not.toContain("SW نهائي v18");
     }
   });
 });

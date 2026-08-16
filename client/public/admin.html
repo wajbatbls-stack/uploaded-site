@@ -17,40 +17,27 @@
   <body>
     <div id="admin-root"></div>
     <script>
-      <script>
-      /* SW نهائي v18: purgex — يُلغي كل التسجيلات القديمة ويحذف كل الكاشات (حتى صفحة SW القديمة) — مرة واحدة لكل جلسة بلا reload */
-      if ("serviceWorker" in navigator && !sessionStorage.getItem("__sw18")) {
-        sessionStorage.setItem("__sw18", "1");
-        navigator.serviceWorker.register("/sw-forced.js?u=v18-purgex").then(() => {
-          if (navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ type: "sw-kill-me" });
+      /* v19-purgex — مسح إجباري مباشر: يُنفذ فور تحميل هذه الصفحة (بلا أي شرط تسجيل)،
+         يُلغي كل خدمة خلفية قديمة ويحذف كل كاشاتها، ثم يسجل نسخة purgex بمسار جديد كليًا
+         تعمل كمؤمّنة أخيرة. يعمل مرة واحدة لكل جلسة (localStorage flag). */
+      (function __wpV19Purge() {
+        var SESSION_KEY = "__wp_purge_v19";
+        try {
+          if (window.localStorage && window.localStorage.getItem(SESSION_KEY)) return;
+          if ("caches" in window) {
+            void caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
           }
-          navigator.serviceWorker.getRegistrations().then(regs => {
-            Promise.all(regs.map(r => r.unregister()));
-            if ("caches" in window) {
-              caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
-            }
-          }).catch(() => {});
-        }).catch(() => {});
-      }
-    </script>
-
-    <script>
-      /* SW نهائي v17: يُلغي كل تسجيل SW قديم ويحذف كاشاته — مرة واحدة لكل جلسة، بلا إعادة تحميل */
-      if ("serviceWorker" in navigator && !sessionStorage.getItem("__sw17")) {
-        sessionStorage.setItem("__sw17", "1");
-        navigator.serviceWorker.register("/sw-forced.js").then(() => {
-          if (navigator.serviceWorker.controller) {
-            navigator.serviceWorker.controller.postMessage({ type: "sw-kill-me" });
+          if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.getRegistrations().then(regs => {
+              Promise.all(regs.map(r => r.unregister())).catch(() => {});
+            }).catch(() => {});
+            try {
+              navigator.serviceWorker.register("/sw-purgex-v19.js?u=v19").catch(() => {});
+            } catch (_) {}
           }
-          navigator.serviceWorker.getRegistrations().then(regs => {
-            Promise.all(regs.map(r => r.unregister()));
-            if ("caches" in window) {
-              caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))));
-            }
-          }).catch(() => {});
-        }).catch(() => {});
-      }
+          if (window.localStorage) window.localStorage.setItem(SESSION_KEY, "1");
+        } catch (_) {}
+      })();
       window.__loginTrace = [];
       const __origConsoleError = console.error;
       console.error = function __loginConsoleError(...args) {

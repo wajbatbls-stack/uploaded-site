@@ -814,3 +814,12 @@ v17-no-reload-loop نفّذ التنظيف مرة واحدة لكل جلسة ع�
 - الاختبارات فشل 4 بسبب أن الاختبارات ما زالت تتوقع r15.
 - ملاحظة: admin-app يبقى r30 (لا نغيره، dl/pm فقط تغيرا إلى r16)
 الخطوة التالية: sed على الاختبارات r15→r16 في downloadsAssets/teamPartners ثم pnpm test + build + checkpoint + تحقق prod.
+
+## 01:42 UTC — تحقق نهائي على الإنتاج (مكتمل بالكامل)
+كل شيء على https://uploadplus-47dkogbk.manus.space يطابق المصدر محليًا:
+- admin-downloads-manager-r16.js: md5=680e7967 ✓ مطابق المصدر
+- admin-partners-manager-r16.js: md5=b975bb9c ✓ مطابق المصدر
+- sw-forced.js (v18-purgex): md5=63f20ddd ✓ مطابق المصدر
+- admin.html: يحمل r16 حصريًا (0 إحالات r14/r15) + v18-purgex مسجل
+- HTML المنشور حديث (no-store) وr16 جديد كليًا يكسر كاش 90 يومًا نهائيًا
+ملاحظة: الإنتاج يخدم public عبر المسار /assets/js وليس /js/ (المسار القديم /js/ يعيد SPA fallback فقط، لا يؤثر على الموقع لأنه يحمّل من /assets/js).

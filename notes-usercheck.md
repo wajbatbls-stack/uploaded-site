@@ -123,3 +123,10 @@
 ## sv21 تقدم (بعد البناء):
 r17 جاهز: client/public/assets/js/admin-downloads-manager-r17.js بنى بتصميم dfa17 فاخر (header متدرج كحلي-بنفسجي + orbs متحركة + dropzone أنيق + بطاقات ملفات بشريط تقدم + استبدال ملف + زر إضافة دائم معطل حتى اختيار ملف وقسم + brand new accent #3d32c8/#7c3aed). md5: 7cc36e5ee0e4383351c02cc849f5a699 متطابق بين dist والمصدر. الاختبارات 98/98 كلها تمر. الإحالات: admin.html/admin-dashboard.html/vite.config.ts والاختبارات كلها على r17.
 المتبقي: حفظ نقطة تفتيش + نشر + تحقق حي من /admin downloads على الدومين الأصلي uploadplus-47dkogbk.manus.space.
+
+## sv21 - المتبقي: اختبار رفع فعلي على الإنتاج ثم حذف بيانات الاختبار
+- r17 منشور حيًا على الدومين الأصلي بمطابقة md5 كاملة (7cc36e5ee0e4383351c02cc849f5a699)، admin.html الحي يشير لـ r17، الاختبارات 98/98، checkpoint b13ebfaf محفوظ ومنشور.
+- سكربت الاختبار: /tmp/test_upload_r17.mjs (تسجيل دخول عبر /api/trpc/auth.login بـ email bdalslamanwralajsh@gmail.com / password abd77312، رفع multipart إلى /api/downloads/upload، إنشاء عبر /api/trpc/admin.downloads.createFile، تحقق عبر /api/downloads.public، حذف عبر /api/trpc/admin.downloads.removeFile). اسم الكوكي: ADMIN_SESSION_COOKIE (معرّف في shared أو _core، يجلب من set-cookie header).
+- جدول download_files: 22 ملفًا أصليًا، الأعمدة: id, categoryId, fileName, originalName, description, fileKey, fileUrl, mimeType, sizeBytes, imageKey, imageUrl, sortOrder, isVisible, downloadCount, lastDownloadedAt, createdAt, updatedAt.
+- بعد نجاح الاختبار: DELETE FROM download_files WHERE fileName LIKE '%sv21%' أو LIKE '%اختبار%'.
+- روابط: الموقع https://uploadplus-47dkogbk.manus.space ، الإدارة https://uploadplus-47dkogbk.manus.space/admin

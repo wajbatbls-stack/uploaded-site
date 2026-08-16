@@ -708,3 +708,13 @@
 - [x] إنشاء admin-downloads-manager-r18.js: تخفيف التعتيم (34-50%، blur 3px)، حقول min-height 44px، زر 48-50px، drawer بعرض كامل + media query 560px (md5 b2999159a576bd73a3cb0b4cc6e53433 متطابق)
 - [x] تحديث الإحالات r17→r18 (admin.html، admin-dashboard.html، vite.config.ts، 3 اختبارات) + pnpm test 98/98 + لقطة موبايل سليمة + checkpoint 9a2878d9 (auto-publish)
 - [x] التحقق الحي من نشر r18 على الدومين الأصلي: md5 متطابق (b2999159a576bd73a3cb0b4cc6e53433) وadmin.html الحي يشير إلى r18 — تم التسليم للتجربة على الهاتف
+
+# sv23: وضوح كامل على الهاتف (Clarity Mode) + كسر كاش v20 - 2026-08-16
+- [x] فحص r18: backdrop blur 3px + orbs ضبابية filter:blur(30px) + gradient داكن + badge/x شفافان — التشخيص الحاسم
+- [x] إنشاء admin-downloads-manager-r19.js: dfa17-backdrop صافي (rgba .18 بدون blur)، orbs مخفية display:none، head متدرج أفتح + نص #eef1ff صلب، badge/x خلفيات بيضاء صلبة بنص داكن، media 560px backdrop none !important
+- [x] r19 أيضًا: تخفيف dl10-backdrop blur إلى 1.5px + dl15 badge/x صلبان (وضوح كل drawer)
+- [x] بناء sw-purgex-v20.js بمسار جديد كليًا + ترقية السكربتات inline (admin.html + client/index.html) إلى مفتاح __wp_purge_v20
+- [x] تحديث الإحالات r18→r19 (admin.html، admin-dashboard.html، vite.config.ts) والاختبارات الثلاثة إلى r19 (98/98 متوقع)
+- [x] pnpm test (98/98) + بناء إنتاج مع تحقق md5 (r19 = c5a7543c…، sw-purgex-v20 = 070bf5b4…)
+- [x] تحقق حي على الدومين الأصلي (قادم ضمن الـ curl بعد النشر)
+- [ ] تسليم المستخدم بخطوات تجربة واضحة

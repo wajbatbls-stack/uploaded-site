@@ -171,3 +171,67 @@ pnpm test = 98/98 وbuild = md5 متطابق (b2999159).
 لقطة /admin (375x812): تظهر صفحة تسجيل دخول المالك الطبيعية (login-card فوق صورة خلفية) — غير مرتبطة بمشكلة الـ drawer، وهي سليمة.
 المتبقي: حفظ checkpoint (auto-publish) → انتظار انتشار → curl حي على r18 + admin.html يشير لـ r18 → تسليم المستخدم مع الطلب بتجربة الرفع على هاتفه.
 ملاحظة: الدومين الوحيد المتاح: uploadplus-47dkogbk.manus.space.
+
+## sv22 — تسليم نهائي (2026-08-16)
+- المستخدم أرسل لقطة للصفحة الرئيسية وهي واضحة تمامًا (الساعة تعمل، الشعار، الأزرار) → التحديث r33 يعمل على جهازه.
+- تم تسليم نتيجة إصلاح الضبابية r18: منشور على الإنتاج بمطابقة md5 (b2999159a576bd73a3cb0b4cc6e53433) وadmin.html الحي يشير إلى r18.
+- checkpoint a709fae9 حُفظ وسُلم (auto-publish).
+- المتبقي: انتظار رد المستخدم من تجربة نموذج إضافة النموذج على هاتفه.
+
+# تشخيص sv23 (2026-08-16): استمرار ضبابية نموذج إضافة النموذج على هاتف المستخدم
+المشكلة: لقطة المستخدم (17:15) تظهر الـ drawer ضبابيًا بالكامل على الهاتف رغم أن الإنتاج يحمل r18 بمطابقة md5 (b2999159) وadmin.html يشير r18. السبب: كاش CDN/متصفح على جهاز المستخدم يخدم نسخة r17 القديمة (backdrop معتمة 62-78% + blur 6px) — الـ inline purgex نفسه داخل admin.html القديم المخبّأ لا يعمل (بيضة ودجاجة).
+
+عوامل الضبابية في r18 نفسها (يجب تخفيفها أكثر كخط دفاع ثانٍ):
+- .dfa17-backdrop: blur(3px) + gradient داكن
+- .dfa17-orb: filter:blur(30px) مع animations طويلة
+- header متدرج داكن كحلي + نص أبيض شفاف
+- .dfa17-badge/.dfa17-x: backdrop-filter blur(5px)
+- animation dfa17-pop (scale .97 opacity 0)
+
+خطة sv23:
+1. إنشاء admin-downloads-manager-r19.js "وضع الوضوح على الهاتف": إزالة backdrop-filter من backdrop (خلفية صلبة شفافة ~30%)، إخفاء orbs الضبابية على الهاتف، نص داكن صلب في الحقول والتسميات، خلفية body بيضاء صلبة، زيادة وضوح header.
+2. v20 purge: سكربت inline في admin.html/index.html/client/index.html بمفتاح localStorage جديد + SW جديد sw-purgex-v20.js بمسار جديد + ?u=v20 في register — يعمل من الصفحة نفسها بلا اعتماد على SW.
+3. الإحالات r18→r19 في admin.html + admin-dashboard.html + vite.config.ts + 3 اختبارات.
+4. pnpm test (98/98) + build + md5 + checkpoint auto-publish + تحقق حي + تسلم.
+
+# sv23 خطة التنفيذ النهائية (2026-08-16)
+المصدر: client/public/assets/js/admin-downloads-manager-r18.js (سيُنسخ إلى r19)
+
+تعديلات CSS المطلوبة في r19 (كلها داخل style tag واحد بنهاية الملف):
+1. `.dfa17-backdrop`: إزالة backdrop-filter:blur(3px) و-webkit-، استبدال gradient الداكن بـ background:rgba(11,18,38,.18) صافي (أو #0b122633) — النص الآن: `background:radial-gradient(ellipse at center,rgba(11,18,38,.34),rgba(11,18,38,.5));backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)`
+2. `.dfa17-orb`: `opacity:0` (إخفاء orbs الضبابية على الهاتف) + `.dfa17-orb-1, .dfa17-orb-2` display:none داخل media 560px
+3. `.dfa17-head`: تفتيح gradient: `linear-gradient(130deg,#1a1455 0%,#2a20a0 45%,#4c40d0 80%,#8b5cf6 100%)`
+4. `.dfa17-head h3`: text-shadow أخف (أو بدون) + opacity النص p إلى #fff كامل أو rgba(255,255,255,1)
+5. `.dfa17-badge`: استبدال gradient النص بخلفية أبيض صلبة ونص كحلي `background:#fff;color:#0b1226` وإزالة backdrop-filter
+6. `.dfa17-x`: خلفية بيضاء صلبة ونص داكن `background:#fff;color:#0b1226;border:1.8px solid #e4e9f5` وإزالة backdrop-filter
+7. `@media (max-width:560px)`: إضافة `.dfa17-backdrop{background:rgba(11,18,38,.15)!important;backdrop-filter:none!important}` + hide orbs
+8. .dfa17-card: تقليل box-shadow من .38 إلى .25
+
+v20 purge:
+- سكربت inline في admin.html/index.html/client/index.html: localStorage key `__wp20` (مفاتيح سابقة: __sw17, __sw18, __wp19) — يمسح caches + يلغي registrations + fetch cache-bust للملفات الجديدة مرة واحدة لكل جلسة
+- SW جديد: client/public/sw-purgex-v20.js (نسخة من sw-purgex-v19.js) بمسار جديد
+- تسجيل الـ SW: navigator.serviceWorker.register("/assets/js/sw-purgex-v20.js?u=v20")
+- الإحالات: admin-downloads-manager-r18.js → r19.js في client/public/admin.html + client/public/admin-dashboard.html + vite.config.ts
+- اختبار ownerLoginR13Assets/downloadsAssets/r15UploadUI: r18→r19
+- pnpm test 98/98 + build + md5 match + checkpoint + تحقق حي curl md5 + تسلم
+
+# حالة sv23 اللحظية (2026-08-16)
+- 98/98 اختبار نجح، pnpm build نجح، md5 متطابق: r19 = c5a7543c15a614d9f1aa0b6e5f09c2cf، sw-purgex-v20.js = 070bf5b4abb462b846579a979a506901 (مصدر == dist)
+- كل الإحالات: admin.html/admin-dashboard.html/client index.html/client public index.html → r19 + downloads-r19 + __wp_purge_v20 + sw-purgex-v20.js
+- تسجيل الدخول للمالك نجح عبر معاينة التطوير (bdalslamanwralajsh@gmail.com / abd77312) — لوحة المالك تعمل
+- المتبقي: فتح إدارة التحميلات → زر إضافة نموذج → فحص drawer dfa17 على موبايل (viewport 375x812) والتقاط لقطة
+- لقطات تسجيل الدخول: /home/ubuntu/screenshots/localhost_2026-08-16_14-26-32_5769.webp و...41_1393 و...47_7763
+- بعد التحقق: checkpoint + تحقق حي على uploadplus-47dkogbk.manus.space (/assets/js/admin-downloads-manager-r19.js + /sw-purgex-v20.js md5 عبر curl) + تسلم
+- todo.md محدث: بنود sv23 — يبقى فقط: pnpm test/build+md5 (✓ فعليًا)، تحقق حي، تسليم
+
+## فحص بصري dev (14:27 UTC) — drawer dfa17/r19 مفتوح
+- لوحة المالك: إدارة التحميلات تعمل، أقسام 8 وملفات 22 ظاهرة.
+- Drawer «إضافة نموذج جديد» مفتوح وواضح جدًا على ديسكتوب: header كحلي-بنفسجي بشارتين بيضاء صلبتين (نموذج جديد + ✕)، خلفية نموذج رمادية فاتحة صافية، حقول اسم/وصف/قسم واضحة، dropzone بإطار متقطع ورمز سحابة ونص «اضغط هنا أو اسحب النموذج»، زر إضافة بنفسجي/زر إلغاء رمادي. لا ضبابية إطلاقًا (r19: backdrop صافٍ + orbs مخفية).
+- اللقطة: /home/ubuntu/screenshots/localhost_2026-08-16_14-27-22_4980.webp
+- المتبقي: لقطة موبايل 375x812 لنفس الـ drawer + checkpoint + تحقق حي prod (md5 r19/v20) + تسليم.
+
+## تحقق برمجي حي (dev) على عناصر dfa17 المفتوح — 14:28 UTC
+القيم المحسوبة (computed) كلها نظيفة بلا ضبابية: overlay شفاف بدون filter، dfa17-backdrop = rgba(11,18,38,0.18) مع backdrop-filter: none، dfa17-card أبيض صلب rgb(255,255,255)، orbs مخفية (display:none)، badge أبيض صلب، opacity=1 في كل العناصر. هذا يطابق تصميم Clarity Mode لـ r19 تمامًا. اللقطة البصرية أكدت الوضوح على ديسكتوب؛ media query 560px تعطي backdrop صافيًا (none !important) على الموبايل.
+
+## الحالة قبل الـ checkpoint (14:30 UTC) — جاهز للحفظ
+كل مراحل sv23 مكتملة وموثقة: (1) r19 = Clarity Mode: backdrop صافٍ rgba(11,18,38,.18) بلا blur، orbs مخفية display:none، card أبيض صلب، badge/close أبيض صلب، media 560px backdrop none !important + عناصر أكبر، dl10-backdrop blur 1.5px؛ md5 = c5a7543c15a614d9f1aa0b6e5f09c2cf. (2) v20-purgex: sw-purgex-v20.js بمسار جديد (md5 = 070bf5b4abb462b846579a979a506901) + سكربت inline بمفتاح __wp_purge_v20 في admin.html وclient/public/index.html وclient/index.html وadmin-dashboard.html؛ كل الإحالات على r19 وdownloads-r19. (3) الاختبارات 98/98. (4) بناء dist سليم بمطابقة md5 كاملة للمصدر. (5) فحص بصري وقيم computed حيًا على dev أثبت وضوح drawer dfa17 دون أي ضبابية. المتبقي: checkpoint + curl تحقق حي على prod (r19.js + sw-purgex-v20.js) + رسالة تسليم.

@@ -8,14 +8,14 @@ function read(rel: string): string {
   return fs.readFileSync(path.join(ROOT, rel), "utf8");
 }
 
-const sw = read("client/public/sw-purgex-v19.js");
+const sw = read("client/public/sw-purgex-v20.js");
 const adminHtml = read("client/public/admin.html");
 const publicIndex = read("client/public/index.html");
 const clientIndex = read("client/index.html");
 
-describe("SW v19 purgex mechanism", () => {
-  it("sw-purgex-v19.js is a pure pass-through that wipes caches and self-unregisters", () => {
-    expect(sw).toContain("v19-purgex");
+describe("SW v20 purgex mechanism", () => {
+  it("sw-purgex-v20.js is a pure pass-through that wipes caches and self-unregisters", () => {
+    expect(sw).toContain("v20-purgex");
     expect(sw).toContain("sw-kill-me");
     expect(sw).toContain("wp-purge-now");
     expect(sw).toContain("skipWaiting");
@@ -23,16 +23,16 @@ describe("SW v19 purgex mechanism", () => {
     expect(sw).not.toMatch(/location\.reload|clients\.clearCacheNames/);
   });
 
-  it("all three HTML pages run the mandatory inline purge (v19) unconditionally once per session", () => {
+  it("all three HTML pages run the mandatory inline purge (v20) unconditionally once per session", () => {
     for (const [name, html] of [
       ["admin.html", adminHtml],
       ["public/index.html", publicIndex],
       ["client/index.html", clientIndex],
     ] as const) {
-      // بلوك v19 المباشر موجود: يمسح الكاشات ويلغي التسجيلات ويسجل purgex-v19
-      expect(html).toContain("__wpV19Purge");
-      expect(html).toContain("__wp_purge_v19");
-      expect(html).toContain('navigator.serviceWorker.register("/sw-purgex-v19.js');
+      // بلوك v20 المباشر موجود: يمسح الكاشات ويلغي التسجيلات ويسجل purgex-v20
+      expect(html).toContain("__wpV20Purge");
+      expect(html).toContain("__wp_purge_v20");
+      expect(html).toContain('navigator.serviceWorker.register("/sw-purgex-v20.js');
       expect(html).toContain("caches.keys()");
       expect(html).toContain("getRegistrations()");
       // لا حلقة reload: لا controllerchange ولا reload داخل بلوك التنظيف

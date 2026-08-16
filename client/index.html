@@ -38,9 +38,9 @@
     <div id="app"></div>
     <div id="toast-region" aria-live="polite" aria-atomic="true"></div>
     <script>
-      /* v19-purgex — مسح إجباري مباشر: يُلغي كل خدمة خلفية قديمة ويحذف كل كاشاتها فور تحميل الصفحة، ثم يسجل purgex-v19 بمسار جديد كليًا كمؤمّنة أخيرة. مرة واحدة لكل جلسة عبر localStorage. */
-      (function __wpV19Purge() {
-        var SESSION_KEY = "__wp_purge_v19";
+      /* v20-purgex — مسح إجباري مباشر: يُلغي كل خدمة خلفية قديمة ويحذف كل كاشاتها فور تحميل الصفحة، ثم يسجل purgex-v20 بمسار جديد كليًا كمؤمّنة أخيرة. مرة واحدة لكل جلسة عبر localStorage. */
+      (function __wpV20Purge() {
+        var SESSION_KEY = "__wp_purge_v20";
         try {
           if (window.localStorage && window.localStorage.getItem(SESSION_KEY)) return;
           if ("caches" in window) {
@@ -51,7 +51,7 @@
               Promise.all(regs.map(r => r.unregister())).catch(() => {});
             }).catch(() => {});
             try {
-              navigator.serviceWorker.register("/sw-purgex-v19.js?u=v19").catch(() => {});
+              navigator.serviceWorker.register("/sw-purgex-v20.js?u=v20").catch(() => {});
             } catch (_) {}
           }
           if (window.localStorage) window.localStorage.setItem(SESSION_KEY, "1");

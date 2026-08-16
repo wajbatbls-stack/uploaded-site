@@ -2,8 +2,8 @@ import { test } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const SRC = path.resolve(import.meta.dirname, "..", "client", "public", "assets", "js", "admin-downloads-manager-r18.js");
-const DIST = path.resolve(import.meta.dirname, "..", "dist", "public", "assets", "js", "admin-downloads-manager-r18.js");
+const SRC = path.resolve(import.meta.dirname, "..", "client", "public", "assets", "js", "admin-downloads-manager-r19.js");
+const DIST = path.resolve(import.meta.dirname, "..", "dist", "public", "assets", "js", "admin-downloads-manager-r19.js");
 
 test("r17: نموذج إضافة النموذج بتصميم فاخر ورفع فعلي بشريط تقدم موجود في المصدر", () => {
   const src = fs.readFileSync(SRC, "utf8");

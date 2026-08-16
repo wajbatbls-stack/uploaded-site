@@ -17,11 +17,11 @@
   <body>
     <div id="admin-root"></div>
     <script>
-      /* v19-purgex — مسح إجباري مباشر: يُنفذ فور تحميل هذه الصفحة (بلا أي شرط تسجيل)،
+      /* v20-purgex — مسح إجباري مباشر: يُنفذ فور تحميل هذه الصفحة (بلا أي شرط تسجيل)،
          يُلغي كل خدمة خلفية قديمة ويحذف كل كاشاتها، ثم يسجل نسخة purgex بمسار جديد كليًا
          تعمل كمؤمّنة أخيرة. يعمل مرة واحدة لكل جلسة (localStorage flag). */
-      (function __wpV19Purge() {
-        var SESSION_KEY = "__wp_purge_v19";
+      (function __wpV20Purge() {
+        var SESSION_KEY = "__wp_purge_v20";
         try {
           if (window.localStorage && window.localStorage.getItem(SESSION_KEY)) return;
           if ("caches" in window) {
@@ -32,7 +32,7 @@
               Promise.all(regs.map(r => r.unregister())).catch(() => {});
             }).catch(() => {});
             try {
-              navigator.serviceWorker.register("/sw-purgex-v19.js?u=v19").catch(() => {});
+              navigator.serviceWorker.register("/sw-purgex-v20.js?u=v20").catch(() => {});
             } catch (_) {}
           }
           if (window.localStorage) window.localStorage.setItem(SESSION_KEY, "1");
@@ -109,7 +109,7 @@
                 visitorLinksManager.async = false;
                 visitorLinksManager.onload = () => {
                   const downloadsManager = document.createElement("script");
-                  downloadsManager.src = "/assets/js/admin-downloads-manager-r18.js?v=downloads-r18";
+                  downloadsManager.src = "/assets/js/admin-downloads-manager-r19.js?v=downloads-r19";
                   downloadsManager.async = false;
                   downloadsManager.onload = () => {
                     const contactManager = document.createElement("script");
@@ -160,7 +160,7 @@
                 visitorLinksManager.async = false;
                 visitorLinksManager.onload = () => {
                   const downloadsManager = document.createElement("script");
-                  downloadsManager.src = "/assets/js/admin-downloads-manager-r18.js?v=downloads-r18";
+                  downloadsManager.src = "/assets/js/admin-downloads-manager-r19.js?v=downloads-r19";
                   downloadsManager.async = false;
                   downloadsManager.onload = () => {
                     const contactManager = document.createElement("script");
@@ -238,7 +238,7 @@
       }
       if (!window.WajbatDownloadsManager) {
         const retryDownloads = document.createElement("script");
-        retryDownloads.src = "/assets/js/admin-downloads-manager-r18.js?v=downloads-r18&reload=" + Date.now();
+        retryDownloads.src = "/assets/js/admin-downloads-manager-r19.js?v=downloads-r19&reload=" + Date.now();
         retryDownloads.async = false;
         document.body.append(retryDownloads);
       }

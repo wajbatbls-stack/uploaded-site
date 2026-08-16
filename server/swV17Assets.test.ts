@@ -14,11 +14,14 @@ const publicIndex = read("client/public/index.html");
 const clientIndex = read("client/index.html");
 
 describe("SW v20 purgex mechanism", () => {
-  it("sw-purgex-v20.js is a pure pass-through that wipes caches and self-unregisters", () => {
+  it("sw-purgex-v20.js wipes caches and redirects only the stale r19 bundle to r20 without caching", () => {
     expect(sw).toContain("v20-purgex");
     expect(sw).toContain("sw-kill-me");
     expect(sw).toContain("wp-purge-now");
     expect(sw).toContain("skipWaiting");
+    expect(sw).toContain('requested.pathname !== "/assets/js/admin-downloads-manager-r19.js"');
+    expect(sw).toContain('"/assets/js/admin-downloads-manager-r20.js"');
+    expect(sw).toContain('cache: "no-store"');
     // لا reload داخل الـSW
     expect(sw).not.toMatch(/location\.reload|clients\.clearCacheNames/);
   });

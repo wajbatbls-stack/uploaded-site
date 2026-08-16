@@ -6,9 +6,9 @@ const projectFile = (path: string) => readFileSync(resolve(process.cwd(), path),
 describe("أصول قسم إدارة التحميلات الحديث (r17 — كسر كاش CDN)", () => {
   it("يحمّل مدير التحميلات r10 ومدير التطبيق المبصّم من صفحة الإدارة", () => {
     const adminHtml = projectFile("client/public/admin.html");
-    expect(adminHtml).toContain("admin-downloads-manager-r17.js");
+    expect(adminHtml).toContain("admin-downloads-manager-r18.js");
     expect(adminHtml).toContain("admin-app-r30.js");
-    expect(adminHtml).toContain("downloads-r17");
+    expect(adminHtml).toContain("downloads-r18");
     expect(adminHtml).toContain("admin-structured-editor-r6.js");
     expect(adminHtml).toContain("structured-r6");
     expect(projectFile("client/public/assets/js/admin-downloads-manager-r14.js")).toContain("WajbatDownloadsManager");
@@ -87,19 +87,19 @@ describe("أصول قسم إدارة التحميلات الحديث (r17 — ك
     const r14DestCount = (vite.match(/destination: ["']assets\/js\/admin-downloads-manager-r14\.js["']/g) || []).length;
     expect(r14DestCount).toBe(0, "يجب ألا توجد وجهة منشورة باسم r14 (كسر كاش CDN)");
     // r15 هو الوجهة المنشورة (مصدران: r14 وr15 كلاهما → r15)
-    const r17Count = (vite.match(/admin-downloads-manager-r17\.js/g) || []).length;
+    const r17Count = (vite.match(/admin-downloads-manager-r18\.js/g) || []).length;
     expect(r17Count).toBeGreaterThanOrEqual(2);
     // صفحات الإدارة تشير إلى r15 حصريًا (HTML نفسه no-cache)
     for (const page of ["client/public/admin.html", "client/public/admin-dashboard.html"]) {
       const html = projectFile(page);
-      expect(html).toContain("admin-downloads-manager-r17.js");
+      expect(html).toContain("admin-downloads-manager-r18.js");
       expect(html).not.toContain("admin-downloads-manager-r14.js", `${page} يجب أن يشير إلى r15`);
       for (let i = 1; i <= 13; i++) {
         expect(html).not.toContain(`admin-downloads-manager-r${i}.js`);
       }
     }
     // ملف المصدر r14 موجود فعليًا في المشروع ويحمله r15 بمحتواه
-    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r17.js");
+    const manager = projectFile("client/public/assets/js/admin-downloads-manager-r18.js");
     expect(manager).toContain("WajbatDownloadsManager");
     // كل نسخ المحرر العام القديمة تُوجَّه إلى r6 الذي أعفي قسم التحميلات
     expect(vite).toContain('"assets/js/admin-structured-editor-r6.js"');

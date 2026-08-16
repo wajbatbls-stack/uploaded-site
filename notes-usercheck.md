@@ -130,3 +130,44 @@ r17 جاهز: client/public/assets/js/admin-downloads-manager-r17.js بنى بت
 - جدول download_files: 22 ملفًا أصليًا، الأعمدة: id, categoryId, fileName, originalName, description, fileKey, fileUrl, mimeType, sizeBytes, imageKey, imageUrl, sortOrder, isVisible, downloadCount, lastDownloadedAt, createdAt, updatedAt.
 - بعد نجاح الاختبار: DELETE FROM download_files WHERE fileName LIKE '%sv21%' أو LIKE '%اختبار%'.
 - روابط: الموقع https://uploadplus-47dkogbk.manus.space ، الإدارة https://uploadplus-47dkogbk.manus.space/admin
+
+# sv22 تشخيص ضبابية نموذج الرفع (2026-08-16)
+- لقطة المستخدم: نموذج إضافة نموذج (dfa17 drawer) على هاتف Android Chrome يبدو كله ضبابي، زر إضافة النموذج غير واضح، لا يستطيع رفع ملفات.
+- عناصر الضبابية في r17: .dfa17-backdrop { background:radial-gradient(rgba(11,18,38,.62),rgba(11,18,38,.78)); backdrop-filter:blur(6px); z-index:85 } — يغطي الشاشة بخلفية كحلية شفافة + blur.
+- .dfa17-card خلفية بيضاء صلبة #fff لكن الـ backdrop يعتم 62-78% من الشاشة؛ على Android Chrome قديم:
+  1) backdrop-filter قد لا تُدعم → الخلفية تصبح كتلة داكنة خالصة تغطي المحتوى جزئيًا.
+  2) الـ aside قد يُعرض بارتفاع صغير + الحقول داخل overflow-y:auto فتبدو صغيرة وضبابية.
+- الحل (sv22): إنشاء -r18.js من r17 مع:
+  1) تقليل تعتيم الخلفية إلى rgba(11,18,38,.38/.5) فقط وإزالة blur أو خفضه 2px + -webkit-backdrop-filter.
+  2) dfa17-card z-index:95، عرض 100% على الشاشات <480px (padding أقل)، الحقول min-height 44px (لمس)، زر إضافة ثابت واضح أسفل الدفتر.
+  3) إزالة أي opacity على محتوى الـ card.
+- بعد التعديل: نسخ إلى admin-downloads-manager-r18.js → تحديث الإحالات: admin.html، admin-dashboard.html، vite.config.ts (redirect r16/r17→r18)، اختبارات: downloadsAssets.test.ts + ownerLoginR13Assets.test.ts + test r15UploadUI → r18 (يجب أن تبقى تمر).
+- ثم: pnpm test + pnpm run build + md5 تحقق + checkpoint + تحقق حي.
+- ملاحظة: لقطة sandbox لـ /admin#/downloads أظهرت صفحة تسجيل دخول (خلفية صورة مهندس + login-card) — صفحة الدخول normal، غير مرتبطة بالدفتر.
+
+## sv22 تشخيص مفصل نهائي (CSS r17 أسطر 958-1120)
+الملف: client/public/assets/js/admin-downloads-manager-r17.js
+
+1. الـ drawer: HTML سطر 382-408: div.dfa17-overlay > (div.dfa17-backdrop[data-dfa17-close] + aside.dfa17-card) ثم header.dfa17-head يحتوي orbs متوهمة (filter:blur(30px) opacity:.75/.5) والأنماط inline على aside.
+2. backdrop سطر 974: background radial rgba(11,18,38,.62)→.78 + backdrop-filter:blur(6px) + z-index:85 — يعتم الشاشة كلها 62-78% ويعمي ما خلفها (مقصود) لكنه على هواتف أندرويد قديمة قد يُطبق blur على layer كامل أو لا يُدعم فيصبح لونًا داكنًا كثيفًا.
+3. card سطر 975: max-width:520px، max-height:min(88vh,780px) — على شاشة 812px height → 710px تقريبًا، لا مشكلة.
+4. لا يوجد media query خاص بـ dfa17 داخل @media 560px (سطر 1106 يخص dl15 فقط!) → على الهاتف الدفتر يأخذ padding:16px وعرض 520px بكامل عرضه — الحقول والأزرار تبقى بنفس الحجم.
+5. orbs: filter:blur(30px) — blur كثيف داخل head فقط، لا يؤثر على الحقول.
+
+التشخيص الأهم: المستخدم يرى الشاشة كلها ضبابية حتى الحقول — الأرجح أن هاتفه (Chrome Android) لديه:
+أ) كاش JS قديم يخدم r15/r16 (الدفتر القديم dl15 كان له مشكلة «الصورة الضبابية» التي اشتكى منها سابقًا: "التحديث ظهر بس صورة غير واضحة... أضغط في أي مكان تختفي"). dl15 drawer كان يستخدم dl15-pop animation مع opacity:0→1 وقد يعلق في opacity:0!
+ب) أو أن dfa17-backdrop blur(6px) + overlay بشفافية 62-78% تجعل الدفتر يبدو مظلمًا ضبابيًا حتى لو أبيض.
+
+الحل المتضمن في r18:
+- تسمية جديدة: admin-downloads-manager-r18.js + تحديث الإحالات admin.html/admin-dashboard.html/vite.config.ts + اختبارات (downloadsAssets, ownerLoginR13Assets مع r18, test وصف r15UploadUI).
+- تعديلات CSS: backdrop rgba(.35)→(.5) + blur(3px) فقط + -webkit-backdrop-filter؛ card: width:100% حتى 520، على <=560px card عرض 100% وhead padding أقل؛ إضافة media query لـ dfa17 داخل 560px: حقول min-height:44px، .dfa17-btn padding:14px 22px (لمس أسهل)؛ orbs opacity تخفيض .55/.35؛ dfa17-head p لون أفتح rgba(255,255,255,.92).
+- الأهم: التأكد أن الـ animation dfa17-pop ينتهي إلى opacity:1 دائمًا (موجود) ولا يوجد animation يعلق.
+- لا تغيير في JS logic (الرفع/الحفظ كما هو).
+
+## sv22 حالة التنفيذ (محدثة)
+تم إنشاء admin-downloads-manager-r18.js (md5: b2999159a576bd73a3cb0b4cc6e53433) مع التعديلات التالية على r17: خفض تعتيم الـ backdrop من rgba(.62/.78) إلى rgba(.34/.5) مع blur(3px) و-webkit-backdrop-filter، تخفيف orbs (.5/.3 بدل .75/.5)، نص header أفتح (.92 بدل .85)، حقول الإدخال min-height:44px والزر min-height:48px، وmedia query جديد لـ 560px يجعل الـ drawer بعرض 100% وأزرار كاملة العرض min-height:50px.
+تم تحديث الإحالات: admin.html (3)، admin-dashboard.html (3)، vite.config.ts (1)، والاختبارات الثلاثة (downloadsAssets/ownerLoginR13Assets/r15UploadUI → r18).
+pnpm test = 98/98 وbuild = md5 متطابق (b2999159).
+لقطة /admin (375x812): تظهر صفحة تسجيل دخول المالك الطبيعية (login-card فوق صورة خلفية) — غير مرتبطة بمشكلة الـ drawer، وهي سليمة.
+المتبقي: حفظ checkpoint (auto-publish) → انتظار انتشار → curl حي على r18 + admin.html يشير لـ r18 → تسليم المستخدم مع الطلب بتجربة الرفع على هاتفه.
+ملاحظة: الدومين الوحيد المتاح: uploadplus-47dkogbk.manus.space.

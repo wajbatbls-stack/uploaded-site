@@ -567,6 +567,7 @@
       submitBtn.textContent = "⏳ جارٍ الرفع…";
       hint.textContent = "يُرفع الملف فعلًا الآن — لا تغلق الصفحة حتى ينتهي";
       const data = Object.fromEntries(new FormData(form).entries());
+      const enteredName = String(data.fileName || "").trim();
       let done = 0;
       try {
         for (let i = 0; i < pendingUploads.length; i++) {
@@ -576,23 +577,42 @@
           try {
             const uploaded = await uploadFileWithProgress(entry.file, pct => setCard(i, { percent: pct }));
             setCard(i, { status: "done" });
+            // عند رفع نموذج واحد يُعتمد الاسم الذي أدخله المالك، لا اسم الملف التقني.
+            // أما الرفع المتعدد فيُبقي اسم كل ملف مستقلًا كي لا تتكرر العناوين.
+            const modelName = pendingUploads.length === 1 && enteredName
+              ? enteredName
+              : (uploaded.originalName.replace(/\.[^.]+$/, "") || uploaded.originalName);
             await request("admin.downloads.createFile", {
               categoryId: Number(data.categoryId),
-              fileName: uploaded.originalName.replace(/\.[^.]+$/, "") || uploaded.originalName,
+              fileName: modelName,
               originalName: uploaded.originalName,
               description: data.description || undefined,
               fileKey: uploaded.fileKey, fileUrl: uploaded.fileUrl,
               mimeType: uploaded.mimeType, sizeBytes: uploaded.sizeBytes,
             });
             done++;
-            showNotice(`✓ تم حفظ «${esc(uploaded.originalName)}» (${done}/${pendingUploads.length})`, "ok");
+            showNotice(`✓ تم حفظ «${esc(modelName)}» (${done}/${pendingUploads.length})`, "ok");
           } catch (upErr) {
             setCard(i, { status: "failed" });
             showNotice(upErr?.message || `فشل رفع: ${esc(entry.file.name)}`, "bad");
           }
         }
-        if (done) showNotice(`✓ تمت إضافة ${done} نموذج بنجاح — يظهر الآن للزوار`, "ok");
-        root.remove(); await list();
+        if (done) {
+          // أعرض القسم الذي اختاره المالك مباشرة بعد الحفظ كي لا يبدو النموذج مختفيًا.
+          state.activeCategory = Number(data.categoryId);
+          await list();
+          showNotice(`✓ تمت إضافة ${done} نموذج بنجاح — يظهر الآن للزوار`, "ok");
+        }
+        const failed = pendingUploads.length - done;
+        if (failed === 0) {
+          root.remove();
+        } else {
+          // لا نغلق النافذة عند الفشل: تبقى الملفات الفاشلة والرسالة أمام المالك لإعادة المحاولة.
+          hint.textContent = done
+            ? `تم حفظ ${done} نموذج، وتعذر حفظ ${failed}. راجع بطاقة الملف ذات العلامة الحمراء ثم أعد المحاولة.`
+            : "لم يُحفظ أي نموذج بعد. راجع الرسالة الحمراء وتحقق من اتصالك ثم أعد المحاولة.";
+          showNotice(`تعذر حفظ ${failed} نموذج. بقيت النافذة مفتوحة حتى لا تضيع بياناتك.`, "bad");
+        }
       } finally {
         submitBtn.removeAttribute("data-busy");
         submitBtn.textContent = "📤 إضافة النموذج";

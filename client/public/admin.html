@@ -103,7 +103,7 @@
                 visitorLinksManager.async = false;
                 visitorLinksManager.onload = () => {
                   const downloadsManager = document.createElement("script");
-                  downloadsManager.src = "/assets/js/admin-downloads-manager-r14.js?v=downloads-r14";
+                  downloadsManager.src = "/assets/js/admin-downloads-manager-r15.js?v=downloads-r15";
                   downloadsManager.async = false;
                   downloadsManager.onload = () => {
                     const contactManager = document.createElement("script");
@@ -115,7 +115,7 @@
                   teamManager.async = false;
                   teamManager.onload = () => {
                   const partnersManager = document.createElement("script");
-                  partnersManager.src = "/assets/js/admin-partners-manager-r14.js?v=partners-r14";
+                  partnersManager.src = "/assets/js/admin-partners-manager-r15.js?v=partners-r15";
                   partnersManager.async = false;
                   partnersManager.onload = () => { try { if (typeof window.__adminRerenderPartners === "function") window.__adminRerenderPartners(); } catch (_) { /* لا شيء */ } };
                   document.body.append(partnersManager);
@@ -154,7 +154,7 @@
                 visitorLinksManager.async = false;
                 visitorLinksManager.onload = () => {
                   const downloadsManager = document.createElement("script");
-                  downloadsManager.src = "/assets/js/admin-downloads-manager-r14.js?v=downloads-r14";
+                  downloadsManager.src = "/assets/js/admin-downloads-manager-r15.js?v=downloads-r15";
                   downloadsManager.async = false;
                   downloadsManager.onload = () => {
                     const contactManager = document.createElement("script");
@@ -166,7 +166,7 @@
                   teamManager.async = false;
                   teamManager.onload = () => {
                   const partnersManager = document.createElement("script");
-                  partnersManager.src = "/assets/js/admin-partners-manager-r14.js?v=partners-r14";
+                  partnersManager.src = "/assets/js/admin-partners-manager-r15.js?v=partners-r15";
                   partnersManager.async = false;
                   partnersManager.onload = () => { try { if (typeof window.__adminRerenderPartners === "function") window.__adminRerenderPartners(); } catch (_) { /* لا شيء */ } };
                   document.body.append(partnersManager);
@@ -232,7 +232,7 @@
       }
       if (!window.WajbatDownloadsManager) {
         const retryDownloads = document.createElement("script");
-        retryDownloads.src = "/assets/js/admin-downloads-manager-r14.js?v=downloads-r14&reload=" + Date.now();
+        retryDownloads.src = "/assets/js/admin-downloads-manager-r15.js?v=downloads-r15&reload=" + Date.now();
         retryDownloads.async = false;
         document.body.append(retryDownloads);
       }
@@ -256,7 +256,7 @@
       }
       if (!window.WajbatPartnersManager) {
         const retryPartners = document.createElement("script");
-        retryPartners.src = "/assets/js/admin-partners-manager-r14.js?v=partners-r14&reload=" + Date.now();
+        retryPartners.src = "/assets/js/admin-partners-manager-r15.js?v=partners-r15&reload=" + Date.now();
         retryPartners.async = false;
         document.body.append(retryPartners);
       }

@@ -589,3 +589,81 @@ boot() في admin-app-r30.js S181: يعرض «جارٍ التحقق من صلا�
 **التحقق الحاسم المطلوب**: curl مباشر لـprod admin-downloads-manager-r14.js وفحص dl15-drop فيه + فحص أي JS ملف يخدم dev server عند /assets/js/admin-downloads-manager-r14.js (vite serve من client/public مباشرة، OK يحمل r15) — لكن ربما dev server أعاد تحميل HTML بدون ?v cache-bust جديد؟ الرندر الفعلي للـdrawer جاء من JS — إذا JS يحمل r15 فالنموذج الجديد يجب أن يظهر.
 **ملاحظة مهمة**: ربما التعديلات r15 على fileDrawer لم تُكتب فعلًا على الملف الصحيح أو فُقدت (context ضغط)؟ لكن grep سابق أثبت dl15-card ×14 في dist بعد البناء.
 **فحص مطلوب**: `curl https://uploadplus-47dkogbk.manus.space/assets/js/admin-downloads-manager-r14.js | grep -c dl15-drop` على prod مباشر.
+
+## 00:57 — CRITICAL: prod يعرض النموذج القديم r14 رغم أن JS المنشور يحمل r15
+- curl prod JS → md5=680e796 (نفس محلي، يحمل dl15-drop ×14) ✓
+- لكن prod live render (sandbox browser على https://uploadplus-47dkogbk.manus.space/admin) يعرض **نموذج «ملف جديد» القديم**: title «ملف جديد»، subtitle «ارفع ملفًا جديدًا ليظهر للزوار فور الحفظ»، زرا «إلغاء/إضافة الملف»، منطقة سحب بسيطة، لا dl15 ولا شريط تقدم.
+- **الاستنتاج الجذري**: النسخة المنقّحة من fileDrawer (r15) **ليست معروضة**. الاحتمالات:
+  (أ) الـdrawer المعروض يُرسم من **كود آخر** غير admin-downloads-manager-r14.js — مثل أن admin-app-r30 أو structured-editor يحتوي fileDrawer خاص (الزر «رفع ملف جديد» قد يستدعي drawer من structured-editor-r6 وليس من r14!).
+  (ب) JS المنقّح فيه خطأ syntax مبكر يجعل الدالة القديمة تُستخدم.
+- **فحص**: البحث عن «ارفع ملفًا جديدًا ليظهر للزوار فور الحفظ» (النص الظاهر في screenshot) داخل أي ملفات المشروع. إذا لم يوجد في r14 فـ(أ) مؤكد.
+- ملاحظة: الزر 39 «رفع ملف جديد» في section إدارة التحميلات — يجب فحص أي handler ينفذه: هل r14 يعرّف زر «⬆ رفع ملف جديد» في cards الأقسام؟ نعم كان في r14. لكن drawer المعروض يحمل title «ملف جديد» وsubtitle «ارفع ملفًا جديدًا ليظهر للزوار فور الحفظ» — هل هذا موجود في r14 القديم أو r11؟ grep مطلوب.
+
+## 01:00 — تحليل جذري حاسم
+prod r14.js = md5 680e796 (يحمل dl15 ×14، size 64691). أي أن JS الجديد **منشور فعلًا** ومعروض. لكن الdrawer الظاهر في الscreenshot (عنوان «ملف جديد» + «ارفع ملفًا جديدًا ليظهر للزوار فور الحفظ») موجود **أيضًا** في هذا الملف الجديد (نص «يظهر للزوار فور الحفظ» موجود في prod r14)! إذن: التعديلات r15 طبقت جزئيًا فقط — drawer في r14 محليًا ما زال هو القديم نسبيًا (header بسيط، عنوان «ملف جديد»، زر «إضافة الملف»/«إلغاء») مع مجرد إضافة dl15 CSS وأزرار سحب دون إعادة بناء form كامل.
+**الاستنتاج**: «النموذج الجديد» في r14 بعد التعديلات = تصميم هجين: CSS جديد (dl15) لكن المحتوى هو form القديم «ملف جديد». يجب استبدال drawer كاملًا في r14: عنوان «إضافة نموذج/ملف»، خطوات، بطاقة معاينة، progress لكل ملف، أزرار «إضافة النموذج» مع حفظ فعلي → يظهر عند الزوار فورًا.
+أيضًا يجب مراجعة «⬆⬆ رفع عدة ملفات» و«إضافة نموذج» text: المستخدم يريد زرًا باسم «إضافة نموذج».
+
+## 01:00 — اكتشاف الجذر الحقيقي للمشكله
+الdrawer المعروض على prod عند «⬆ رفع ملف جديد» (عنوان «ملف جديد»، «ارفع ملفًا جديدًا ليظهر للزوار فور الحفظ»، أزرار «إلغاء/إضافة الملف») **ليس** من admin-downloads-manager-r14.js على الإطلاق! لا يوجد هذا النص في dl-r14 (محليًا أو prod). الdrawer يأتي من **admin-app-r30.js** (المحرر القديم structured-editor) الذي يحتوي data-add على downloads بـitem افتراضي «ملف جديد»... بل الأدق: الdrawer نفسه قد يكون داخل structured-editor-r6 أو من نسخة أخرى.
+الحقيقة: prod dl-r14.js = r15 كامل (dl15 ×14) لكن الواجهة المعروضة في الـbrowser هي الواجهة القديمة ⇒ **admin.html المنشور يستورد نسخة قديمة/مخفية من JS (ربما r2 القديم) أو أن الdrawer المعروض يُستدعى من مكان آخر**.
+الخطوة: فحص admin.html المنشور: كل السكربتات المستوردة في صفحة التحميلات.
+
+## 01:05 — الاكتشاف الحاسم النهائي (مطابق 100%)
+1. prod `/admin` يُخدم عبر client/public/admin.html المستقل: scripts تشمل admin-app-r30.js, admin-structured-editor-r6.js, admin-downloads-manager-r14.js... (curl /admin.html مباشر → 200، HTML يحتوي كل السكربتات).
+2. الdrawer المعروض في screenshot المستخدم (عنوان «ملف جديد»، «ارفع ملفًا جديدًا ليظهر للزوار فور الحفظ»، أزرار إلغاء/إضافة الملف) **موجود في prod admin.html** (الـcurl أظهر `33192 bytes` فيه admin-downloads-manager-r14.js?v=downloads-r14) لكن نص الdrawer نفسه لم يوجد في grep dl-r14! أي أن الdrawer يأتي من **admin-app-r30.js** أو **admin-structured-editor-r6.js** على prod.
+3. prod admin-app-r30.js = md5 0683e5ed مطابق للمحلي. prod dl-r14.js = 680e7967 (ر15 كامل، dl15 ×14).
+4. الscreenshot المستخدم (03:48 محلي ≈ 00:48 UTC) كان **قبل** نشر 6f2420bb (00:54 UTC). أي الdrawer المعروض للمستخدم كان النسخة القديمة قبل r15.
+5. snapshot sandbox (00:56) التقط **قبل** وصول النشر إلى CDN — لذا عرض الواجهة القديمة.
+6. الآن (01:00+): prod dl-r14 يحمل ر15 كاملًا. الdrawer الجديد «إضافة نموذج جديد» + خطوات + dl15 موجود.
+7. **الخلاصة**: لا يوجد عيب في prod؛ المشكلة عند المستخدم = كاش جهازه (رأى الواجهة القديمة قبل النشر) + snapshot التقط قبل النشر. لا حاجة لأي تغيير كودي!
+8. المتبقي: اختبار فعلي رفع ملف عبر الواجهة الجديدة على prod + إزالة ملفات test (test-verify, prod-test, real-test-upload) من آخر الملفات + تأكيد 22 ملفًا أصليًا.
+
+## 01:02 — اكتشاف جذري جديد (مهم جدًا)
+1. prod /assets/js/admin-downloads-manager-r14.js = md5 680e7967 (مطابق محليًا، يحمل r15: dl15-drop, uploadFileWithProgress, «إضافة نموذج جديد»).
+2. **لكن** drawer المفتوح في prod admin (عند الضغط «⬆ رفع ملف جديد») يعرض نموذج «ملف جديد» القديم: العنوان «ملف جديد»، النص «ارفع ملفًا جديدًا ليظهر للزوار فور الحفظ»، أزرار «إلغاء/إضافة الملف».
+3. هذه النصوص **ليست** في prod dl-r14 (ر15) ولا في محلي — الdrawer المعروض **يُرسم من ملف آخر** (admin-app-r30.js أو admin-structured-editor-r6.js) الذي فيه data-add لdownloads بـitem «ملف جديد».
+4. الخلاصة: dl-r14 (ر15) موجود ومنشور لكن **الزر «⬆ رفع ملف جديد» يفتح drawer من admin-app-r30.js القديم** وليس من مدير التحميلات الجديد! الواجهة الرئيسية قد تكون تُعرض من admin-app-r30 (شبكة الأقسام + بطاقات من r30) وليس من dl-r14 r15.
+5. الخطوة التالية: فحص admin-app-r30.js: هل يحتوي drawer «ملف جديد»؟ وأين يبدأ تحميل/تفعيل الدوم في كل ملف (من يسيطر على DOM)؟
+
+## 01:03 — اكتشاف مصيري: prod root HTML قديم
+- prod `/` يجيب `/assets/site-Cy0Hofkh.js` (legacy bundled) وليس `/assets/js/site-app-r32.js` الذي في client/index.html الحالي.
+- prod root HTML: 370671 بايت (مضغوط inline legacy bundle)، بينما client/index.html الجديد صغير + يستورد /src/main.tsx (dev) + r32.
+- last-modified prod root: 00:55:31 UTC = **نشرة الإصدار 6f2420bb (r15) أُطلقت 00:58 تقريبًا لكن prod root HTML ما زال من بناء أقدم؟** لا — checkpoint ر15 كان ~00:57. prod root أحدث بـ00:55 أي من checkpoint سابق.
+- الخلاصة المبدئية: منصة النشر ربما تستخدم نسخة من dist لم يُدخل فيها r15 (r15 حُفظ في client/public/assets/js لكن البناء/النشر لم يأخذه). أو أن root HTML القديم (legacy) هو نقطة الدخول الفعلية وlegacy bundle يحمّل admin-app-r30 الذي يرسم drawer القديم.
+- السؤال الحاسم: legacy /assets/site-Cy0Hofkh.js من أين يأتي؟ هل هو موجود محليًا؟ هل هو legacy build (قبل الريلوكيشن)؟ وفحص هل admin-app-r30 موجود محليًا ومن أين يُستورد في legacy build.
+
+## 01:04 — حسم كامل (مهم جدًا جدًا)
+الوضع الآن مفهوم بالكامل:
+1. prod /admin يخدم `admin-dashboard.html` (SPA خفيف) → يستورد `admin-app-r30.js` (merge-r3).
+2. admin-app-r30 يحتوي drawer «ملف جديد» القديم (النص «ارفع ملفًا جديدًا ليظهر للزوار فور الحفظ») — وهو نفسه drawer الذي في screenshot المستخدم. prod r30 = محلي r30 (md5 متطابق 0683e5e).
+3. dl-r14 (الذي عدّلناه إلى r15) غير مستخدم في هذه الواجهة! الواجهة الجديدة (شبكة الأقسام + بطاقات dl-r14) كانت تُعرض في `admin.html` القديم المستقل — لكن prod الآن يسلك مسار `admin-dashboard.html` → r30 + structured-editor-r6 + partners-r14... أي أن **الواجهة المعروضة للمستخدم = r30 القديمة التي فيها drawer قديم**، بينما dl-r14/r15 يعيش في صفحة admin.html القديمة التي قد لا تُخدم.
+4. لكن: screenshot آخر أظهر شبكة أقسام + بطاقات (واجهة r14) — أي أن الواجهة خليط: r30 يرسم الشريط الجانبي + المحتوى الأساسي، وعند downloads يحمّل dl-r14 عبر mountCompatibleDownloadsManager؟
+5. الخطوة التالية الحاسمة: قراءة mountCompatibleDownloadsManager في r30: هل يحمّل dl-r14 أم يرسم drawer خاص به؟ (المخرج السابق أظهر سطر 49: if state.selected !== "downloads" || typeof manager?.activate !== "function" — يوجد `manager` خارجي).
+
+## 01:05 — الحسم النهائي للألغاز الثلاثة
+الوضع الحالي على prod (مؤكد الآن، جميع الأدلة متسقة):
+1. `/assets/js/admin-downloads-manager-r14.js` على prod = 64691 بايت يحمل r15 كاملًا (dl15-drop، uploadFileWithProgress، «إضافة نموذج جديد»، «إضافة الملف») ✓
+2. `/admin` يخدم admin-dashboard.html الذي يحمّل سلسلة: r30 → media-binding → structured-r6 → homepage-r1 → services-r2 → visitor-links-r4 → **dl-r14** → contact-r4 → team-r1 → partners-r14 → blog-r8.
+3. الواجهة الظاهرة للمستخدم = r30 + dl-r14 (شبكة أقسام + بطاقات + drawer من dl-r14 الذي هو الآن r15).
+
+**السبب الحقيقي لما رآه المستخدم في screenshot (03:48 محلي = 00:48 UTC)**:
+- التقط screenshot **قبل** نشر r15 (checkpoint 6f2420bb أُطلق ~00:57-01:00).
+- بالإضافة كاش CDN: `cache-control: max-age=7776000` (90 يومًا!) على JS وHTML — جهازه يحمل صفحات/ملفات مخزنة قبل النشر.
+- prod dl-r14 سابقًا كان نسخة قديمة (محتوى r11 باسم r14) — لكن الآن يحمل r15 بالفعل.
+
+**ملاحظة كاش مهمة**: cache-control الحالي 90 يومًا على ملفات JS يعني أن كل نسخة قديمة تبقى في أجهزة المستخدمين. آلية v17 (sw-forced) تمسح الكاش لكنها تعمل «مرة واحدة لكل جلسة» — يجب أن تكسر هذا الكاش 90 يومًا.
+
+**الخلاصة للمستخدم**: المشكلة مني 100%: (أ) ملف dl-r14 كان قديمًا (محتوى r11 باسم r14) لأيام، (ب) screenshot الأخير كان قبل نشر r15 بدقائق + كاش جهازه 90 يومًا. الآن كل شيء جديد منشور.
+
+## 01:12 — إجراء كسر كاش CDN النهائي (اسم ملف جديد = r15)
+الإجراء المنفذ:
+1. نُسخت `client/public/assets/js/admin-downloads-manager-r14.js` → `r15.js` (md5: 680e796730058776ee89e200dba75c18، يحمل r15 كاملًا: dl15-drop, uploadFileWithProgress, «إضافة نموذج جديد»).
+2. نُسخت `admin-partners-manager-r14.js` → `r15.js` (md5: b975bb9c308b867238b3c0dab72a920b).
+3. عدّل `client/public/admin-dashboard.html`: التحميلات أصبحت `admin-downloads-manager-r15.js?v=downloads-r15` و`admin-partners-manager-r15.js?v=partners-r15` (في الموضعين: التحميل العادي وfallback).
+4. عدّل `vite.config.ts` (copyAdminAssets): المصدران r14 وr15 كلاهما ينسخان إلى `admin-downloads-manager-r15.js` و`admin-partners-manager-r15.js` في dist.
+   - السطر 189: r15 → r15، السطر 190: r14 → r15 (fallback).
+   - السطر 213: partners r15 → r15، السطر 214: r14 → r15.
+5. HTML نفسه no-cache (تم فحص prod: `cache-control: no-cache, no-store, must-revalidate` و`last-modified: 00:55:31`) — لذا فور النشر سيقرأ جهاز المستخدم admin-dashboard.html الجديد ويسأل عن أسماء الملفات الجديدة r15 التي ليست في كاشه إطلاقًا.
+
+لم يبقَ سوى: بناء vite + اختبارات + checkpoint + تحقق حي أن prod admin-dashboard.html يحمل r15 وأن /assets/js/admin-downloads-manager-r15.js يخدم r15.

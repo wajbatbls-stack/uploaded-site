@@ -621,3 +621,9 @@
 - [ ] الحفاظ على الوظائف الحالية (رفع متعدد، createFile، replaceFile، الاستبدال)
 - [ ] اختبار vitest جديد يتحقق من عناصر r15
 - [ ] بناء + checkpoint منشور + تحقق حي من prod
+
+## كسر كاش CDN (90 يوم) على JS - كسر كاش جهاز المستخدم
+- [ ] نسخ dl-r14 إلى dl-r15 وpm-r14 إلى pm-r15 (اسم ملف جديد يتجاوز كاش 90 يوم)
+- [ ] تحديث admin-dashboard.html: تحميل admin-downloads-manager-r15.js وadmin-partners-manager-r15.js
+- [ ] تحديث vite.config redirects إن لزم للأسماء الجديدة
+- [ ] بناء + اختبارات + checkpoint + تحقق حي من prod

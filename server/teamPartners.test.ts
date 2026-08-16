@@ -54,9 +54,9 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
     const adminHtml = projectFile("client/public/admin.html");
     const dashboard = projectFile("client/public/admin-dashboard.html");
     expect(adminHtml).toContain("admin-team-manager-r1.js");
-    expect(adminHtml).toContain("admin-partners-manager-r15.js");
+    expect(adminHtml).toContain("admin-partners-manager-r16.js");
     expect(dashboard).toContain("admin-team-manager-r1.js");
-    expect(dashboard).toContain("admin-partners-manager-r15.js");
+    expect(dashboard).toContain("admin-partners-manager-r16.js");
     const app = projectFile("client/public/assets/js/admin-app-r30.js");
     expect(app).toContain("mountCompatibleTeamManager");
     expect(app).toContain("mountCompatiblePartnersManager");
@@ -66,7 +66,7 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
 
   it("يدعم رفع الصور من الجهاز داخل مديرَي الفريق والشركاء", () => {
     const team = projectFile("client/public/assets/js/admin-team-manager-r1.js");
-    const partners = projectFile("client/public/assets/js/admin-partners-manager-r15.js");
+    const partners = projectFile("client/public/assets/js/admin-partners-manager-r16.js");
     expect(team).toContain("admin.team.uploadPhoto");
     expect(team).toContain("fileToDataUrl");
     expect(team).toContain("WajbatTeamManager");
@@ -124,7 +124,7 @@ describe("زر بطاقة الشريك ومعالجة القيم النصية NU
   });
 
   it("يعترض القيم النصية NULL في مدير الشركاء عند الحفظ", () => {
-    const manager = file("client/public/assets/js/admin-partners-manager-r15.js");
+    const manager = file("client/public/assets/js/admin-partners-manager-r16.js");
     expect(manager).toContain('=== "NULL"');
     expect(manager).toContain("رابط موقع الجامعة (الموقع الرسمي)");
   });

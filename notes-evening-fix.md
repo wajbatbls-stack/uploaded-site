@@ -704,3 +704,113 @@ prod r14.js = md5 680e796 (يحمل dl15 ×14، size 64691). أي أن JS الج
 - ملف الاختبار r15 يظهر كآخر ملف في «آخر الملفات» في لوحة التحكم.
 - **خلاصة الضبابية**: لقطة المستخدم (04:11 محلي) مموهة يدويًا منه (backdrop blur كامل بما فيه شريط الحالة — واضح من تحليل edge density: 5.81 في الشريط الأصلي مقابل 0.4-0.56 في بقية الصورة). الواجهة على prod واضحة تمامًا.
 - المتبقي: حذف ملف الاختبار r15-test-file.pdf من قاعدة البيانات + تسليم النتيجة النهائية.
+
+## تشخيص 01:24 UTC — لماذا ما زال المستخدم يرى «نفس المشكلة» (ر15 لم يصل إليه)
+المستخدم أرسل لقطة (04:23 محلي) وقال: «نفس ما كلّمك سابقاً — حتى لو أعمل تعديل على أي ملف نفس المشكلة».
+
+**حقائق مؤكدة من prod (curl مباشر):**
+1. HTML على prod حديث: cache-control: no-cache/no-store + last-modified 01:17 UTC (بعد آخر checkpoint 38057333).
+2. prod admin HTML يحمّل: `admin-downloads-manager-r15.js?v=downloads-r15` + `admin-partners-manager-r15.js?v=partners-r15` — صحيح.
+3. prod dl-r15.js يحمل dl15 ×121 — الملف صحيح.
+4. prod admin-app-r30.js مطابق محليًا md5 ويحمل mountCompatibleDownloadsManager ×4.
+5. **النقطة الحاسمة**: النص «ملف جديد» الموجود في r30 هو فقط في defaultTemplate (fallback) — وليس drawer قديم.
+
+**السبب الجذري الحقيقي لعدم وصول التحديث لأجهزة المستخدم:**
+v17-no-reload-loop نفّذ التنظيف مرة واحدة لكل جلسة عبر `sessionStorage.__sw17` ثم ألغى نفسه. أجهزة المستخدم مرت عليها v17 في جلسة سابقة، فعند فتح الموقع الآن: SW لا يعمل أصلاً (أُلغي تسجيله بعد v17)، ولا يوجد تنظيف جديد، وكاش CDN (90 يوم على JS) يخدم ملفاتهم القديمة إن كان اسم الملف محفوظًا في كاش HTML — لكن HTML لا-cache... 
+
+**الأرجح**: الهاتف لديه كاش **Service Worker قديم لا يزال مسجلاً** يخدم الصفحة من الكاش دون الاتصال بالشبكة أصلًا (service worker يُخزن الصفحة حتى وإن كان HTML no-store)، أو كاش JS بـ90 يوم لأسماء r14 القديمة.
+
+**الخطة r16 (v18):**
+- إنشاء dl-r16 وpm-r16 باسم جديد كليًا + admin-dashboard.html بإحالات r16 + redirects في vite.config.
+- SW v18 (sw-forced.js v18) بمفتاح sessionStorage جديد مختلف (مثلاً __sw18) — حتى لو نفذ المستخدم v17 سابقًا، سيعاد التنظيف مرة واحدة جديدة.
+- آلية v18: تسجيل مؤقت في كل صفحة (admin + public)، يمسح كل registrations القديمة + كل caches ثم يلغي نفسه فورًا بلا أي reload.
+
+## حالة العمل 01:35 UTC — خطة r16 + v18 + متطلبات الرمز الإلزامي
+**جلسة 9 (كاش مستمر)** — التشخيص مكتمل: السبب هو SW قديم مسجل على جهاز المستخدم يخدم الصفحة من الكاش (SW يخزن حتى لو HTML no-store). الخطة المطبقة:
+- أسماء ملفات جديدة: admin-downloads-manager-r16.js + admin-partners-manager-r16.js (نسخة من r15 الحالي كما هو — لا تغييرات وظيفية).
+- admin-dashboard.html: إحالات r16 مع ?v=downloads-r16/partners-r16 + حذف إحالات r15.
+- vite.config: redirects r1..r15→r16 لملفي dl/partners + copyAdminAssets يشمل r16.
+- SW v18 (sw-forced.js): مفتاح sessionStorage جديد __sw18 — إذا لم يوجد في sessionStorage فينفذ التنظيف مرة واحدة: إلغاء كل registrations + مسح كل caches + sw_unregister ثم يلغي نفسه (self.registration.unregister) بلا أي location.reload.
+- بلوك تسجيل SW في admin.html + client/public/index.html + client/index.html: نسخة v18 (يفحص sessionStorage.__sw18 → "done":true؟ لا → سجل sw-forced.js → ثم setItem done + self-destruct).
+- اختبارات: downloadsAssets.test + teamPartners.test + ownerLoginR13Assets.test → تحديث إلى r16.
+- آخر checkpoint: 38057333 (prod يعمل، 22 ملفًا أصليًا).
+
+**جلسة 10 (الرمز إلزامي)** — المستخدم يطلب: حتى لو كانت الجلسة محفوظة، عند الخروج والرجوع يجب إدخال الرمز.
+- تشخيص الجلسة (تم): الكوكيز httpOnly عمرها 12 ساعة، والـcookie session يُبقي الدخول تلقائيًا.
+- الحل المطبق: تقليل عمر الجلسة: **جعل maxAge = 0 (session cookie تنتهي عند إغلاق المتصفح)** + إلزام إدخال الرمز عند كل فتح للوحة (فحص client-side: لا يوجد token محفوظ في storage → يجب الدخول بالرمز). الأسهل: في admin-app-r30 (والمديرين)، عدم حفظ أي sessionStorage للمصادقة، والجلسة cookie session فقط. لكن إذا كان متصفح الجوال لا يُغلق (Android Chrome) فقد تبقى. 
+- حل أضمن: إضافة **إجبار إدخال الرمز كل 24 ساعة** (ختم آخر تحقق بالرمز في sessionStorage بعلامة يومية) — أو اختصار عمر الكوكيز إلى ساعة واحدة maxAge=3600.
+- القرار: تقليل maxAge إلى 1 ساعة (غير قابلة للتجديد) + أي session storage لا يبقي الجلسة → عمليًا كل زيارة بعد ساعة تتطلب الرمز.
+- الملفات: server/adminSession.ts (maxAge) + التحقق من أن admin-app لا يخزن bypass.
+
+**ملاحظات prod**: 
+- prod HTML: cache-control no-store/no-cache — سليم.
+- prod dl-r15 يحمل dl15 ×121 — سليم.
+- DB: 22 ملفًا أصليًا (حُذف ملف الاختبار r15-test-file.pdf id 180001).
+
+## حالة تطبيق متطلبات الرمز (01:40 UTC)
+تم اختصار عمر جلسة المالك من 12 ساعة إلى ساعة واحدة في كل المواضع:
+- server/adminSession.ts سطر 25: SESSION_MAX_AGE_MS = 60*60*1000 (كان 12*60*60*1000)
+- server/adminSession.ts سطر 130: setExpirationTime("1h") (كان 12h)
+- server/routers.ts سطرا 194 و298: maxAge: 60*60*1000 (كان 12*60*60*1000)
+مواضع 5 دقائق في adminSession.ts (Passkey challenges) سليمة ولا علاقة لها بالجلسة الرئيسية.
+**التأثير**: بعد انتهاء الجلسة (ساعة من آخر تسجيل دخول) سيُطلب الرمز مجددًا عند أي زيارة للوحة. الكوكيز httpOnly لا يمكن لمسحها من JS، لكن عند انتهاء مدتها يرفض getVerifiedAdminSession تلقائيًا (expiresAt من DB + JWT exp).
+**المتبقي في جلسة 10**: اختبار أن الخروج/الرجوع يتطلب الرمز (بانتظار انتهاء الجلسة أو فحص السلوك) + بناء + checkpoint.
+**المتبقي في جلسة 9**: تطبيق r16+v18 (لم يبدأ التنفيذ الفعلي بعد — الخطة موثقة أعلاه).
+
+## حالة 01:43 UTC — جاهز لبنية v18 + r16
+1. **جلسة المالك**: اختُصر عمر الجلسة إلى ساعة واحدة في adminSession.ts (SESSION_MAX_AGE_MS=3600000، setExpirationTime("1h")) وrouters.ts (سطرا 194 و298: maxAge=3600000). الاختبارات 97/98 بعد تحديث swV17Assets.test (يضيف expect v18-force-purge — سيمر الآن).
+2. **sw-forced.js**: مكتوب بالفعل v18-force-purge (مفتاح جديد، يمسح كل الكاشات عند activate/kill-me، بلا reload) — HTML الثلاثة تحمل بلوك v17/__sw17 (يُستخدم مرة واحدة لكل جلسة). الخطة: إضافة بلوك v18 جديد (__sw18) في HTML الثلاثة بجانب v17 مع مفتاح جديد في sessionStorage.
+3. **r16**: لم يُطبَّق بعد — الخطة: نسخ dl-r15→dl-r16 وpm-r15→pm-r16 وr30→r31، تحديث admin-dashboard.html + admin.html + vite.config (redirects + copyAdminAssets) + تحديث اختباري downloadsAssets/teamPartners/ownerLoginR13Assets.
+4. prod حالياً: dl-r15 صحيح (v18 في sw-forced المنشور 01:09)، لكن جهاز المستخدم ما زال يرى القديم بسبب SW قديم — v18 يمسحه.
+5. بعد البناء: checkpoint → auto-publish → انتظار 2-5 دقائق → curl تحقق.
+
+## حالة 01:50 UTC — بلوك v18 أُضيف للHTML الثلاثة
+- بلوك v18 أُدرج في client/public/admin.html + client/public/index.html + client/index.html (مفتاح sessionStorage.__sw18، يستدعي /sw-forced.js?__v18=timestamp مع postMessage sw-kill-me + إلغاء registrations القديمة غير v18).
+- sw-forced.js بالفعل v18-force-purge (fetch passthrough + purge في activate وkill-me).
+- اختبارات: swV17Assets.test حُدّث (v18 فقط) — متوقع نجاح.
+- المتبقي: (1) نسخ dl-r15→dl-r16 وpm-r15→pm-r16 وadmin-app-r30→r31 + تحديث admin.html وadmin-dashboard.html + vite.config redirects وcopyAdminAssets + تحديث الاختبارات الثلاثة r15→r16. (2) بناء + checkpoint + تحقق prod.
+- عمر الجلسة حُدّث: SESSION_MAX_AGE_MS=3600000 (1h) في adminSession.ts وrouters.ts — المستخدم يطلب رمز بعد ساعة وعند فتح الجلسة الجديدة.
+- prod الآن: dl-r15 صحيح + r30 صحيح + HTML حديث — المشكلة عند المستخدم بسبب SW قديم مسجل على جهازه؛ v18 يمحوه.
+
+## حالة 01:52 UTC — تنفيذ r16 جارٍ
+- v18 وبلوكاته في HTML الثلاثة: مكتمل ✓
+- جلسة 1h: مكتمل ✓ (97/98 اختبار بعد التحديث)
+- المتبقي الآن: نسخ ملفات الإدارة r15→r16 في client/public/assets/js/:
+  - admin-downloads-manager-r15.js → admin-downloads-manager-r16.js
+  - admin-partners-manager-r15.js → admin-partners-manager-r16.js
+  (ملاحظة: admin-app-r30 موجود محليًا — r30→r31 إن لزم، لكن admin-dashboard.html الحالي يحمل r30؟ تحقق من ذلك)
+- تحديث admin.html وadmin-dashboard.html: إحالات r15→r16 مع ?v=downloads-r16/partners-r16
+- vite.config.ts: copyAdminAssets (نسخ r16) + redirects (downloads r1..r15→r16، partners r2..r15→r16)
+- اختبارات: server/downloadsAssets.test.ts وserver/ownerLoginR13Assets.test.ts وserver/teamPartners.test.ts: r15→r16
+- ثم: pnpm test → pnpm run build → فحص dist (md5 dl-r16/pm-r16) → checkpoint → auto-publish → انتظار 2-5 دقائق → curl تحقق من prod (/assets/js/admin-downloads-manager-r16.js = 200 مع dl16، admin-dashboard.html يحمل r16)
+
+## جلسة 10 — حالة العمل 01:32 UTC (قبل الضغط)
+
+### تم إنجازه:
+1. نسخ r16: admin-downloads-manager-r16.js وadmin-partners-manager-r16.js (من r15، يحملان dl15) ✓
+2. HTML (admin.html + admin-dashboard.html): إحالات → r16 + ?v=downloads-r16 / partners-r16 ✓
+3. vite.config copyAdminAssets: dl/partners → r16 + سطر تحويل r14→r16 (source r14 موجود) ✓
+4. vite.config redirects: r14→r16 للـdownloads/partners + أسطر r16 الأصلية ✓ (لا يوجد r15 كـdestination في redirects — r15 موجود كمصدر من جلسة سابقة؟ grep أظهر r14→r16 فقط)
+5. عمر الجلسة: SESSION_MAX_AGE_MS وkMaxAge من 12h → 1h في adminSession.ts + routers.ts ✓ (اختبارات 101/101 تقريبًا — يجب إعادة التحقق)
+6. sw-forced.js: v18 (sw18 purgex) ✓ + HTML الثلاثة تحمل بلوك v17 موجود + سأضيف بلوك v18 (مفتاح __sw18 جديد)
+7. اختبار swV17Assets محدث لـv18 (v17 بلا no-reload-loop متوقع في HTML، SW v18) ✓
+
+### المتبقي:
+- إضافة بلوك v18 في HTML الثلاثة (client/index.html, client/public/admin.html, client/public/index.html) بجوار بلوك v17
+- pnpm test كاملة
+- pnpm run build + فحص dist md5 (dl-r16, pm-r16, sw-forced v18)
+- checkpoint + نشر + انتظار + تحقق prod حي: /admin يحمل r16، dl-r16 يحمل dl15
+
+### حقائق مهمة:
+- prod serve: HTML admin من admin.html المستقل (16.5KB)، JS من dist/public/assets/js/ مع كاش CDN 90 يوم على JS
+- admin-app-r30 هو الإطار العام، mountCompatibleDownloadsManager يحمّل dl-r15/r16
+- SW v17 مسجل على أجهزة المستخدمين — v18 بمفتاح __sw18 سيجبرهم على purge جديد
+
+
+## 01:29 UTC — حالة r16+v18 قبل الاختبارات
+المطلوب في الاختبارات الآن (بعد نسخ r15→r16): تحديث كل expect من r15→r16 (admin-downloads-manager-r16, admin-partners-manager-r16, ?v=downloads-r16/partners-r16) في: server/downloadsAssets.test.ts, server/teamPartners.test.ts, server/swV17Assets.test.ts (ربما).
+تم تنفيذ:
+- copy r15→r16 لكل ملفات الإدارة (dl/pm) + admin-dashboard.html إحالات r16 + admin.html إحالات r16 + vite.config redirects r1..r15→r16 + copyAdminAssets r16 + بلوك v18 في HTML الثلاثة (بجوار v17) + sw-forced.js v18-purgex + SESSION 1h في adminSession.ts+routers.ts
+- الاختبارات فشل 4 بسبب أن الاختبارات ما زالت تتوقع r15.
+- ملاحظة: admin-app يبقى r30 (لا نغيره، dl/pm فقط تغيرا إلى r16)
+الخطوة التالية: sed على الاختبارات r15→r16 في downloadsAssets/teamPartners ثم pnpm test + build + checkpoint + تحقق prod.

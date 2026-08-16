@@ -22,7 +22,7 @@ import {
 import { ENV } from "./_core/env";
 
 export const ADMIN_SESSION_COOKIE = "wajbat_admin_session";
-const SESSION_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+const SESSION_MAX_AGE_MS = 60 * 60 * 1000; // ساعة واحدة: الرمز يُطلب مجددًا بعد انتهاء الجلسة
 
 const signingKey = () => new TextEncoder().encode(ENV.cookieSecret);
 
@@ -127,7 +127,7 @@ export async function createAdminSession(account?: OwnerAccount, metadata: Sessi
   return new SignJWT({ scope: "owner-admin", version, aid: activeAccount?.id ?? 0, sid: sessionId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("12h")
+    .setExpirationTime("1h")
     .sign(signingKey());
 }
 

@@ -13,9 +13,9 @@ const adminHtml = read("client/public/admin.html");
 const publicIndex = read("client/public/index.html");
 const clientIndex = read("client/index.html");
 
-describe("SW v17 no-reload-loop mechanism", () => {
+describe("SW v17+v18 mechanism", () => {
   it("sw-forced.js is v17 with single-run cleanup and self-unregister", () => {
-    expect(sw).toContain("v17-no-reload-loop");
+    expect(sw).toContain("v18-force-purge");
     expect(sw).toContain("sw-kill-me");
     expect(sw).toContain("skipWaiting");
     // لا reload داخل الـSW

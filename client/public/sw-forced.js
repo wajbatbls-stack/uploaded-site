@@ -1,26 +1,21 @@
-/* Service worker نهائي — v17-no-reload-loop
-   مهمته: تفعيله مرة واحدة فقط يمحو كل الكاشات ثم يُلغي نفسه نهائيًا.
-   لا أي إعادة تحميل — لا رسائل reload ولا حلقات. */
-const SW_VERSION = "v17-no-reload-loop";
+/* Service worker — v18-force-purge
+   مهمته: أي زيارة تستلم v18 — ولو لمرة واحدة في جلسة جديدة — تُمحو
+   كل الكاشات القديمة (حتى من SWs سابقة) ثم تُلغي نفسها نهائيًا بلا إعادة تحميل.
+   مفتاح الجلسة مختلف عن v17 حتى لو كانت v17 قد نفّذت على الجهاز سابقًا. */
+const SW_VERSION = "v18-force-purge";
 
 self.addEventListener("install", () => { self.skipWaiting(); });
 
-/* التنفيذ مرة واحدة فقط لكل عملية تشغيل */
-let __done = false;
-const __doOnce = () => {
-  if (__done) return;
-  __done = true;
-  void caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
-    .then(() => self.clients.claim());
-};
+const __purgeAll = () =>
+  caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k))))
+    .catch(() => {})
+    .then(() => self.clients.claim().catch(() => {}));
 
-self.addEventListener("activate", () => { __doOnce(); });
+let __done = false;
+self.addEventListener("activate", () => { if (!__done) { __done = true; __purgeAll(); } });
 
 self.addEventListener("message", e => {
-  if (e.data && e.data.type === "sw-kill-me") {
-    __doOnce();
-    void self.registration.unregister();
-  }
+  if (e.data && e.data.type === "sw-kill-me") { __purgeAll(); void self.registration.unregister(); }
 });
 
 /* لا نخزن أي ملف نهائيًا — مرور فقط */

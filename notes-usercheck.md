@@ -90,3 +90,36 @@
 
 ## sv20 حالة 13:18 UTC — لقطة المعاينة المحلية ✓
 التصميم الجديد يظهر في المعاينة (/#/services): خلفية متدرجة كحلية فاخرة، Hero بعنوان "خدماتنا الأكاديمية" + إحصائيات (15 قسم · 75 خدمة فرعية)، بطاقات زجاجية بأيقونات متوهجة، badges بعدد الخدمات، أسهم hover. التصميم يعرض من الرتبة الثانية (الصف الأول يظهر مقطوعًا قليلاً في لقطة العرض فقط، وهذا من أصل التصميم). بقي: حفظ نقطة التفتيش (auto-publish) ثم تحقق حي على https://uploadplus-47dkogbk.manus.space/#/services.
+
+## sv21 (2026-08-16 13:25 UTC) — طلب جديد: إعادة تصميم لوحة إدارة التحميلات (رفع نماذج)
+الطلب: "قم بتحديث وتصميم بشكل أقوى واحترافي وجذاب وقوي لرفع ملفات نماذج في لوحة الإدارة"
+
+### حالة sv20 (منجزة ومنشورة):
+- تصميم قسم الخدمات الجديد (svc24) في site-app-r33.js منشور على الإنتاج: https://uploadplus-47dkogbk.manus.space/#/services يعمل، md5 متطابق (e1d7bd1b31d9f961942d8366357629f5)، checkpoint 71d3bc3b.
+- index.html يستهلك الآن عبر React entry (assets/site-*.js يحمل site-app-r33.js inline)، purgex v19 يعمل على الإنتاج.
+- رابط الإدارة: https://uploadplus-47dkogbk.manus.space/admin
+
+### خطة sv21:
+- الملف الحالي: client/public/assets/js/admin-downloads-manager-r16.js (1040 سطر، يبدأ بإIFE يحتوي BRAND/state/esc/admin/toast/fmtDate/fmtSize/fileGlyph/apiError/request/list/filesOf/byOrder/visibleCats/totalStats/saveCategory/removeCategory/toggleCategoryVisibility/moveCategory/saveFile/removeFile/toggleFileVisibility/moveFile/copyFileUrl/shareFile...).
+- الإحالات إلى r16 في: client/public/admin.html (سطور 112/163/241)، client/public/admin-dashboard.html (46/96/173)، vite.config.ts (سطر 189).
+- المنهجية المتبعة سابقًا (r15/r16): إنشاء نسخة جديدة admin-downloads-manager-r17.js بنمط dl10/dfa17 فاخر، ثم sed للإحالات، pnpm test + build، md5 match، checkpoint (auto-publish).
+- ملاحظة: المستخدم يكرر طلب تصميم أقوى — سنعيد تصميم النموذج كاملًا (drawer جديد dfa17): header متدرج فاخر، رفع ملفات بتجربة drag & drop، معاينة ضخمة، شريط تقدم، رسائل تأكيد، وجعل زر الإضافة واضحًا دائمًا (شكوى سابقة: زر إضافة يختفي/النافذة تغمق).
+
+## sv21 تفاصيل تقنية (مرحلة 2):
+- قرأت r16 بالكامل (1040 سطر): السطور 1-246 منطق سليم (BRAND/state/esc/admin/toast/fmtDate/fmtSize/fileGlyph/apiError/request/list/saveCategory/removeCategory/saveFile/createWithUploads/replaceFile/uploadFileWithProgress/uploadFileLegacy/showNotice/closeOverlays/overlay/categoryDrawer).
+- السطور 266-622: drawers (overlay/ categoryDrawer / fileDrawer بتدرج dl15).
+- السطور 624-834: render + bindEvents + activate + window.WajbatDownloadsManager.
+- السطور 844-1040: CSS (dl10 + dl15).
+- العقد الخلفية (server/downloads.ts + server/_core/index.ts): /api/trpc/admin.downloads.{list,createFile,updateFile,replaceFile,trackDownload} و/api/downloads/upload يعيد {success,mediaId,fileName,originalName,fileUrl,fileKey,mimeType,sizeBytes}. لا تغيير في الخلفية.
+- الاختبارات المتأثرة بـ r16→r17: server/downloadsAssets.test.ts (يعتمد admin-downloads-manager-r16.js + downloads-r16)، server/r15UploadUI.test.ts (يدقق dl15 tokens في الملفين المصدر وdist) — يجب تحديثها لـ r17/dfa17.
+- الإحالات r16: admin.html (112/163/241), admin-dashboard.html (46/96/173), vite.config.ts (189).
+
+### خطة تنفيذ r17 (في build_r17.py):
+1. نسخ r16 → r17.
+2. إضافة BRAND فاخر جديد (كحلي #0c1e3f + بنفسجي) + CSS dfa17 جديد كامل في نهاية الملف قبل السكربت الختامي (أو بعد CSS dl15) مع استبدال class prefix dl15→dfa17 في fileDrawer فقط.
+3. الدوال الحرجة يجب ألا تتغير توقيعاتها: fileDrawer(file, categoryId), overlay, showNotice, list, saveFile, createWithUploads, uploadFileWithProgress, fileGlyph, fmtSize, esc, request, admin, toast, BRAND.
+4. التحسينات المطلوبة من المستخدم: زر «إضافة النموذج» بارز دائم (يظهر قبل اختيار ملف مع حالة معطلة واضحة)، نافذة لا تغمق/تختفي، رسالة «تم رفع الشعار/النموذج» واضحة، رفع فعلي بشريط تقدم يبقى كما هو، استبدال CSS الداعم بالكامل.
+
+## sv21 تقدم (بعد البناء):
+r17 جاهز: client/public/assets/js/admin-downloads-manager-r17.js بنى بتصميم dfa17 فاخر (header متدرج كحلي-بنفسجي + orbs متحركة + dropzone أنيق + بطاقات ملفات بشريط تقدم + استبدال ملف + زر إضافة دائم معطل حتى اختيار ملف وقسم + brand new accent #3d32c8/#7c3aed). md5: 7cc36e5ee0e4383351c02cc849f5a699 متطابق بين dist والمصدر. الاختبارات 98/98 كلها تمر. الإحالات: admin.html/admin-dashboard.html/vite.config.ts والاختبارات كلها على r17.
+المتبقي: حفظ نقطة تفتيش + نشر + تحقق حي من /admin downloads على الدومين الأصلي uploadplus-47dkogbk.manus.space.

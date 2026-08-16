@@ -2,16 +2,16 @@ import { test } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 
-const SRC = path.resolve(import.meta.dirname, "..", "client", "public", "assets", "js", "admin-downloads-manager-r16.js");
-const DIST = path.resolve(import.meta.dirname, "..", "dist", "public", "assets", "js", "admin-downloads-manager-r16.js");
+const SRC = path.resolve(import.meta.dirname, "..", "client", "public", "assets", "js", "admin-downloads-manager-r17.js");
+const DIST = path.resolve(import.meta.dirname, "..", "dist", "public", "assets", "js", "admin-downloads-manager-r17.js");
 
-test("r16: نموذج إضافة النموذج بتصميم فاخر ورفع فعلي بشريط تقدم موجود في المصدر", () => {
+test("r17: نموذج إضافة النموذج بتصميم فاخر ورفع فعلي بشريط تقدم موجود في المصدر", () => {
   const src = fs.readFileSync(SRC, "utf8");
   // عناصر التصميم الجديد
   const checks = [
-    { token: "dl15-drop", desc: "dropzone الرافع" },
-    { token: "dl15-card", desc: "بطاقة المعاينة" },
-    { token: "dl15-track", desc: "شريط التقدم" },
+    { token: "dfa17-drop", desc: "dropzone الرافع" },
+    { token: "dfa17-card-row", desc: "بطاقة المعاينة" },
+    { token: "dfa17-track", desc: "شريط التقدم" },
     { token: "dl15-head-badge", desc: "شارة الترويسة المتدرجة" },
     { token: "dl15-primary", desc: "زر الإضافة الفاخر" },
     { token: "uploadFileWithProgress", desc: "دالة الرفع الفعلي مع تقدم XHR" },
@@ -27,11 +27,11 @@ test("r16: نموذج إضافة النموذج بتصميم فاخر ورفع �
   if (!src.includes("admin.downloads.createFile")) throw new Error("استدعاء createFile مفقود");
 });
 
-test("r16: نسخة الإنتاج dist تطابق المصدر وتحمل حماية فشل الرفع", () => {
+test("r17: نسخة الإنتاج dist تطابق المصدر وتحمل حماية فشل الرفع", () => {
   const src = fs.readFileSync(SRC, "utf8");
   const dist = fs.readFileSync(DIST, "utf8");
   if (src !== dist) throw new Error("dist لا يطابق المصدر — تم نسخ نسخة قديمة!");
-  if (!dist.includes("dl15-drop") || !dist.includes("uploadFileWithProgress") || !dist.includes("تعذر حفظ")) {
+  if (!dist.includes("dfa17-drop") || !dist.includes("uploadFileWithProgress") || !dist.includes("تعذر حفظ")) {
     throw new Error("dist لا يحمل تصميم r16 أو دالة الرفع الفعلي أو معالجة الفشل");
   }
 });

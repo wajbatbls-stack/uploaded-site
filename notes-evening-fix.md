@@ -496,3 +496,42 @@ production URL: https://uploadplus-47dkogbk.manus.space — auto-publish مفع�
 NODE_ENV=production node dist/index.js محليًا: /admin=200، /api/trpc يعمل (FORBIDDEN طبيعي بدون جلسة)، لا استثناءات. إذن البناء محليًا سليم والخادم سليم. لكن الإنتاج يعيد 500. الفرق الوحيد: serverless runtime يشغّل dist/index.js بـ env مختلف — على الأرجح يستخدم vite dev fallback (NODE_ENV غير production) أو أن المسار import.meta.dirname يشير مكانًا خاطئًا في serverless. ملاحظة: في bundle، serveStatic يستخدم process.cwd()؟ لا — يستخدم import.meta.dirname/public. serverless ينفّذ من dist لذا /dist/public سليم.
 السبب المتبقي المحتمل: serverless framework يمرر المنفذ عبر env PORT — الكود يستخدم process.env.PORT، وهذا سليم. ربما الـ500 عابر من نشر قديم ما زال ينتشر (checkpoint منشور 00:00 والنشر يكتمل بعد دقائق). انتظر وأعد الفحص.
 ملاحظة أخرى غير مهمة: dist/public/index.html 369KB هو SPA bundle كامل (vite حوّل input JS إلى index.html) — لكن الخادم يخدم admin.html مباشرة، والزائر يحصل على index.html من root → الذي صار SPA bundle وليس index.html الأصلي! هذا كسر صفحة الزائر: الزائر يرى SPA فارغة بدل صفحة واجبات بلاس الحقيقية! يجب إصلاح rollupOptions.input.
+
+## الحالة 00:18 (متابعة 4 — أزمة 500 على الإنتاج)
+
+المشكلة الأصلية للمستخدم: «جاري التحقق من صلاحية الوصول» تظهر وتختفي في حلقة لا نهائية على هاتفه بعد نشر v16. أُصلحت بـv17-no-reload-loop (flag في sessionStorage، لا reload).
+
+لكن بعد v17: **الإنتاج يعيد 500 لكل مسار** (/, admin, tRPC, assets). السبب: «cloudrun service not found» — deployment لم يكتمل.
+
+- checkpoint ea4926ae حُفظ (رسالة: checkpoint لإعادة تفعيل النشر).
+- إشعار «Deployment successful» ظهر لكن الإنتاج ما زال 500 عند 00:18.
+- محليًا: البناء سليم (dist/index.js 297KB + dist/public/), start script موجود, tests 93/93, NODE_ENV=production node dist/index.js يعمل 200.
+- devserver.log: الخادم المحلي يعمل (3000). ELIFECYCLE failures سابقة عادية عند restart.
+- لقطة الشاشة للمستخدم كانت من المعاينة المحلية (الزائر يعرض الصفحة الرئيسية سليم، لوحة الدخول تظهر).
+- v17 موجود في dist/public/assets/js/sw-forced.js محليًا.
+
+الخطوة التالية: انتظار النشر (قد يستغرق 5-10 دقائق بعد الإشعار) وإعادة فحص prod كل دقيقتين. إذا استمر 500 بعد 10 دقائق، المشكلة قد تكون في artifact: check if deploy builds separately — ربما منصة البناء تستخدم pnpm build في بيئة مختلفة وتخطئ. بدائل: rollback إلى checkpoint سليم سابق (1fe255f4 v17 أو d5bf3e51 v16... لكن v16/v17 نفسهم). أو فحص rollupOptions.input في vite.config (input قد يشير client/public/index.html وهو SPA؟ لا — index.html للزوار موجود client/public/index.html أصلي).
+
+## الخلاصة الحاسمة 00:21 (قبل ضغط السياق)
+
+الحالة: prod كله 500 منذ checkpoint 1fe255f4 (v17). الإشعارات «Deployment successful» ظهرت لكن prod ما زال 500. manus-webdev-logs = «cloudrun service not found» — deployment لم يُنشأ أو فشل صامتًا.
+
+أدلة مهمة من فحص dist:
+1. bundle الإنتاج (NODE_ENV=production node dist/index.js) يعمل سليمًا محليًا 100%.
+2. dist/public/index.html (369KB) هو SPA bundle — rollupOptions.input يحتوي نقاط دخول JS خام (js/site-app-r19... إلخ). **هذه نقاط دخول SPA غير ضرورية** — الموقع ليس SPA؛ كل الصفحات HTML ثابتة. يُحتمل أن هذا الـinput هو ما يسبب فشل النشر (vite dependency scan يفشل على مسارات dist عند البناء في بيئة المنصة).
+3. prod كان يعمل قبل اليوم — تعديلات اليوم شملت vite.config (root=client/public، publicDir، copyAdminAssets، serve middleware redirects). لكن checkpoint 63e4e44d (r14) كان يعمل على prod قبل إدخال نقاط دخول SPA!
+4. checkpoints الحديثة كلها تعتمد نفس البناء. الفارق المحتمل: rollupOptions.input بنقاط JS الخام أُضيف في جلسة SPA ثم بقي.
+
+**خطة الإصلاح المقترحة**:
+- خطوة A: إصلاح rollupOptions.input في vite.config.ts — إزالة نقاط دخول JS الخام والإبقاء فقط على client/public/index.html (وadmin.html إن وُجد). إعادة بناء والتأكد أن index.html الأصلي يُبنى (وليس SPA 369KB).
+- خطوة B: إعادة نشر checkpoint جديد.
+
+الأولوية القصوى: إعادة الموقع للإنتاج لأنه معطّل كليًا منذ ~20 دقيقة والمستخدم ينتظر.
+
+## 00:25 — bundle إنتاج محلي جديد (بعد إزالة نقاط دخول JS الخام)
+
+- البناء نجح: dist/index.js (290KB) + dist/public/ يحتوي HTML أصلي (ليس SPA) — index.html الآن HTML صحيح وليس bundle
+- محليًا: / = 200، /admin = 200، /sw-forced.js = 200
+- /api/trpc = 404: **هذا طبيعي في bundle الإنتاج محليًا** (يحتاج JWT_SECRET/DB حقيقين ليعمل بشكل كامل؟ لا — الـ404 لأن المسار غير مسجل في وضع placeholder). على الإنتاج كان يعمل قبل ذلك، فالرابط الحقيقي مع DB حقيقي سيسجله. (الـ404 على GET بدون input طبيعي في tRPC أيًا كان.)
+- **التشخيص السابق 500 مُرجَّح سببه: نقاط دخول JS الخام في rollupOptions.input** كانت تسبب فشل تحليل/بناء في بيئة النشر على المنصة.
+- التالي: checkpoint → انتظار النشر → فحص prod.

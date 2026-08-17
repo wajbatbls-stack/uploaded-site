@@ -53,10 +53,14 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
   it("يشحن مديرَي الإدارة في صفحتي المالك ويتيح تركيبهما داخل مساحة العمل", () => {
     const adminHtml = projectFile("client/public/admin.html");
     const dashboard = projectFile("client/public/admin-dashboard.html");
+    const sv25Entry = projectFile("client/public/admin-sv25.html");
     expect(adminHtml).toContain("admin-team-manager-r1.js");
     expect(adminHtml).toContain("admin-partners-manager-r17.js");
     expect(dashboard).toContain("admin-team-manager-r1.js");
     expect(dashboard).toContain("admin-partners-manager-r17.js");
+    expect(sv25Entry).toContain("admin-partners-manager-r17.js?v=partners-r17-sv25");
+    expect(sv25Entry).not.toContain("admin-partners-manager-r16.js");
+    expect(projectFile("vite.config.ts")).toContain('{ source: "admin-sv25.html", destination: "admin-sv25.html" }');
     const app = projectFile("client/public/assets/js/admin-app-r30.js");
     expect(app).toContain("mountCompatibleTeamManager");
     expect(app).toContain("mountCompatiblePartnersManager");

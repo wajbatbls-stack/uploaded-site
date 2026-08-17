@@ -95,7 +95,9 @@ function mountCompatiblePartnersManager() {
 window.__adminRerenderPartners = function rerenderPartnersOnLateMount() {
   if (state.selected !== "partners") return;
   const placeholder = document.querySelector("[data-partners-workspace]");
-  if (!placeholder) return;
+  // إذا كانت الحزمة قد وصلت بعد أن بنى المحرر التقليدي القسم، أعد رسم مساحة
+  // المحتوى حتى يأخذ مدير الشركاء المتخصص الأولوية بدلاً من محرر البيانات العام.
+  if (!placeholder) { dashboard(); return; }
   try { window.WajbatPartnersManager.container = placeholder; void window.WajbatPartnersManager.refresh(); } catch (error) { toast(messageOf(error)); }
 };
 function mountCompatibleVisitorLinksManager() {
@@ -139,6 +141,9 @@ contentWorkspace = function structuredContentWorkspace() {
   if (compatibleServicesWorkspace) return compatibleServicesWorkspace;
   if (state.selected === "downloads" && typeof window.WajbatDownloadsManager?.activate === "function") return mountCompatibleDownloadsManager();
   if (state.selected === "contact" && typeof window.WajbatContactManager?.activate === "function") return mountCompatibleContactManager();
+  // يجب أن يسبق مدير الشركاء المحرر العام؛ فالمحرر العام لا يحتوي حقول الشعار
+  // والوصف والرابط الرسمي ولا يدعم رفع شعار الجهة من الهاتف.
+  if (state.selected === "partners" && typeof window.WajbatPartnersManager?.activate === "function") return mountCompatiblePartnersManager();
   if (window.WajbatStructuredEditor?.supports?.(state.selected)) return window.WajbatStructuredEditor.workspace(state.selected);
   return legacyContentWorkspace();
 };

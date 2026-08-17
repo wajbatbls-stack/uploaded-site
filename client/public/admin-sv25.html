@@ -123,7 +123,7 @@
                   teamManager.async = false;
                   teamManager.onload = () => {
                   const partnersManager = document.createElement("script");
-                  partnersManager.src = "/assets/js/admin-partners-manager-r17.js?v=partners-r17-sv25";
+                  partnersManager.src = "/assets/js/admin-partners-manager-r18.js?v=partners-r18-sv25";
                   partnersManager.async = false;
                   partnersManager.onload = () => { try { if (typeof window.__adminRerenderPartners === "function") window.__adminRerenderPartners(); } catch (_) { /* لا شيء */ } };
                   document.body.append(partnersManager);
@@ -174,7 +174,7 @@
                   teamManager.async = false;
                   teamManager.onload = () => {
                   const partnersManager = document.createElement("script");
-                  partnersManager.src = "/assets/js/admin-partners-manager-r17.js?v=partners-r17-sv25";
+                  partnersManager.src = "/assets/js/admin-partners-manager-r18.js?v=partners-r18-sv25";
                   partnersManager.async = false;
                   partnersManager.onload = () => { try { if (typeof window.__adminRerenderPartners === "function") window.__adminRerenderPartners(); } catch (_) { /* لا شيء */ } };
                   document.body.append(partnersManager);
@@ -264,7 +264,7 @@
       }
       if (!window.WajbatPartnersManager) {
         const retryPartners = document.createElement("script");
-        retryPartners.src = "/assets/js/admin-partners-manager-r17.js?v=partners-r17-sv25&reload=" + Date.now();
+        retryPartners.src = "/assets/js/admin-partners-manager-r18.js?v=partners-r18-sv25&reload=" + Date.now();
         retryPartners.async = false;
         document.body.append(retryPartners);
       }

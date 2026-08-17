@@ -55,10 +55,10 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
     const dashboard = projectFile("client/public/admin-dashboard.html");
     const sv25Entry = projectFile("client/public/admin-sv25.html");
     expect(adminHtml).toContain("admin-team-manager-r1.js");
-    expect(adminHtml).toContain("admin-partners-manager-r17.js");
+    expect(adminHtml).toContain("admin-partners-manager-r18.js");
     expect(dashboard).toContain("admin-team-manager-r1.js");
-    expect(dashboard).toContain("admin-partners-manager-r17.js");
-    expect(sv25Entry).toContain("admin-partners-manager-r17.js?v=partners-r17-sv25");
+    expect(dashboard).toContain("admin-partners-manager-r18.js");
+    expect(sv25Entry).toContain("admin-partners-manager-r18.js?v=partners-r18-sv25");
     expect(sv25Entry).not.toContain("admin-partners-manager-r16.js");
     expect(projectFile("vite.config.ts")).toContain('{ source: "admin-sv25.html", destination: "admin-sv25.html" }');
     const app = projectFile("client/public/assets/js/admin-app-r30.js");
@@ -66,11 +66,12 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
     expect(app).toContain("mountCompatiblePartnersManager");
     expect(app).toContain("[data-team-workspace]");
     expect(app).toContain("[data-partners-workspace]");
+    expect(app).toContain('state.selected === "partners" && typeof window.WajbatPartnersManager?.activate === "function"');
   });
 
   it("يدعم رفع الصور من الجهاز داخل مديرَي الفريق والشركاء", () => {
     const team = projectFile("client/public/assets/js/admin-team-manager-r1.js");
-    const partners = projectFile("client/public/assets/js/admin-partners-manager-r17.js");
+    const partners = projectFile("client/public/assets/js/admin-partners-manager-r18.js");
     expect(team).toContain("admin.team.uploadPhoto");
     expect(team).toContain("fileToDataUrl");
     expect(team).toContain("WajbatTeamManager");
@@ -128,7 +129,7 @@ describe("زر بطاقة الشريك ومعالجة القيم النصية NU
   });
 
   it("يعترض القيم النصية NULL في مدير الشركاء عند الحفظ", () => {
-    const manager = file("client/public/assets/js/admin-partners-manager-r17.js");
+    const manager = file("client/public/assets/js/admin-partners-manager-r18.js");
     expect(manager).toContain('=== "NULL"');
     expect(manager).toContain("رابط الموقع الرسمي");
     expect(manager).toContain("logoPreviewUrl");

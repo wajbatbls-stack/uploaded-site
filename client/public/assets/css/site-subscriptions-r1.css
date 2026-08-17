@@ -1,0 +1,45 @@
+/* sv28 — Subscription Studio: public plans and mobile header */
+:root { --sub-ink:#071a38; --sub-blue:#2458e8; --sub-aqua:#12c3c8; --sub-violet:#7454ee; --sub-warm:#f6b74c; }
+
+/* The old animated ticker compressed RTL copy and phone numbers on narrow devices. */
+@media (max-width: 680px) {
+  .ticker.ticker-pro { min-height: 44px !important; height: auto !important; padding: 7px 14px !important; display: grid !important; place-items: center !important; overflow: hidden !important; }
+  .ticker.ticker-pro > span { display: block !important; max-width: 100% !important; margin: 0 !important; animation: none !important; transform: none !important; white-space: normal !important; text-align: center !important; line-height: 1.65 !important; font-size: .77rem !important; font-weight: 800 !important; letter-spacing: 0 !important; }
+  .ticker.ticker-pro .ticker-num { display: inline-block !important; direction: ltr !important; unicode-bidi: plaintext !important; white-space: nowrap !important; margin-inline: .22rem !important; }
+  .site-header { min-height: 104px !important; padding: 15px 17px !important; display: grid !important; grid-template-columns: 52px minmax(0,1fr) 52px !important; align-items: center !important; }
+  .site-header > .header-actions { display: contents !important; }
+  .site-header > .header-actions:first-child > .btn-icon { grid-column: 1 !important; justify-self: start !important; }
+  .site-header .brand { grid-column: 2 !important; justify-self: center !important; min-width: 0 !important; gap: 9px !important; text-align: right !important; }
+  .site-header .brand img, .site-header .brand .logo { width: 48px !important; height: 48px !important; flex: 0 0 48px !important; }
+  .site-header .brand-title { font-size: 1.15rem !important; white-space: nowrap !important; }
+  .site-header .brand-subtitle { font-size: .67rem !important; white-space: nowrap !important; }
+  .site-header > .header-actions:last-child > .btn-icon { grid-column: 3 !important; justify-self: end !important; }
+  .site-header > .header-actions:last-child > .whatsapp-link { display: none !important; }
+}
+
+/* Subscription Studio — applied only to the existing plans route through its plan cards. */
+body:has(.plan-card) .page-content { position: relative; isolation: isolate; overflow: hidden; background: radial-gradient(circle at 16% 7%, rgba(18,195,200,.18), transparent 25rem), radial-gradient(circle at 88% 12%, rgba(116,84,238,.19), transparent 27rem), #f5f8ff; }
+body:has(.plan-card) .page-content::before { content:""; position:absolute; z-index:-1; inset:0 0 auto; height:330px; background: linear-gradient(125deg,#061837 0%,#123776 48%,#6f4ee5 100%); clip-path: polygon(0 0,100% 0,100% 82%,0 100%); }
+body:has(.plan-card) .page-title { position:relative; max-width:1220px; margin:0 auto 26px; padding:66px 28px 44px; color:#fff; text-align:center; }
+body:has(.plan-card) .page-title::before { content:"خطط مصممة لمسارك الأكاديمي"; display:block; width:max-content; max-width:100%; margin:0 auto 12px; padding:7px 13px; border:1px solid rgba(255,255,255,.28); border-radius:999px; color:#d7fbff; background:rgba(255,255,255,.09); font-size:.76rem; font-weight:800; letter-spacing:.03em; }
+body:has(.plan-card) .page-title h1, body:has(.plan-card) .page-title h2 { margin:0; color:inherit; font-size:clamp(1.8rem,4vw,3.1rem); text-shadow:0 10px 30px rgba(0,0,0,.2); }
+body:has(.plan-card) .page-title p { max-width:640px; margin:12px auto 0; color:rgba(255,255,255,.8); }
+body:has(.plan-card) .grid.grid-5 { position:relative; max-width:1230px; grid-template-columns:repeat(auto-fit,minmax(238px,1fr)) !important; gap:20px !important; margin:0 auto 60px !important; padding:0 24px !important; align-items:stretch; }
+body:has(.plan-card) .plan-card { position:relative; display:flex; flex-direction:column; min-height:100%; overflow:hidden; border:1px solid rgba(32,76,158,.12) !important; border-radius:24px !important; background:linear-gradient(155deg,rgba(255,255,255,.98),rgba(246,249,255,.93)) !important; box-shadow:0 16px 38px rgba(17,47,99,.11) !important; transition:transform .23s cubic-bezier(.23,1,.32,1),box-shadow .23s cubic-bezier(.23,1,.32,1),border-color .23s ease !important; }
+body:has(.plan-card) .plan-card::before { content:""; position:absolute; inset:0 0 auto; height:5px; background:linear-gradient(90deg,var(--sub-aqua),var(--sub-blue),var(--sub-violet)); }
+body:has(.plan-card) .plan-card:hover { transform:translateY(-8px); border-color:rgba(36,88,232,.38) !important; box-shadow:0 26px 48px rgba(17,47,99,.18) !important; }
+body:has(.plan-card) .plan-card.popular,body:has(.plan-card) .plan-card.is-popular { transform:translateY(-12px); border:2px solid rgba(18,195,200,.55) !important; box-shadow:0 25px 54px rgba(18,107,183,.25) !important; }
+body:has(.plan-card) .plan-card.popular::after,body:has(.plan-card) .plan-card.is-popular::after { content:"الخيار الأكثر تميزاً"; position:absolute; inset:16px 16px auto auto; padding:6px 10px; border-radius:999px; color:#062342; background:#d8ffef; font-size:.68rem; font-weight:900; }
+body:has(.plan-card) .plan-head { padding:31px 24px 17px !important; background:transparent !important; text-align:right !important; }
+body:has(.plan-card) .plan-emoji { width:52px; height:52px; display:grid; place-items:center; margin-bottom:16px; border-radius:17px; background:linear-gradient(135deg,#ecf4ff,#ddfbfa); box-shadow:inset 0 0 0 1px rgba(36,88,232,.08); font-size:1.65rem !important; }
+body:has(.plan-card) .plan-head h3 { color:var(--sub-ink) !important; font-size:1.28rem !important; font-weight:900 !important; }
+body:has(.plan-card) .plan-duration { display:inline-flex; margin-top:10px; padding:6px 10px; border-radius:9px; color:#2562a7; background:#edf4ff; font-weight:800; font-size:.77rem; }
+body:has(.plan-card) .plan-body { display:flex; flex:1; flex-direction:column; gap:14px; padding:0 24px 25px !important; color:#5b6d88; }
+body:has(.plan-card) .check-list { display:grid; gap:9px; margin:2px 0 15px !important; padding:0 !important; list-style:none; }
+body:has(.plan-card) .check-list li { display:flex; align-items:flex-start; gap:8px; padding:0; line-height:1.7; }
+body:has(.plan-card) .check-list li::before { content:"✓"; display:grid; flex:0 0 20px; width:20px; height:20px; place-items:center; margin-top:2px; border-radius:50%; color:#07596a; background:#d9faf5; font-size:.7rem; font-weight:900; }
+body:has(.plan-card) .plan-card .btn { width:100%; margin-top:auto; min-height:47px; border:0 !important; border-radius:13px !important; color:#fff !important; background:linear-gradient(105deg,#155ed0,#704eeb) !important; box-shadow:0 10px 20px rgba(51,88,197,.24); font-weight:900; }
+body:has(.plan-card) .plan-card .btn:hover { filter:brightness(1.06); }
+body:has(.plan-card) .contact-card { max-width:1000px; margin:10px auto 76px !important; border:1px solid rgba(36,88,232,.12) !important; border-radius:22px !important; background:linear-gradient(112deg,#fff,#eaf5ff) !important; box-shadow:0 16px 36px rgba(17,47,99,.09); }
+@media (max-width:680px) { body:has(.plan-card) .page-title { padding:48px 20px 39px; } body:has(.plan-card) .grid.grid-5 { padding:0 16px !important; gap:15px !important; } body:has(.plan-card) .plan-card:hover,body:has(.plan-card) .plan-card.popular,body:has(.plan-card) .plan-card.is-popular { transform:none; } }
+

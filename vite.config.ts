@@ -206,7 +206,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-app-r29.js", destination: "assets/js/admin-app-r29.js" },
         { source: "assets/js/admin-app-r30.js", destination: "assets/js/admin-app-r30.js" },
 
-        { source: "assets/js/admin-partners-manager-r16.js", destination: "assets/js/admin-partners-manager-r16.js" },
+        { source: "assets/js/admin-partners-manager-r17.js", destination: "assets/js/admin-partners-manager-r17.js" },
         { source: "assets/css/style-r4.css", destination: "assets/css/style-r4.css" },
         { source: "assets/css/style-r5.css", destination: "assets/css/style-r5.css" },
         { source: "assets/css/style-r6.css", destination: "assets/css/style-r6.css" },

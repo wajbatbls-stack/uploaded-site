@@ -9,7 +9,7 @@ describe("owner login current assets", () => {
     const adminHtml = projectFile("client/public/admin.html");
     expect(adminHtml).toContain("admin-r14.css");
     expect(adminHtml).toContain("admin-owner-login-r13-mobile.css");
-    expect(adminHtml).toContain("admin-app-r31.js");
+    expect(adminHtml).toContain("admin-app-r32.js");
     expect(adminHtml).toContain("admin-downloads-manager-r20.js");
     expect(adminHtml).toContain("admin-design-studio-r2.js");
     expect(adminHtml).toContain("admin-services-manager-r2.js");
@@ -41,17 +41,21 @@ describe("owner login current assets", () => {
 
   it("publishes the visitor design layer and versioned entry asset", () => {
     const site = projectFile("client/public/index.html");
+    const productionEntry = projectFile("client/index.html");
     const css = projectFile("client/public/assets/css/site-design-r2.css");
     expect(site).toContain("site-design-r2.css");
-    expect(site).toContain("site-app-r33.js");
+    expect(site).toContain("site-app-r35.js");
     expect(site).toContain("style-r3.css");
     expect(projectFile("client/public/assets/css/style-r3.css")).toContain(".contact");
-    const app = projectFile("client/public/assets/js/site-app-r33.js");
+    const app = projectFile("client/public/assets/js/site-app-r35.js");
     expect(app).toContain("contact-social-strip");
     expect(app).toContain("contact-social-icon");
     expect(app).toContain('data-action="contact-scroll"');
     expect(app).not.toContain("iframe class=\"map\"");
     expect(site).toContain("services-manager-r2.css");
     expect(css).toContain("#site-design-clock");
+    expect(productionEntry).toContain("site-home-r34.css");
+    expect(productionEntry).toContain("site-app-r35.js");
+    expect(productionEntry).not.toContain("site-app-r33.js");
   });
 });

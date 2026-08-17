@@ -63,7 +63,7 @@ describe("أصول مدير روابط الزوار", () => {
   });
 
   it("يثبت رابط الزوار قبل الصفحة الرئيسية في التنقل ويمنحه مسار فتح مباشر", () => {
-    const app = projectFile("client/public/assets/js/admin-app-r21.js");
+    const app = projectFile("client/public/assets/js/admin-app-r32.js");
     const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r4.js");
     expect(app).toContain('visitorLinks: ["🔗", "إنشاء روابط الزوار"');
     expect(app).toContain('items: ["dashboard", "visitorLinks", "homePage", "design"]');
@@ -76,7 +76,7 @@ describe("أصول مدير روابط الزوار", () => {
     expect(manager).toContain("admin.createVisitorLink");
     expect(manager).toContain("await verifyAvailability(token, input)");
     expect(
-      [projectFile("client/public/admin-dashboard.html"), projectFile("client/public/admin.html")].some(content => content.includes("admin-app-r31.js?v=partners-handoff-r31")),
+      [projectFile("client/public/admin-dashboard.html"), projectFile("client/public/admin.html")].some(content => content.includes("admin-app-r32.js?v=admin-design-r32")),
     ).toBe(true);
   });
 
@@ -99,7 +99,7 @@ describe("أصول مدير روابط الزوار", () => {
   });
 
   it("يركّب مدير روابط الزوار داخل مساحة عمل القسم عند اختياره", () => {
-    const app = projectFile("client/public/assets/js/admin-app-r21.js");
+    const app = projectFile("client/public/assets/js/admin-app-r32.js");
     const manager = projectFile("client/public/assets/js/admin-visitor-links-manager-r4.js");
     expect(app).toContain("function mountCompatibleVisitorLinksManager()");
     expect(app).toContain('key === "visitorLinks"');

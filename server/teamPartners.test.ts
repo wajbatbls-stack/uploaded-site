@@ -61,11 +61,11 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
     expect(sv25Entry).toContain("admin-partners-manager-r18.js?v=partners-r18-sv25");
     expect(sv25Entry).not.toContain("admin-partners-manager-r16.js");
     expect(projectFile("vite.config.ts")).toContain('{ source: "admin-sv25.html", destination: "admin-sv25.html" }');
-    expect(adminHtml).toContain("admin-app-r31.js?v=partners-handoff-r31");
-    expect(dashboard).toContain("admin-app-r31.js?v=partners-handoff-r31");
-    expect(sv25Entry).toContain("admin-app-r31.js?v=partners-handoff-r31");
-    expect(projectFile("vite.config.ts")).toContain('{ source: "assets/js/admin-app-r31.js", destination: "assets/js/admin-app-r31.js" }');
-    const app = projectFile("client/public/assets/js/admin-app-r31.js");
+    expect(adminHtml).toContain("admin-app-r32.js?v=admin-design-r32");
+    expect(dashboard).toContain("admin-app-r32.js?v=admin-design-r32");
+    expect(sv25Entry).toContain("admin-app-r32.js?v=admin-design-r32");
+    expect(projectFile("vite.config.ts")).toContain('{ source: "assets/js/admin-app-r32.js", destination: "assets/js/admin-app-r32.js" }');
+    const app = projectFile("client/public/assets/js/admin-app-r32.js");
     expect(app).toContain("mountCompatibleTeamManager");
     expect(app).toContain("mountCompatiblePartnersManager");
     expect(app).toContain("[data-team-workspace]");

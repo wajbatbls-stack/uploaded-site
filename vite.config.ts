@@ -174,6 +174,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-structured-editor-r5.js", destination: "assets/js/admin-structured-editor-r3.js" },
         { source: "assets/js/admin-structured-editor-r5.js", destination: "assets/js/admin-structured-editor-r4.js" },
         { source: "assets/js/admin-homepage-manager-r1.js", destination: "assets/js/admin-homepage-manager-r1.js" },
+        { source: "assets/js/admin-homepage-manager-r2.js", destination: "assets/js/admin-homepage-manager-r2.js" },
         { source: "assets/js/admin-services-manager-r1.js", destination: "assets/js/admin-services-manager-r1.js" },
         { source: "assets/js/admin-services-manager-r2.js", destination: "assets/js/admin-services-manager-r2.js" },
         { source: "assets/js/admin-visitor-links-manager-r4.js", destination: "assets/js/admin-visitor-links-manager-r4.js" },
@@ -203,10 +204,13 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-blog-manager-r7.js", destination: "assets/js/admin-blog-manager-r7.js" },
         { source: "assets/js/admin-blog-manager-r8.js", destination: "assets/js/admin-blog-manager-r8.js" },
         { source: "assets/js/site-app-r33.js", destination: "assets/js/site-app-r33.js" },
+        { source: "assets/js/site-app-r34.js", destination: "assets/js/site-app-r34.js" },
+        { source: "assets/js/site-app-r35.js", destination: "assets/js/site-app-r35.js" },
         { source: "assets/js/admin-app-r28.js", destination: "assets/js/admin-app-r28.js" },
         { source: "assets/js/admin-app-r29.js", destination: "assets/js/admin-app-r29.js" },
         { source: "assets/js/admin-app-r30.js", destination: "assets/js/admin-app-r30.js" },
         { source: "assets/js/admin-app-r31.js", destination: "assets/js/admin-app-r31.js" },
+        { source: "assets/js/admin-app-r32.js", destination: "assets/js/admin-app-r32.js" },
 
         { source: "assets/js/admin-partners-manager-r17.js", destination: "assets/js/admin-partners-manager-r17.js" },
         { source: "assets/js/admin-partners-manager-r18.js", destination: "assets/js/admin-partners-manager-r18.js" },
@@ -229,6 +233,8 @@ function copyAdminAssets(): Plugin {
         { source: "assets/css/admin-services-r2.css", destination: "assets/css/admin-services-r2.css" },
         { source: "assets/css/site-design-r2.css", destination: "assets/css/site-design-r2.css" },
         { source: "assets/css/homepage-manager-r1.css", destination: "assets/css/homepage-manager-r1.css" },
+        { source: "assets/css/site-home-r34.css", destination: "assets/css/site-home-r34.css" },
+        { source: "assets/css/admin-shell-r32.css", destination: "assets/css/admin-shell-r32.css" },
         { source: "assets/css/services-manager-r1.css", destination: "assets/css/services-manager-r1.css" },
         { source: "assets/css/services-manager-r2.css", destination: "assets/css/services-manager-r2.css" },
         { source: "assets/css/visitor-links-r1.css", destination: "assets/css/visitor-links-r1.css" },
@@ -251,7 +257,10 @@ function publishVersionedEntryAssets(): Plugin {
   const sourceRoot = path.resolve(import.meta.dirname, "client", "public", "assets");
   const entries = [
     { source: "js/site-app-r33.js", destination: "js/site-app-r33.js" },
+    { source: "js/site-app-r34.js", destination: "js/site-app-r34.js" },
+    { source: "js/site-app-r35.js", destination: "js/site-app-r35.js" },
     { source: "js/admin-app-r16.js", destination: "js/admin-app-r17.js" },
+    { source: "js/admin-app-r32.js", destination: "js/admin-app-r32.js" },
   ];
 
   return {

@@ -7,7 +7,7 @@ describe("أصول قسم إدارة التحميلات الحديث (r20 — ك
   it("يحمّل مدير التحميلات r10 ومدير التطبيق المبصّم من صفحة الإدارة", () => {
     const adminHtml = projectFile("client/public/admin.html");
     expect(adminHtml).toContain("admin-downloads-manager-r20.js");
-    expect(adminHtml).toContain("admin-app-r31.js");
+    expect(adminHtml).toContain("admin-app-r32.js");
     expect(adminHtml).toContain("downloads-r20");
     expect(adminHtml).toContain("admin-structured-editor-r6.js");
     expect(adminHtml).toContain("structured-r6");
@@ -15,10 +15,10 @@ describe("أصول قسم إدارة التحميلات الحديث (r20 — ك
     expect(projectFile("client/public/assets/js/admin-app-r21.js")).toContain("mountCompatibleDownloadsManager");
   });
 
-  it("يحمّل تطبيق الزائر المبصّم site-app-r33 بتصميم التحميلات الجديد dl10", () => {
+  it("يحمّل تطبيق الزائر المبصّم site-app-r35 بتصميم التحميلات الجديد dl10", () => {
     const indexHtml = projectFile("client/public/index.html");
-    expect(indexHtml).toContain("site-app-r33.js");
-    const app = projectFile("client/public/assets/js/site-app-r33.js");
+    expect(indexHtml).toContain("site-app-r35.js");
+    const app = projectFile("client/public/assets/js/site-app-r35.js");
     expect(app).toContain("loadSiteDownloads()");
     expect(app).toContain("dl10FileCard");
     expect(app).toContain("dl10Tabs");
@@ -26,7 +26,7 @@ describe("أصول قسم إدارة التحميلات الحديث (r20 — ك
   });
 
   it("يركّب مدير التحميلات r10 داخل مساحة عمل قسم التحميلات بعد إعفائه من structured editor", () => {
-    const app = projectFile("client/public/assets/js/admin-app-r21.js");
+    const app = projectFile("client/public/assets/js/admin-app-r32.js");
     expect(app).toContain('downloads: ["📥", "إدارة التحميلات"');
     expect(app).toContain("mountCompatibleDownloadsManager();");
     expect(app).toContain("manager.activate()");

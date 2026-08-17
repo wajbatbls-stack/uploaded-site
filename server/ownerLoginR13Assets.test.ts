@@ -54,7 +54,7 @@ describe("owner login current assets", () => {
     expect(app).not.toContain("iframe class=\"map\"");
     expect(site).toContain("services-manager-r2.css");
     expect(css).toContain("#site-design-clock");
-    expect(productionEntry).toContain("site-home-r34.css");
+    expect(productionEntry).toContain("site-home-r38.css");
     expect(productionEntry).toContain("site-app-r36.js");
     expect(productionEntry).not.toContain("site-app-r33.js");
   });

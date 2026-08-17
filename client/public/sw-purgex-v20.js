@@ -29,18 +29,23 @@ self.addEventListener("message", e => {
 });
 
 /*
-  توافق انتقال r19 → r20:
-  بعض الأجهزة قد تملك صفحة إدارة قديمة تشير إلى r19 رغم أن r20 منشور. لا نخزن
-  أي استجابة ولا نغير أي مسار آخر؛ نستبدل طلب الحزمة القديمة مرة واحدة على الشبكة
-  بالحزمة r20 التي تحتوي إصلاح ترتيب طبقات النافذة.
+  توافق انتقال r19 → r20 وحزم الواجهة الرئيسية القديمة → r36:
+  قد تملك بعض الأجهزة صفحة مخزنة تشير إلى الحزمة القديمة. لا نخزن أي استجابة ولا
+  نغير أي مسار آخر؛ نستبدل الطلب فقط بحزمة الإصلاح الحديثة عبر الشبكة.
 */
 self.addEventListener("fetch", event => {
   const requested = new URL(event.request.url);
-  if (requested.pathname !== "/assets/js/admin-downloads-manager-r19.js") return;
+  const replacements = {
+    "/assets/js/admin-downloads-manager-r19.js": { path: "/assets/js/admin-downloads-manager-r20.js", version: "downloads-r20", compat: "r19-to-r20" },
+    "/assets/js/site-app-r33.js": { path: "/assets/js/site-app-r36.js", version: "home-r36", compat: "r33-to-r36" },
+    "/assets/js/site-app-r35.js": { path: "/assets/js/site-app-r36.js", version: "home-r36", compat: "r35-to-r36" },
+  };
+  const replacement = replacements[requested.pathname];
+  if (!replacement) return;
 
-  const current = new URL("/assets/js/admin-downloads-manager-r20.js", self.location.origin);
-  current.searchParams.set("v", "downloads-r20");
-  current.searchParams.set("compat", "r19-to-r20");
+  const current = new URL(replacement.path, self.location.origin);
+  current.searchParams.set("v", replacement.version);
+  current.searchParams.set("compat", replacement.compat);
   event.respondWith(fetch(new Request(current.toString(), {
     method: "GET",
     cache: "no-store",

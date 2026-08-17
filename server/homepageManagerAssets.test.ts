@@ -24,12 +24,14 @@ describe("إدارة الصفحة الرئيسية", () => {
   });
 
   it("يطبّق التخصيص المحفوظ على واجهة الزائر مع إبقاء الحالة الافتراضية عند غياب الإعداد", () => {
-    const app = projectFile("client/public/assets/js/site-app-r35.js");
+    const app = projectFile("client/public/assets/js/site-app-r36.js");
     const style = projectFile("client/public/assets/css/homepage-manager-r1.css");
 
     expect(app).toContain("const home = siteSettings.homePageConfig && typeof siteSettings.homePageConfig === \"object\" ? siteSettings.homePageConfig : null");
     expect(app).toContain('const isLegacyHomeConfig = Number(home.version || 1) < 2;');
-    expect(app).toContain('if (isLegacyHomeConfig && ["services", "features"].includes(id)) return true;');
+    expect(app).toContain('const legacySectionVisible = id => isLegacyHomeConfig && ["services", "features"].includes(id);');
+    expect(app).toContain('legacySectionVisible("services") || serviceConfig.visible !== false');
+    expect(app).toContain('legacySectionVisible("features") || featureConfig.visible !== false');
     expect(app).toContain('return `<div class="home-managed-stack">');
     expect(style).toContain(".home-managed-hero");
   });

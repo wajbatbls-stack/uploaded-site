@@ -15,10 +15,10 @@ describe("أصول قسم إدارة التحميلات الحديث (r20 — ك
     expect(projectFile("client/public/assets/js/admin-app-r21.js")).toContain("mountCompatibleDownloadsManager");
   });
 
-  it("يحمّل تطبيق الزائر المبصّم site-app-r37 بتصميم التحميلات الجديد dl10", () => {
+  it("يحمّل تطبيق الزائر المبصّم site-app-r38 بتصميم التحميلات الجديد dl10", () => {
     const indexHtml = projectFile("client/public/index.html");
-    expect(indexHtml).toContain("site-app-r37.js");
-    const app = projectFile("client/public/assets/js/site-app-r37.js");
+    expect(indexHtml).toContain("site-app-r38.js");
+    const app = projectFile("client/public/assets/js/site-app-r38.js");
     expect(app).toContain("loadSiteDownloads()");
     expect(app).toContain("dl10FileCard");
     expect(app).toContain("dl10Tabs");

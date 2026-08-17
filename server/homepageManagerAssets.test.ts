@@ -24,7 +24,7 @@ describe("إدارة الصفحة الرئيسية", () => {
   });
 
   it("يطبّق التخصيص المحفوظ على واجهة الزائر مع إبقاء الحالة الافتراضية عند غياب الإعداد", () => {
-    const app = projectFile("client/public/assets/js/site-app-r36.js");
+    const app = projectFile("client/public/assets/js/site-app-r38.js");
     const style = projectFile("client/public/assets/css/homepage-manager-r1.css");
 
     expect(app).toContain("const home = siteSettings.homePageConfig && typeof siteSettings.homePageConfig === \"object\" ? siteSettings.homePageConfig : null");

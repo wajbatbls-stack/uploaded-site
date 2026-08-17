@@ -234,6 +234,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/css/admin-homepage-r1.css", destination: "assets/css/admin-homepage-r1.css" },
         { source: "assets/css/admin-services-r1.css", destination: "assets/css/admin-services-r1.css" },
         { source: "assets/css/admin-services-r2.css", destination: "assets/css/admin-services-r2.css" },
+        { source: "assets/css/admin-services-r3.css", destination: "assets/css/admin-services-r3.css" },
         { source: "assets/css/site-design-r2.css", destination: "assets/css/site-design-r2.css" },
         { source: "assets/css/homepage-manager-r1.css", destination: "assets/css/homepage-manager-r1.css" },
         { source: "assets/css/site-home-r34.css", destination: "assets/css/site-home-r34.css" },
@@ -251,6 +252,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/css/admin-plans-r2.css", destination: "assets/css/admin-plans-r2.css" },
         { source: "assets/css/services-manager-r1.css", destination: "assets/css/services-manager-r1.css" },
         { source: "assets/css/services-manager-r2.css", destination: "assets/css/services-manager-r2.css" },
+        { source: "assets/css/site-services-r3.css", destination: "assets/css/site-services-r3.css" },
         { source: "assets/css/visitor-links-r1.css", destination: "assets/css/visitor-links-r1.css" },
         { source: "assets/css/style-r3.css", destination: "assets/css/style-r3.css" },
       ];

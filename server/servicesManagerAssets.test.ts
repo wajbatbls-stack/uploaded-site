@@ -32,7 +32,7 @@ describe("مدير الخدمات الهرمي", () => {
 		expect(app).toContain("function bindSidebarNavigation()");
 		expect(app).toContain('document.querySelectorAll(".side-menu [data-select]")');
 		expect(app).toContain("bindSidebarNavigation();");
-			expect(page).toContain("services-nav-fix-r4");
+			expect(page).toContain("sv30-services-functional-r5");
 	});
 
 	it("يحمّل مدير روابط الزوار ببصمة إصدار تمنع تنفيذ نسخة قديمة مخزنة مؤقتاً", () => {
@@ -69,5 +69,31 @@ describe("مدير الخدمات الهرمي", () => {
     expect(app).toContain("serviceButtonHref");
     expect(app).toContain("serviceSurfaceStyle");
     expect(app).toContain("buttonTextColor");
+  });
+
+  it("ينشر طبقة خدمات الزوار الفاخرة عبر مدخلي البناء والعرض مع تفاصيل وبطاقات متجاوبة", () => {
+    const visitorCss = readProject("client/public/assets/css/site-services-r3.css");
+    const buildEntry = readProject("client/index.html");
+    const publicEntry = readProject("client/public/index.html");
+    expect(buildEntry).toContain("site-services-r3.css?v=sv30-luxe-services");
+    expect(publicEntry).toContain("site-services-r3.css?v=sv30-luxe-services");
+    expect(visitorCss).toContain(".svc24-wrap");
+    expect(visitorCss).toContain(".svc24-card");
+    expect(visitorCss).toContain(".svc24-sub-grid");
+    expect(visitorCss).toContain("prefers-reduced-motion:reduce");
+  });
+
+  it("يعرض محرر الخدمات في نافذة واضحة ويحافظ على الحفظ والمعاينة والتركيز التلقائي", () => {
+    const manager = readProject("client/public/assets/js/admin-services-manager-r2.js");
+    const adminCss = readProject("client/public/assets/css/admin-services-r3.css");
+    const adminEntry = readProject("client/public/admin-sv25.html");
+    expect(adminEntry).toContain("admin-services-r3.css?v=sv30-luxe-services");
+    expect(manager).toContain("service-editor-overlay");
+    expect(manager).toContain("service-editor-dialog");
+    expect(manager).toContain('querySelector(\'#service-editor-form [name="title"]\')?.focus()');
+    expect(manager).toContain('await save("تم حفظ الخدمة بنجاح")');
+    expect(adminCss).toContain(".service-editor-overlay{position:fixed");
+    expect(adminCss).toContain(".service-editor-dialog");
+    expect(adminCss).toContain("z-index:1000");
   });
 });

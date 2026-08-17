@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="/assets/css/admin-homepage-r1.css" />
     <link rel="stylesheet" href="/assets/css/admin-services-r1.css" />
     <link rel="stylesheet" href="/assets/css/admin-services-r2.css" />
+    <link rel="stylesheet" href="/assets/css/admin-services-r3.css?v=sv30-luxe-services" />
     <link rel="stylesheet" href="/assets/css/visitor-links-r1.css" />
     <link rel="stylesheet" href="/assets/css/visitor-links-whatsapp-r1.css?v=visitor-links-telegram-r5" />
   </head>
@@ -103,7 +104,7 @@
             homepageManager.async = false;
             homepageManager.onload = () => {
               const servicesManager = document.createElement("script");
-              servicesManager.src = "/assets/js/admin-services-manager-r2.js?v=services-nav-fix-r4";
+              servicesManager.src = "/assets/js/admin-services-manager-r2.js?v=sv30-services-functional-r5";
               servicesManager.async = false;
               servicesManager.onload = () => {
                 const visitorLinksManager = document.createElement("script");
@@ -155,7 +156,7 @@
             homepageManager.src = "/assets/js/admin-homepage-manager-r2.js?v=homepage-manager-r2";
             homepageManager.onload = () => {
               const servicesManager = document.createElement("script");
-              servicesManager.src = "/assets/js/admin-services-manager-r2.js?v=services-nav-fix-r4";
+              servicesManager.src = "/assets/js/admin-services-manager-r2.js?v=sv30-services-functional-r5";
               servicesManager.onload = () => {
                 const visitorLinksManager = document.createElement("script");
                 visitorLinksManager.src = "/assets/js/admin-visitor-links-manager-r4.js?v=visitor-links-r4-load";

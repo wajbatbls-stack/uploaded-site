@@ -7,7 +7,7 @@ describe("أصول قسم إدارة التحميلات الحديث (r20 — ك
   it("يحمّل مدير التحميلات r10 ومدير التطبيق المبصّم من صفحة الإدارة", () => {
     const adminHtml = projectFile("client/public/admin.html");
     expect(adminHtml).toContain("admin-downloads-manager-r20.js");
-    expect(adminHtml).toContain("admin-app-r30.js");
+    expect(adminHtml).toContain("admin-app-r31.js");
     expect(adminHtml).toContain("downloads-r20");
     expect(adminHtml).toContain("admin-structured-editor-r6.js");
     expect(adminHtml).toContain("structured-r6");

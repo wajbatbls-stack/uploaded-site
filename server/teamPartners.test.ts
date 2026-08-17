@@ -61,12 +61,19 @@ describe("أقسام الفريق الإداري وشركاء النجاح (إد
     expect(sv25Entry).toContain("admin-partners-manager-r18.js?v=partners-r18-sv25");
     expect(sv25Entry).not.toContain("admin-partners-manager-r16.js");
     expect(projectFile("vite.config.ts")).toContain('{ source: "admin-sv25.html", destination: "admin-sv25.html" }');
-    const app = projectFile("client/public/assets/js/admin-app-r30.js");
+    expect(adminHtml).toContain("admin-app-r31.js?v=partners-handoff-r31");
+    expect(dashboard).toContain("admin-app-r31.js?v=partners-handoff-r31");
+    expect(sv25Entry).toContain("admin-app-r31.js?v=partners-handoff-r31");
+    expect(projectFile("vite.config.ts")).toContain('{ source: "assets/js/admin-app-r31.js", destination: "assets/js/admin-app-r31.js" }');
+    const app = projectFile("client/public/assets/js/admin-app-r31.js");
     expect(app).toContain("mountCompatibleTeamManager");
     expect(app).toContain("mountCompatiblePartnersManager");
     expect(app).toContain("[data-team-workspace]");
     expect(app).toContain("[data-partners-workspace]");
     expect(app).toContain('state.selected === "partners" && typeof window.WajbatPartnersManager?.activate === "function"');
+    expect(app).toContain("function forcePartnersWorkspace()");
+    expect(app).toContain("legacyWorkspace.replaceWith(placeholder)");
+    expect(app).toContain("window.__partnersWorkspaceHandoffVersion = \"r31\"");
   });
 
   it("يدعم رفع الصور من الجهاز داخل مديرَي الفريق والشركاء", () => {

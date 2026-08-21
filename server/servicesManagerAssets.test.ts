@@ -71,15 +71,16 @@ describe("مدير الخدمات الهرمي", () => {
     expect(app).toContain("buttonTextColor");
   });
 
-  it("ينشر طبقة خدمات الزوار الفاخرة عبر مدخلي البناء والعرض مع تفاصيل وبطاقات متجاوبة", () => {
-    const visitorCss = readProject("client/public/assets/css/site-services-r3.css");
+  it("ينشر طبقة خدمات الزوار المعاد تصميمها عبر مدخلي البناء والعرض مع تفاصيل وبطاقات متجاوبة", () => {
+    const visitorCss = readProject("client/public/assets/css/site-services-r4.css");
     const buildEntry = readProject("client/index.html");
     const publicEntry = readProject("client/public/index.html");
-    expect(buildEntry).toContain("site-services-r3.css?v=sv30-luxe-services");
-    expect(publicEntry).toContain("site-services-r3.css?v=sv30-luxe-services");
+    expect(buildEntry).toContain("site-services-r4.css?v=sv40-services-studio");
+    expect(publicEntry).toContain("site-services-r4.css?v=sv40-services-studio");
     expect(visitorCss).toContain(".svc24-wrap");
     expect(visitorCss).toContain(".svc24-card");
     expect(visitorCss).toContain(".svc24-sub-grid");
+    expect(visitorCss).toContain("body.dark .svc24-wrap");
     expect(visitorCss).toContain("prefers-reduced-motion:reduce");
   });
 

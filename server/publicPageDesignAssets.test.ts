@@ -79,4 +79,19 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
     expect(styles).toContain(".dl11-library .dl10-file");
     expect(styles).toContain("body.dark .dl11-library");
   });
+
+  it("يربط طبقة sv40 التي تعيد بناء هوية الخدمات في نقاط النشر والبناء", () => {
+    const sourceEntry = projectFile("client/index.html");
+    const publicEntry = projectFile("client/public/index.html");
+    const vite = projectFile("vite.config.ts");
+    const styles = projectFile("client/public/assets/css/site-services-r4.css");
+
+    expect(sourceEntry).toContain("site-services-r4.css?v=sv40-services-studio");
+    expect(publicEntry).toContain("site-services-r4.css?v=sv40-services-studio");
+    expect(vite).toContain('{ source: "assets/css/site-services-r4.css", destination: "assets/css/site-services-r4.css" }');
+    expect(styles).toContain("body .svc24-hero");
+    expect(styles).toContain("body .svc24-card");
+    expect(styles).toContain("body .svc24-sub-grid");
+    expect(styles).toContain("body.dark .svc24-wrap");
+  });
 });

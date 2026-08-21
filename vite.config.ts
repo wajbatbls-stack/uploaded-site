@@ -264,6 +264,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/css/services-manager-r1.css", destination: "assets/css/services-manager-r1.css" },
         { source: "assets/css/services-manager-r2.css", destination: "assets/css/services-manager-r2.css" },
         { source: "assets/css/site-services-r3.css", destination: "assets/css/site-services-r3.css" },
+        { source: "assets/css/site-services-r4.css", destination: "assets/css/site-services-r4.css" },
         { source: "assets/css/visitor-links-r1.css", destination: "assets/css/visitor-links-r1.css" },
         { source: "assets/css/style-r3.css", destination: "assets/css/style-r3.css" },
       ];

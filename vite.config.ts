@@ -239,6 +239,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/css/site-home-r41.css", destination: "assets/css/site-home-r41.css" },
         { source: "assets/css/site-pages-r1.css", destination: "assets/css/site-pages-r1.css" },
         { source: "assets/css/site-downloads-assignment-r1.css", destination: "assets/css/site-downloads-assignment-r1.css" },
+        { source: "assets/css/site-contact-blog-faq-r1.css", destination: "assets/css/site-contact-blog-faq-r1.css" },
         { source: "assets/css/admin-services-r2.css", destination: "assets/css/admin-services-r2.css" },
         { source: "assets/css/admin-services-r3.css", destination: "assets/css/admin-services-r3.css" },
         { source: "assets/css/site-design-r2.css", destination: "assets/css/site-design-r2.css" },

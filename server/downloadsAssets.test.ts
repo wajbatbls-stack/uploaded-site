@@ -15,12 +15,13 @@ describe("أصول قسم إدارة التحميلات الحديث (r20 — ك
     expect(projectFile("client/public/assets/js/admin-app-r21.js")).toContain("mountCompatibleDownloadsManager");
   });
 
-  it("يحمّل حزمة التحميلات الأساسية r38 وطبقة sv33 التي تفصل كل قسم", () => {
+  it("يحمّل حزمة التحميلات الأساسية r38 وطبقتي sv33 وsv38 مع بقاء كل قسم منفصلًا", () => {
     const indexHtml = projectFile("client/public/index.html");
     expect(indexHtml).toContain("site-app-r41.js");
     const app = projectFile("client/public/assets/js/site-app-r38.js");
     const homeEnhancement = projectFile("client/public/assets/js/site-app-r41.js");
     const downloadsStyle = projectFile("client/public/assets/css/site-downloads-assignment-r1.css");
+    const downloadsStyleSv38 = projectFile("client/public/assets/css/site-downloads-r2.css");
     expect(app).toContain("loadSiteDownloads()");
     expect(app).toContain("dl10FileCard");
     expect(app).toContain("dl10Tabs");
@@ -30,6 +31,10 @@ describe("أصول قسم إدارة التحميلات الحديث (r20 — ك
     expect(homeEnhancement).toContain("focusHomeWelcome");
     expect(downloadsStyle).toContain(".dl11-library");
     expect(downloadsStyle).toContain(".dl11-library .dl10-section");
+    expect(indexHtml).toContain("site-downloads-r2.css?v=sv38-downloads-library");
+    expect(downloadsStyleSv38).toContain(".dl11-library .dl10-tabs");
+    expect(downloadsStyleSv38).toContain(".dl11-library .dl10-file");
+    expect(downloadsStyleSv38).toContain("body.dark .dl11-library");
     expect(app).not.toContain("site-app-r11.js");
   });
 

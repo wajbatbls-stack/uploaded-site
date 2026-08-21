@@ -64,4 +64,19 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
     expect(styles).toContain(".partner-pro-card:first-child");
     expect(styles).toContain("body.dark");
   });
+
+  it("يربط طبقة sv38 التي تعيد بناء هوية التحميلات في نقاط النشر والبناء", () => {
+    const sourceEntry = projectFile("client/index.html");
+    const publicEntry = projectFile("client/public/index.html");
+    const vite = projectFile("vite.config.ts");
+    const styles = projectFile("client/public/assets/css/site-downloads-r2.css");
+
+    expect(sourceEntry).toContain("site-downloads-r2.css?v=sv38-downloads-library");
+    expect(publicEntry).toContain("site-downloads-r2.css?v=sv38-downloads-library");
+    expect(vite).toContain('{ source: "assets/css/site-downloads-r2.css", destination: "assets/css/site-downloads-r2.css" }');
+    expect(styles).toContain(".dl11-library .dl10-hero");
+    expect(styles).toContain(".dl11-library .dl10-tab-active");
+    expect(styles).toContain(".dl11-library .dl10-file");
+    expect(styles).toContain("body.dark .dl11-library");
+  });
 });

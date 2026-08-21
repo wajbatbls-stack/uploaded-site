@@ -35,4 +35,18 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
     expect(styles).toContain(".goal-card");
     expect(styles).toContain("body.dark");
   });
+
+  it("يربط طبقة sv36 الخاصة بشركاء النجاح في نقاط النشر والبناء", () => {
+    const sourceEntry = projectFile("client/index.html");
+    const publicEntry = projectFile("client/public/index.html");
+    const vite = projectFile("vite.config.ts");
+    const styles = projectFile("client/public/assets/css/site-partners-r1.css");
+
+    expect(sourceEntry).toContain("site-partners-r1.css?v=sv36-partners");
+    expect(publicEntry).toContain("site-partners-r1.css?v=sv36-partners");
+    expect(vite).toContain('{ source: "assets/css/site-partners-r1.css", destination: "assets/css/site-partners-r1.css" }');
+    expect(styles).toContain(".partner-pro-card");
+    expect(styles).toContain(".partner-pro-badge");
+    expect(styles).toContain("body.dark");
+  });
 });

@@ -817,11 +817,11 @@ let contactItems = [["◉", "واتساب", "+966 56 768 0470", wa()], ["☎", "
 function contactPage() {
   const waLink = wa("أريد التواصل مع فريق واجبات بلس");
   const cards = buildContactCards();
-  const chip = (card, kind) => {
+  const channelCard = (card, kind, index) => {
     if (!card) return "";
     const [, label, value, href] = card;
-    const inner = href ? `<a class="contact-chip-link" href="${href}" ${href.startsWith("http") ? 'target="_blank" rel="noopener"' : ""}>${esc(value)}</a>` : `<span class="contact-chip-value">${esc(value)}</span>`;
-    return `<div class="contact-chip ${kind}"><span class="contact-chip-icon">${card[0]}</span><div class="contact-chip-body"><small class="contact-chip-label">${esc(label)}</small>${inner}</div></div>`;
+    const inner = href ? `<a class="royal-channel-value" href="${href}" ${href.startsWith("http") ? 'target="_blank" rel="noopener"' : ""}>${esc(value)}</a>` : `<span class="royal-channel-value">${esc(value)}</span>`;
+    return `<article class="royal-channel royal-${kind}"><span class="royal-channel-index">0${index + 1}</span><span class="royal-channel-icon">${card[0]}</span><div class="royal-channel-body"><small>${esc(label)}</small>${inner}</div><span class="royal-channel-line"></span></article>`;
   };
   const SOCIAL_META = { whatsapp: { icon: "◉", color: "#25D366", aria: "واتساب" }, telegram: { icon: "✈", color: "#26A5E4", aria: "تيليجرام" }, facebook: { icon: "f", color: "#1877F2", aria: "فيسبوك" }, twitter: { icon: "𝕏", color: "#1D9BF0", aria: "تويتر" } };
   const socialIcons = (() => {
@@ -837,20 +837,12 @@ function contactPage() {
     }).join("");
   })();
   const channelClass = (card) => ({ "◉": "wa", "☎": "mob", "✉": "email", "⌖": "addr" }[card[0]] || "general");
-  const allChannels = cards.map((card) => chip(card, channelClass(card))).join("");
-  return `<div class="container section contact-page contact-r2 contact-couture contact-atlas">
-    <section class="contact-r2-hero"><span>مركز التواصل والدعم</span><h1>تواصل معنا<br /><em>بالطريقة التي تناسبك</em></h1><p>كل قنوات الدعم التي تضيفها من لوحة الإدارة تظهر هنا مباشرة.</p><a class="contact-r2-primary" href="${waLink}" target="_blank" rel="noopener">ابدأ محادثة واتساب ←</a></section>
-    <section class="contact-r2-directory"><div><span>دليل التواصل</span><h2>اختر القناة المناسبة لك</h2></div><div class="contact-chips contact-r2-chips">${allChannels}</div><div class="contact-social-strip">${socialIcons || `<span class="text-muted">لا توجد روابط تواصل اجتماعي بعد</span>`}</div></section>
-    <div class="contact-main-grid">
-      <div class="contact-form-col">
-        <div class="card card-pad"><h2 class="contact-form-title">أرسل لنا رسالة</h2><p class="text-muted contact-form-hint">املأ النموذج أدناه وسنرد عليك في أقرب وقت ممكن.</p><form data-form="contact" class="contact-form"><div class="grid grid-2"><div class="field"><label>الاسم الكريم *</label><input name="name" required placeholder="محمد أحمد" /></div><div class="field"><label>رقم الجوال *</label><input name="phone" required placeholder="05XXXXXXXX" /></div></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" placeholder="example@email.com" dir="ltr" /></div><div class="field"><label>الموضوع *</label><input name="subject" required placeholder="استفسار عن خدمة..." /></div><div class="field"><label>الرسالة *</label><textarea name="message" required placeholder="اكتب رسالتك أو استفسارك هنا..."></textarea></div><button class="btn btn-primary" type="submit">➤ إرسال الرسالة</button></form></div>
-      </div>
-      <div class="contact-side-col">
-        <div class="card card-pad contact-side-card"><h3 class="contact-side-title">تواصل فوري</h3><p class="text-muted" style="font-size:.85rem;margin-bottom:.8rem">للاستجابة الأسرع يفضل التواصل عبر الواتساب مباشرة.</p><div class="social-row" style="margin-bottom:1rem">${dynamicSocialRow() || fallbackSocialRow()}</div><a class="btn btn-green contact-wa-btn" href="${waLink}" target="_blank" rel="noopener">◉ تواصل فوري عبر واتساب</a></div>
-      </div>
-    </div>
-    
-  </div>`;
+  const allChannels = cards.map((card, index) => channelCard(card, channelClass(card), index)).join("");
+  return `<main class="contact-royal" aria-label="مركز التواصل">
+    <section class="royal-marquee"><div class="royal-arch royal-arch-a"></div><div class="royal-arch royal-arch-b"></div><div class="royal-seal"><span class="royal-crown">♛</span><span>WAJIBAT<br />PLUS</span></div><div class="royal-marquee-copy"><p class="royal-kicker">الردهة الملكية للتواصل</p><h1>حيث تبدأ<br /><strong>خدمة استثنائية</strong></h1><p class="royal-lead">اختر وسيلة التواصل المناسبة، وسيتابع فريق واجبات بلس طلبك باهتمام وسرية.</p><div class="royal-marquee-actions"><a class="royal-main-action" href="${waLink}" target="_blank" rel="noopener"><span>◉</span> ابدأ محادثة خاصة</a><a class="royal-plain-action" href="javascript:void(0)" data-action="contact-scroll">اكتب رسالة</a></div></div><aside class="royal-service-note"><span>عناية خاصة</span><b>24 / 7</b><small>قنواتنا متاحة<br />لاستقبال استفساراتك</small></aside></section>
+    <section class="royal-gallery"><header class="royal-section-title"><div><span class="royal-number">I</span><p>دليل القنوات</p><h2>بوابتك إلى فريق الدعم</h2></div><p>كل رقم ووسيلة تواصل تضيفها من لوحة الإدارة محفوظة هنا في سجل خاص ومستقل.</p></header><div class="royal-channel-grid">${allChannels}</div><div class="royal-social-hall"><span>تابع أروقتنا الرقمية</span><div class="royal-social-links">${socialIcons || `<span class="text-muted">لا توجد روابط تواصل اجتماعي بعد</span>`}</div></div></section>
+    <section class="royal-message-suite" id="contact-message-form"><aside class="royal-concierge"><span class="royal-number">II</span><p class="royal-concierge-label">مكتب العناية</p><h2>رسالتك<br /><em>محل اهتمامنا</em></h2><p>أرسل التفاصيل التي تحتاجها، وسيتولى فريقنا مراجعتها والتواصل معك عبر القناة المناسبة.</p><div class="royal-concierge-rule"></div><div class="royal-fast"><span>◉</span><div><b>تواصل أسرع</b><small>يمكنك بدء محادثة فورية عبر واتساب</small></div></div><a class="royal-concierge-btn" href="${waLink}" target="_blank" rel="noopener">انتقل إلى واتساب ←</a><div class="royal-dynamic-socials">${dynamicSocialRow() || fallbackSocialRow()}</div></aside><div class="royal-letter"><div class="royal-letter-head"><span>رسالة إلى واجبات بلس</span><span class="royal-letter-stamp">بكل سرية</span></div><h2>اكتب رسالتك</h2><p>فضلاً املأ الحقول التالية، وسنعود إليك في أقرب وقت ممكن.</p><form data-form="contact" class="royal-contact-form"><div class="royal-form-two"><div class="field"><label>الاسم الكريم *</label><input name="name" required placeholder="محمد أحمد" /></div><div class="field"><label>رقم الجوال *</label><input name="phone" required placeholder="05XXXXXXXX" /></div></div><div class="field"><label>البريد الإلكتروني</label><input name="email" type="email" placeholder="example@email.com" dir="ltr" /></div><div class="field"><label>موضوع الرسالة *</label><input name="subject" required placeholder="استفسار عن خدمة..." /></div><div class="field"><label>الرسالة *</label><textarea name="message" required placeholder="اكتب رسالتك أو استفسارك هنا..."></textarea></div><button class="royal-submit" type="submit"><span>✦</span> إرسال الرسالة إلى الفريق</button></form></div></section>
+  </main>`;
 }
 let managedTeam = null; // فريق الإدارة من قاعدة البيانات (team_members)
 let managedPartners = null; // شركاء النجاح من قاعدة البيانات (partners)

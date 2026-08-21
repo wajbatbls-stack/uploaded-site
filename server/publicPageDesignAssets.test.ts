@@ -21,4 +21,18 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
     expect(styles).toContain(".faq-list");
     expect(styles).toContain("body.dark");
   });
+
+  it("يربط طبقة sv35 الخاصة بصفحة من نحن في نقاط النشر والبناء", () => {
+    const sourceEntry = projectFile("client/index.html");
+    const publicEntry = projectFile("client/public/index.html");
+    const vite = projectFile("vite.config.ts");
+    const styles = projectFile("client/public/assets/css/site-about-r1.css");
+
+    expect(sourceEntry).toContain("site-about-r1.css?v=sv35-about-story");
+    expect(publicEntry).toContain("site-about-r1.css?v=sv35-about-story");
+    expect(vite).toContain('{ source: "assets/css/site-about-r1.css", destination: "assets/css/site-about-r1.css" }');
+    expect(styles).toContain(".about-box");
+    expect(styles).toContain(".goal-card");
+    expect(styles).toContain("body.dark");
+  });
 });

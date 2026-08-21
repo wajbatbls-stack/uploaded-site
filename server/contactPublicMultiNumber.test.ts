@@ -7,7 +7,7 @@ const source = readFileSync(resolve(process.cwd(), "client/public/assets/js/site
 describe("عرض قنوات الاتصال العامة", () => {
   it("يعرض كل قنوات الاتصال ولا يختار الرقم الأول فقط", () => {
     expect(source).toContain('const allChannels = cards.map((card, index) => channelCard(card, channelClass(card), index)).join("");');
-    expect(source).toContain('class="royal-channel-grid"');
+    expect(source).toContain('class="atelier-route-list"');
     expect(source).not.toContain("cards.find((c) => c[0] === \"◉\")");
     expect(source).not.toContain("cards.find((c) => c[0] === \"☎\")");
   });

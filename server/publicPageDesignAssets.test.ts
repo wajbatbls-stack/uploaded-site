@@ -16,6 +16,8 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
     expect(publicEntry).toContain("site-contact-blog-faq-r4.css?v=sv49-navy-gold-atlas");
     expect(sourceEntry).toContain("site-contact-blog-faq-r5.css?v=sv50-royal-hall");
     expect(publicEntry).toContain("site-contact-blog-faq-r5.css?v=sv50-royal-hall");
+    expect(sourceEntry).toContain("site-contact-blog-faq-r6.css?v=sv51-atelier-royal");
+    expect(publicEntry).toContain("site-contact-blog-faq-r6.css?v=sv51-atelier-royal");
   });
 
   it("ينسخ طبقة sv34 إلى بناء الإنتاج ويستهدف القوالب الحقيقية فقط", () => {
@@ -45,14 +47,18 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
     expect(styles).toContain(".contact-atlas .contact-r2-chips");
   });
 
-  it("ينسخ طبقة sv50 الملكية ويربط الهيكل المستبدل بالكامل", () => {
+  it("ينسخ طبقة sv50 الملكية كطبقة تاريخية ويربط الهيكل المستبدل بالكامل في sv51", () => {
     const vite = projectFile("vite.config.ts");
-    const styles = projectFile("client/public/assets/css/site-contact-blog-faq-r5.css");
+    const royalStyles = projectFile("client/public/assets/css/site-contact-blog-faq-r5.css");
+    const atelierStyles = projectFile("client/public/assets/css/site-contact-blog-faq-r6.css");
     const app = projectFile("client/public/assets/js/site-app-r44.js");
     expect(vite).toContain('{ source: "assets/css/site-contact-blog-faq-r5.css", destination: "assets/css/site-contact-blog-faq-r5.css" }');
-    expect(styles).toContain(".contact-royal");
-    expect(styles).toContain(".royal-marquee");
-    expect(app).toContain('class="contact-royal"');
+    expect(royalStyles).toContain(".contact-royal");
+    expect(royalStyles).toContain(".royal-marquee");
+    expect(vite).toContain('{ source: "assets/css/site-contact-blog-faq-r6.css", destination: "assets/css/site-contact-blog-faq-r6.css" }');
+    expect(atelierStyles).toContain(".contact-atelier");
+    expect(atelierStyles).toContain(".atelier-workspace");
+    expect(app).toContain('class="contact-atelier"');
   });
 
   it("يربط طبقة sv35 الخاصة بصفحة من نحن في نقاط النشر والبناء", () => {

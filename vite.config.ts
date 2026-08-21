@@ -209,6 +209,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/site-app-r36.js", destination: "assets/js/site-app-r36.js" },
         { source: "assets/js/site-app-r37.js", destination: "assets/js/site-app-r37.js" },
         { source: "assets/js/site-app-r38.js", destination: "assets/js/site-app-r38.js" },
+        { source: "assets/js/site-app-r39.js", destination: "assets/js/site-app-r39.js" },
         { source: "assets/js/admin-app-r28.js", destination: "assets/js/admin-app-r28.js" },
         { source: "assets/js/admin-app-r29.js", destination: "assets/js/admin-app-r29.js" },
         { source: "assets/js/admin-app-r30.js", destination: "assets/js/admin-app-r30.js" },
@@ -233,6 +234,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/css/admin-owner-login-r13-mobile.css", destination: "assets/css/admin-owner-login-r13-mobile.css" },
         { source: "assets/css/admin-homepage-r1.css", destination: "assets/css/admin-homepage-r1.css" },
         { source: "assets/css/admin-services-r1.css", destination: "assets/css/admin-services-r1.css" },
+        { source: "assets/css/site-home-r41.css", destination: "assets/css/site-home-r41.css" },
         { source: "assets/css/admin-services-r2.css", destination: "assets/css/admin-services-r2.css" },
         { source: "assets/css/admin-services-r3.css", destination: "assets/css/admin-services-r3.css" },
         { source: "assets/css/site-design-r2.css", destination: "assets/css/site-design-r2.css" },
@@ -278,6 +280,7 @@ function publishVersionedEntryAssets(): Plugin {
     { source: "js/site-app-r36.js", destination: "js/site-app-r36.js" },
     { source: "js/site-app-r37.js", destination: "js/site-app-r37.js" },
     { source: "js/site-app-r38.js", destination: "js/site-app-r38.js" },
+    { source: "js/site-app-r39.js", destination: "js/site-app-r39.js" },
     { source: "js/admin-app-r16.js", destination: "js/admin-app-r17.js" },
     { source: "js/admin-app-r32.js", destination: "js/admin-app-r32.js" },
   ];

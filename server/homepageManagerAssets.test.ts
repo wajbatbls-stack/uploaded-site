@@ -35,4 +35,18 @@ describe("إدارة الصفحة الرئيسية", () => {
     expect(app).toContain('return `<div class="home-managed-stack">');
     expect(style).toContain(".home-managed-hero");
   });
+
+  it("يرتب التحميلات الحقيقية قبل الخدمات ويعرض الآراء المنشورة فقط ضمن الهوية الفاتحة", () => {
+    const app = projectFile("client/public/assets/js/site-app-r39.js");
+    const style = projectFile("client/public/assets/css/site-home-r41.css");
+
+    expect(app).toContain('readPublicData("site.downloads.publicList")');
+    expect(app).toContain('readPublicData("site.publicContent")');
+    expect(app).toContain('services.insertAdjacentHTML("beforebegin", downloadsBlock)');
+    expect(app).toContain('reviews.filter((review) => review?.isVisible !== false && (review.body || review.text))');
+    expect(app).not.toContain("★★★★★");
+    expect(style).toContain(".home-download-spotlight");
+    expect(style).toContain("body:not(.dark) .footer");
+    expect(style).toContain("body.dark .footer");
+  });
 });

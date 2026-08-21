@@ -12,7 +12,8 @@ describe("ميتا مشاركة رابط الزوار", () => {
     for (const entry of [sourceEntry, publicEntry]) {
       expect(entry).not.toContain("opengraph.jpg");
       expect(entry).not.toContain("favicon.svg");
-      expect(entry).toContain('<link rel="icon" href="data:," />');
+      expect(entry).not.toContain("user_upload_by_module/web_dev_logo");
+      expect(entry).toContain('href="/manus-storage/wajibat-plus-site-logo_7728b19c.jpg?v=sv45"');
       expect(entry).toContain('property="og:title"');
       expect(entry).toContain('property="og:description"');
       expect(entry).toContain('property="og:type" content="website"');

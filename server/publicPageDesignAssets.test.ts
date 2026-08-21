@@ -49,4 +49,19 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
     expect(styles).toContain(".partner-pro-badge");
     expect(styles).toContain("body.dark");
   });
+
+  it("يربط طبقة sv37 التي تستبدل تجربة بطاقات الشركاء كليًا", () => {
+    const sourceEntry = projectFile("client/index.html");
+    const publicEntry = projectFile("client/public/index.html");
+    const vite = projectFile("vite.config.ts");
+    const styles = projectFile("client/public/assets/css/site-partners-r2.css");
+
+    expect(sourceEntry).toContain("site-partners-r2.css?v=sv37-partners-rebuilt");
+    expect(publicEntry).toContain("site-partners-r2.css?v=sv37-partners-rebuilt");
+    expect(vite).toContain('{ source: "assets/css/site-partners-r2.css", destination: "assets/css/site-partners-r2.css" }');
+    expect(styles).toContain(".partner-grid-pro");
+    expect(styles).toContain(".partner-pro-card");
+    expect(styles).toContain(".partner-pro-card:first-child");
+    expect(styles).toContain("body.dark");
+  });
 });

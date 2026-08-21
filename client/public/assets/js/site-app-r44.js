@@ -838,7 +838,7 @@ function contactPage() {
   })();
   const channelClass = (card) => ({ "◉": "wa", "☎": "mob", "✉": "email", "⌖": "addr" }[card[0]] || "general");
   const allChannels = cards.map((card) => chip(card, channelClass(card))).join("");
-  return `<div class="container section contact-page contact-r2 contact-couture">
+  return `<div class="container section contact-page contact-r2 contact-couture contact-atlas">
     <section class="contact-r2-hero"><span>مركز التواصل والدعم</span><h1>تواصل معنا<br /><em>بالطريقة التي تناسبك</em></h1><p>كل قنوات الدعم التي تضيفها من لوحة الإدارة تظهر هنا مباشرة.</p><a class="contact-r2-primary" href="${waLink}" target="_blank" rel="noopener">ابدأ محادثة واتساب ←</a></section>
     <section class="contact-r2-directory"><div><span>دليل التواصل</span><h2>اختر القناة المناسبة لك</h2></div><div class="contact-chips contact-r2-chips">${allChannels}</div><div class="contact-social-strip">${socialIcons || `<span class="text-muted">لا توجد روابط تواصل اجتماعي بعد</span>`}</div></section>
     <div class="contact-main-grid">

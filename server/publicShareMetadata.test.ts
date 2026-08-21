@@ -11,6 +11,8 @@ describe("ميتا مشاركة رابط الزوار", () => {
 
     for (const entry of [sourceEntry, publicEntry]) {
       expect(entry).not.toContain("opengraph.jpg");
+      expect(entry).not.toContain("favicon.svg");
+      expect(entry).toContain('<link rel="icon" href="data:," />');
       expect(entry).toContain('property="og:title"');
       expect(entry).toContain('property="og:description"');
       expect(entry).toContain('property="og:type" content="website"');

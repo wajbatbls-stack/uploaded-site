@@ -37,7 +37,7 @@ describe("إدارة الصفحة الرئيسية", () => {
   });
 
   it("يبقي الصفحة الرئيسية ترحيبية ويبدأ القائمة بالرئيسية ثم الخدمات", () => {
-    const app = projectFile("client/public/assets/js/site-app-r41.js");
+    const app = projectFile("client/public/assets/js/site-app-r43.js");
     const style = projectFile("client/public/assets/css/site-pages-r1.css");
     const entry = projectFile("client/index.html");
 
@@ -50,7 +50,7 @@ describe("إدارة الصفحة الرئيسية", () => {
     expect(app).toContain('section.classList.contains("home-stat-section")');
     expect(app).not.toContain('readPublicData("site.downloads.publicList")');
     expect(app).not.toContain("★★★★★");
-    expect(entry).toContain("site-app-r41.js?v=sv33-sectioned-downloads");
+    expect(entry).toContain("site-app-r43.js?v=sv41-remove-personal-photo");
     expect(entry).toContain("site-pages-r1.css?v=sv32-separate-pages");
     expect(style).toContain(".svc24-wrap");
     expect(style).toContain(".dl10-hero");

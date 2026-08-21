@@ -5,11 +5,13 @@ import { describe, expect, it } from "vitest";
 const projectFile = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("طبقة تصميم الصفحات العامة sv34", () => {
-  it("تربط طبقة الاتصال والمدونة والأسئلة الشائعة في مدخلي الزوار", () => {
+  it("تربط طبقات الاتصال والمدونة والأسئلة الشائعة في مدخلي الزوار", () => {
     const sourceEntry = projectFile("client/index.html");
     const publicEntry = projectFile("client/public/index.html");
     expect(sourceEntry).toContain("site-contact-blog-faq-r2.css?v=sv47-contact-studio");
     expect(publicEntry).toContain("site-contact-blog-faq-r2.css?v=sv47-contact-studio");
+    expect(sourceEntry).toContain("site-contact-blog-faq-r3.css?v=sv48-burgundy-concierge");
+    expect(publicEntry).toContain("site-contact-blog-faq-r3.css?v=sv48-burgundy-concierge");
   });
 
   it("ينسخ طبقة sv34 إلى بناء الإنتاج ويستهدف القوالب الحقيقية فقط", () => {
@@ -19,6 +21,15 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
     expect(styles).toContain(".contact-r2-hero");
     expect(styles).toContain(".contact-r2-chips");
     expect(styles).toContain(".contact-page");
+  });
+  it("يربط طبقة sv48 التي تستبدل هوية اتصل بنا بتصميم مختلف كليًا", () => {
+    const vite = projectFile("vite.config.ts");
+    const styles = projectFile("client/public/assets/css/site-contact-blog-faq-r3.css");
+    expect(vite).toContain('{ source: "assets/css/site-contact-blog-faq-r3.css", destination: "assets/css/site-contact-blog-faq-r3.css" }');
+    expect(styles).toContain(".contact-couture");
+    expect(styles).toContain(".contact-couture .contact-r2-hero");
+    expect(styles).toContain(".contact-couture .contact-r2-chips");
+    expect(styles).toContain("body.dark .contact-couture");
   });
 
   it("يربط طبقة sv35 الخاصة بصفحة من نحن في نقاط النشر والبناء", () => {

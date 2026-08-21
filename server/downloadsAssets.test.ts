@@ -15,15 +15,16 @@ describe("أصول قسم إدارة التحميلات الحديث (r20 — ك
     expect(projectFile("client/public/assets/js/admin-app-r21.js")).toContain("mountCompatibleDownloadsManager");
   });
 
-  it("يحمّل حزمة التحميلات الأساسية r38 وطبقة الصفحة الرئيسية r39", () => {
+  it("يحمّل حزمة التحميلات الأساسية r38 وطبقة واجهة sv32 المنفصلة", () => {
     const indexHtml = projectFile("client/public/index.html");
-    expect(indexHtml).toContain("site-app-r39.js");
+    expect(indexHtml).toContain("site-app-r40.js");
     const app = projectFile("client/public/assets/js/site-app-r38.js");
-    const homeEnhancement = projectFile("client/public/assets/js/site-app-r39.js");
+    const homeEnhancement = projectFile("client/public/assets/js/site-app-r40.js");
     expect(app).toContain("loadSiteDownloads()");
     expect(app).toContain("dl10FileCard");
     expect(app).toContain("dl10Tabs");
-    expect(homeEnhancement).toContain("site.downloads.publicList");
+    expect(homeEnhancement).toContain("placeServicesFirst");
+    expect(homeEnhancement).toContain("focusHomeWelcome");
     expect(app).not.toContain("site-app-r11.js");
   });
 

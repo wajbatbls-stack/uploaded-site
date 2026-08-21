@@ -36,17 +36,23 @@ describe("إدارة الصفحة الرئيسية", () => {
     expect(style).toContain(".home-managed-hero");
   });
 
-  it("يرتب التحميلات الحقيقية قبل الخدمات ويعرض الآراء المنشورة فقط ضمن الهوية الفاتحة", () => {
-    const app = projectFile("client/public/assets/js/site-app-r39.js");
-    const style = projectFile("client/public/assets/css/site-home-r41.css");
+  it("يبقي الصفحة الرئيسية ترحيبية ويعرض كل قسم في صفحته المستقلة مع الخدمات أولًا", () => {
+    const app = projectFile("client/public/assets/js/site-app-r40.js");
+    const style = projectFile("client/public/assets/css/site-pages-r1.css");
+    const entry = projectFile("client/index.html");
 
-    expect(app).toContain('readPublicData("site.downloads.publicList")');
-    expect(app).toContain('readPublicData("site.publicContent")');
-    expect(app).toContain('services.insertAdjacentHTML("beforebegin", downloadsBlock)');
-    expect(app).toContain('reviews.filter((review) => review?.isVisible !== false && (review.body || review.text))');
+    expect(app).toContain('find((link) => link.getAttribute("href") === "#/services")');
+    expect(app).toContain("navigation.prepend(servicesItem)");
+    expect(app).toContain('home.classList.add("home-sv31", "home-sv32")');
+    expect(app).toContain("[data-sv31-section='downloads'], [data-sv31-section='reviews']");
+    expect(app).toContain('section.classList.contains("home-stat-section")');
+    expect(app).not.toContain('readPublicData("site.downloads.publicList")');
     expect(app).not.toContain("★★★★★");
-    expect(style).toContain(".home-download-spotlight");
-    expect(style).toContain("body:not(.dark) .footer");
-    expect(style).toContain("body.dark .footer");
+    expect(entry).toContain("site-app-r40.js?v=sv32-welcome-focus");
+    expect(entry).toContain("site-pages-r1.css?v=sv32-separate-pages");
+    expect(style).toContain(".svc24-wrap");
+    expect(style).toContain(".dl10-hero");
+    expect(style).toContain(".review-card");
+    expect(style).toContain(".home-sv32");
   });
 });

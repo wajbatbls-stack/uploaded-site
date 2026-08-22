@@ -4,12 +4,12 @@ import { describe, expect, it } from "vitest";
 
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
-describe("هيكل استوديو التواصل", () => {
+describe("هيكل معرض التواصل", () => {
   it("يعرض جميع القنوات في الدليل الجديد ويحافظ على نموذج الرسالة", () => {
-    const app = read("client/public/assets/js/site-app-r44.js");
-    expect(app).toContain('class="contact-atelier"');
-    expect(app).toContain('class="atelier-route-list"');
-    expect(app).toContain('class="atelier-contact-form"');
+    const app = read("client/public/assets/js/site-app-r45.js");
+    expect(app).toContain('class="contact-galleria"');
+    expect(app).toContain('class="galleria-channel-rail"');
+    expect(app).toContain('class="galleria-contact-form"');
     expect(app).toContain('cards.map((card, index) => channelCard(card, channelClass(card), index))');
   });
 
@@ -17,8 +17,8 @@ describe("هيكل استوديو التواصل", () => {
     const source = read("client/index.html");
     const publicEntry = read("client/public/index.html");
     const vite = read("vite.config.ts");
-    expect(source).toContain("site-contact-blog-faq-r6.css?v=sv51-atelier-royal");
-    expect(publicEntry).toContain("site-contact-blog-faq-r6.css?v=sv51-atelier-royal");
-    expect(vite).toContain('assets/css/site-contact-blog-faq-r6.css');
+    expect(source).toContain("site-contact-blog-faq-r7.css?v=sv52-galleria-consulting");
+    expect(publicEntry).toContain("site-contact-blog-faq-r7.css?v=sv52-galleria-consulting");
+    expect(vite).toContain('assets/css/site-contact-blog-faq-r7.css');
   });
 });

@@ -18,6 +18,8 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
     expect(publicEntry).toContain("site-contact-blog-faq-r5.css?v=sv50-royal-hall");
     expect(sourceEntry).toContain("site-contact-blog-faq-r6.css?v=sv51-atelier-royal");
     expect(publicEntry).toContain("site-contact-blog-faq-r6.css?v=sv51-atelier-royal");
+    expect(sourceEntry).toContain("site-contact-blog-faq-r7.css?v=sv52-galleria-consulting");
+    expect(publicEntry).toContain("site-contact-blog-faq-r7.css?v=sv52-galleria-consulting");
   });
 
   it("ينسخ طبقة sv34 إلى بناء الإنتاج ويستهدف القوالب الحقيقية فقط", () => {
@@ -59,6 +61,17 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
     expect(atelierStyles).toContain(".contact-atelier");
     expect(atelierStyles).toContain(".atelier-workspace");
     expect(app).toContain('class="contact-atelier"');
+  });
+
+  it("يربط طبقة sv52 الاستشارية بالهيكل التحريري الجديد", () => {
+    const vite = projectFile("vite.config.ts");
+    const styles = projectFile("client/public/assets/css/site-contact-blog-faq-r7.css");
+    const app = projectFile("client/public/assets/js/site-app-r45.js");
+    expect(vite).toContain('{ source: "assets/css/site-contact-blog-faq-r7.css", destination: "assets/css/site-contact-blog-faq-r7.css" }');
+    expect(vite).toContain('{ source: "assets/js/site-app-r45.js", destination: "assets/js/site-app-r45.js" }');
+    expect(styles).toContain(".contact-galleria");
+    expect(styles).toContain(".galleria-letter");
+    expect(app).toContain('class="contact-galleria"');
   });
 
   it("يربط طبقة sv35 الخاصة بصفحة من نحن في نقاط النشر والبناء", () => {

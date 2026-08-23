@@ -5,9 +5,9 @@ import { describe, expect, it } from "vitest";
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("قارئ صفحات النماذج المصوّرة", () => {
-  it("لا يعيد رابط الملف الخام من قائمة الزوار ويعلن دعم القراءة لـPDF فقط", () => {
+  it("لا يعيد رابط الملف الخام من قائمة الزوار ويعلن دعم القراءة للصيغ القابلة للتحويل", () => {
     const downloads = read("server/downloads.ts");
-    expect(downloads).toContain("readerSupported: String(file.mimeType || \"\").toLowerCase().includes(\"pdf\")");
+    expect(downloads).toContain("readerSupported: isReadOnlySupported(file)");
     expect(downloads).not.toContain("directUrl");
   });
 

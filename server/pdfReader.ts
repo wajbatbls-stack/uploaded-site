@@ -1,6 +1,11 @@
 import type { Express, Request, Response } from "express";
 import { createCanvas } from "@napi-rs/canvas";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { spawn } from "node:child_process";
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { listDownloadFiles } from "./db";
 import { storageGetSignedUrl } from "./storage";
 
@@ -8,6 +13,16 @@ const MAX_READER_PAGES = 24;
 const READER_CACHE_TTL_MS = 10 * 60 * 1000;
 const pdfCache = new Map<number, { bytes: Uint8Array; pageCount: number; expiresAt: number }>();
 const pageCache = new Map<string, { png: Buffer; expiresAt: number }>();
+const OFFICE_EXTENSIONS = new Set([".doc", ".docx", ".ppt", ".pptx"]);
+
+function extensionFor(file: { originalName?: string | null; fileName?: string | null; fileKey?: string | null }) {
+  const name = String(file.originalName || file.fileName || file.fileKey || "").toLowerCase();
+  return path.extname(name);
+}
+
+export function isReadOnlySupported(file: { mimeType?: string | null; originalName?: string | null; fileName?: string | null; fileKey?: string | null }) {
+  return String(file.mimeType || "").toLowerCase().includes("pdf") || extensionFor(file) === ".pdf" || OFFICE_EXTENSIONS.has(extensionFor(file));
+}
 
 function storageKeyFromUrl(url: string) {
   return url.startsWith("/manus-storage/") ? url.slice("/manus-storage/".length) : "";
@@ -22,11 +37,40 @@ async function sourceUrlFor(file: { fileKey: string; fileUrl: string }) {
   return `https://files.manuscdn.com/user_upload_by_module/session_file/310519663231231378/${encodeURIComponent(file.fileKey || raw)}`;
 }
 
+function runOffice(args: string[]) {
+  return new Promise<void>((resolve, reject) => {
+    const child = spawn("libreoffice", args, { stdio: ["ignore", "ignore", "pipe"] });
+    let stderr = "";
+    child.stderr.on("data", chunk => { stderr = `${stderr}${String(chunk)}`.slice(-4000); });
+    child.on("error", reject);
+    child.on("close", code => code === 0 ? resolve() : reject(new Error(`LibreOffice failed (${code}): ${stderr || "تعذر التحويل"}`)));
+  });
+}
+
+async function officeToPdf(bytes: Uint8Array, extension: string) {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "wajbat-reader-"));
+  try {
+    const source = path.join(directory, `source${extension}`);
+    const outputDirectory = path.join(directory, "out");
+    const profileDirectory = path.join(directory, "profile");
+    await fs.mkdir(outputDirectory);
+    await fs.mkdir(profileDirectory);
+    await fs.writeFile(source, bytes);
+    await runOffice(["--headless", "--nologo", "--nodefault", "--nofirststartwizard", "--nolockcheck", `-env:UserInstallation=${pathToFileURL(profileDirectory).href}`, "--convert-to", "pdf", "--outdir", outputDirectory, source]);
+    const output = path.join(outputDirectory, "source.pdf");
+    const pdf = await fs.readFile(output);
+    if (!pdf.length) throw new Error("LibreOffice returned an empty PDF");
+    return new Uint8Array(pdf);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true }).catch(() => undefined);
+  }
+}
+
 async function getReaderPdf(fileId: number) {
   const existing = pdfCache.get(fileId);
   if (existing && existing.expiresAt > Date.now()) return existing;
   const file = (await listDownloadFiles(undefined, true)).find(item => Number(item.id) === fileId);
-  if (!file || !String(file.mimeType || "").toLowerCase().includes("pdf")) {
+  if (!file || !isReadOnlySupported(file)) {
     const error = new Error("النموذج غير متاح للقراءة");
     (error as any).status = 404;
     throw error;
@@ -37,7 +81,11 @@ async function getReaderPdf(fileId: number) {
     (error as any).status = 502;
     throw error;
   }
-  const bytes = new Uint8Array(await response.arrayBuffer());
+  const sourceBytes = new Uint8Array(await response.arrayBuffer());
+  const extension = extensionFor(file);
+  const bytes = extension === ".pdf" || String(file.mimeType || "").toLowerCase().includes("pdf")
+    ? sourceBytes
+    : await officeToPdf(sourceBytes, extension);
   const loadingTask = getDocument({ data: new Uint8Array(bytes), verbosity: 0 });
   const document = await loadingTask.promise;
   const cached = { bytes, pageCount: Math.min(document.numPages, MAX_READER_PAGES), expiresAt: Date.now() + READER_CACHE_TTL_MS };

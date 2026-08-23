@@ -8,6 +8,7 @@ import {
   replaceDownloadFile, moveDownloadFile, moveDownloadCategory, incrementDownloadCount,
   getPublicSiteContent, recordAdminAudit,
 } from "./db";
+import { isReadOnlySupported } from "./pdfReader";
 
 const categoryInput = z.object({
   name: z.string().min(1).max(160),
@@ -130,7 +131,7 @@ export const downloadsRouter = router({
       mimeType: file.mimeType,
       sizeBytes: file.sizeBytes,
       sortOrder: file.sortOrder,
-      readerSupported: String(file.mimeType || "").toLowerCase().includes("pdf"),
+      readerSupported: isReadOnlySupported(file),
     });
     const publicCategories = categories.map(category => ({ ...category, files: (byCategory.get(category.id) ?? []).map(publicFile) }));
     return { categories: publicCategories, files: publicCategories.flatMap(category => category.files) };

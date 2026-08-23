@@ -48,7 +48,7 @@ export const adminProcedure = t.procedure.use(
 export const ownerProcedure = t.procedure.use(
   t.middleware(async opts => {
     if (!(await hasAdminSession(opts.ctx.req.headers.cookie))) {
-      throw new TRPCError({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+      throw new TRPCError({ code: "FORBIDDEN", message: "انتهت جلسة المالك. سجّل الدخول مرة أخرى (10002)" });
     }
     return opts.next();
   }),

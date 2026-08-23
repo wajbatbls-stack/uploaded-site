@@ -37,14 +37,7 @@
   };
   const apiError = async res => {
     const p = await res.json().catch(() => null);
-    if (!res.ok) {
-      const message = p?.error?.json?.message || "تعذّر إتمام العملية. حاول مرة أخرى.";
-      if (String(message).includes("10002")) {
-        toast("انتهت جلسة المالك. ستظهر شاشة الدخول لتسجيل الدخول من جديد.");
-        window.setTimeout(() => { window.location.href = "/admin-sv25.html?session=renew"; }, 300);
-      }
-      throw new Error(message);
-    }
+    if (!res.ok) throw new Error(p?.error?.json?.message || "تعذّر إتمام العملية. حاول مرة أخرى.");
     return p?.result?.data?.json ?? p?.result?.data;
   };
   const request = (procedure, input, method = "POST") => {
@@ -342,7 +335,6 @@
       imageKey: typeof category.imageKey === "string" && category.imageKey.length > 0 ? category.imageKey : undefined,
       imageUrl: typeof category.imageUrl === "string" && category.imageUrl.length > 0 ? category.imageUrl : undefined,
     } : null;
-    let pendingLogoFile = null;
     logoInput.addEventListener("change", () => {
       const f = logoInput.files?.[0];
       if (!f) return;
@@ -351,8 +343,8 @@
       reader.onload = () => {
         preview.innerHTML = `<img src="${reader.result}" alt="معاينة" />`;
         preview.classList.remove("dl10-preview-empty");
-        pendingLogoFile = f;
-        showNotice("تم اختيار صورة الشعار — اضغط حفظ لرفعها فعليًا", "ok");
+        pendingLogo = { imageUrl: String(reader.result) };
+        showNotice("تم رفع صورة الشعار بنجاح", "ok");
       };
       reader.readAsDataURL(f);
     });
@@ -362,10 +354,6 @@
       submit.disabled = true;
       try {
         const data = Object.fromEntries(new FormData(form).entries());
-        if (pendingLogoFile) {
-          const uploadedLogo = await uploadFileLegacy(pendingLogoFile);
-          pendingLogo = { imageKey: uploadedLogo.fileKey, imageUrl: uploadedLogo.fileUrl };
-        }
         await saveCategory({
           name: data.name, emoji: data.emoji, description: data.description,
           color: data.color, backgroundColor: data.backgroundColor,

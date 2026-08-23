@@ -190,6 +190,8 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/admin-list-controls.js", destination: "assets/js/admin-list-controls.js" },
         { source: "assets/js/admin-app-r16.js", destination: "assets/js/admin-app-r16.js" },
         { source: "assets/js/admin-downloads-manager-r20.js", destination: "assets/js/admin-downloads-manager-r20.js" },
+        { source: "assets/js/admin-app-r33.js", destination: "assets/js/admin-app-r33.js" },
+        { source: "assets/js/admin-downloads-manager-r21.js", destination: "assets/js/admin-downloads-manager-r21.js" },
         { source: "assets/js/admin-structured-editor-r3.js", destination: "assets/js/admin-structured-editor-r6.js" },
         { source: "assets/js/admin-structured-editor-r4.js", destination: "assets/js/admin-structured-editor-r6.js" },
         { source: "assets/js/admin-structured-editor-r5.js", destination: "assets/js/admin-structured-editor-r6.js" },

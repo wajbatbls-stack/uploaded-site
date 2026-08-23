@@ -22,7 +22,7 @@ import {
 import { ENV } from "./_core/env";
 
 export const ADMIN_SESSION_COOKIE = "wajbat_admin_session";
-const SESSION_MAX_AGE_MS = 60 * 60 * 1000; // ساعة واحدة: الرمز يُطلب مجددًا بعد انتهاء الجلسة
+export const ADMIN_SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // أسبوع: تبقى جلسة المالك صالحة لإدارة المحتوى دون انقطاع متكرر
 
 const signingKey = () => new TextEncoder().encode(ENV.cookieSecret);
 
@@ -120,14 +120,14 @@ export async function createAdminSession(account?: OwnerAccount, metadata: Sessi
         sessionId,
         userAgent: metadata.userAgent?.slice(0, 512),
         ipAddress: metadata.ipAddress?.slice(0, 64),
-        expiresAt: new Date(Date.now() + SESSION_MAX_AGE_MS),
+        expiresAt: new Date(Date.now() + ADMIN_SESSION_MAX_AGE_MS),
       });
     }
   }
   return new SignJWT({ scope: "owner-admin", version, aid: activeAccount?.id ?? 0, sid: sessionId })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("1h")
+    .setExpirationTime("7d")
     .sign(signingKey());
 }
 

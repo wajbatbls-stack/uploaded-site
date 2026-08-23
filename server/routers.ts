@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import {
   ADMIN_SESSION_COOKIE,
+  ADMIN_SESSION_MAX_AGE_MS,
   createAdminSession,
   finishOwnerPasskeyAuthentication,
   finishOwnerPasskeyRegistration,
@@ -191,7 +192,7 @@ export const appRouter = router({
         const userAgent = typeof ctx.req.headers["user-agent"] === "string" ? ctx.req.headers["user-agent"] : undefined;
         const forwarded = typeof ctx.req.headers["x-forwarded-for"] === "string" ? ctx.req.headers["x-forwarded-for"].split(",")[0]?.trim() : undefined;
         const token = await createAdminSession(account, { userAgent, ipAddress: forwarded });
-        ctx.res.cookie(ADMIN_SESSION_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 1000 });
+        ctx.res.cookie(ADMIN_SESSION_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: ADMIN_SESSION_MAX_AGE_MS });
         return { success: true } as const;
       }),
     logout: publicProcedure.mutation(async ({ ctx }) => {

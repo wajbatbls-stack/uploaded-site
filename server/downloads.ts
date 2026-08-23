@@ -121,19 +121,19 @@ export const downloadsRouter = router({
       list.push(file);
       byCategory.set(file.categoryId, list);
     }
-    return {
-      categories: categories.map(category => ({
-        ...category,
-        files: (byCategory.get(category.id) ?? []).map(file => {
-          const raw = String(file.fileUrl || "");
-          const directUrl = raw.startsWith("http") || raw.startsWith("/manus-storage")
-            ? raw
-            : `https://files.manuscdn.com/user_upload_by_module/session_file/310519663231231378/${encodeURIComponent(file.fileKey || raw)}`;
-          return { ...file, directUrl };
-        }),
-      })),
-      files,
-    };
+    const publicFile = (file: typeof files[number]) => ({
+      id: file.id,
+      categoryId: file.categoryId,
+      fileName: file.fileName,
+      originalName: file.originalName,
+      description: file.description,
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes,
+      sortOrder: file.sortOrder,
+      readerSupported: String(file.mimeType || "").toLowerCase().includes("pdf"),
+    });
+    const publicCategories = categories.map(category => ({ ...category, files: (byCategory.get(category.id) ?? []).map(publicFile) }));
+    return { categories: publicCategories, files: publicCategories.flatMap(category => category.files) };
   }),
 
   trackDownload: publicProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ input }) => {
@@ -141,7 +141,7 @@ export const downloadsRouter = router({
     const file = files.find(f => f.id === input.id);
     if (!file || !file.isVisible) throw new TRPCError({ code: "NOT_FOUND", message: "الملف غير متاح" });
     await incrementDownloadCount(input.id);
-    return { fileUrl: file.fileUrl, fileName: file.fileName, mimeType: file.mimeType };
+    return { success: true } as const;
   }),
 
   createCategory: ownerProcedure.input(categoryInput).mutation(async ({ input }) => {

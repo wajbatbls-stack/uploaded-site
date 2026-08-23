@@ -66,12 +66,13 @@ describe("طبقة تصميم الصفحات العامة sv34", () => {
   it("يربط طبقة sv52 الاستشارية بالهيكل التحريري الجديد", () => {
     const vite = projectFile("vite.config.ts");
     const styles = projectFile("client/public/assets/css/site-contact-blog-faq-r7.css");
-    const app = projectFile("client/public/assets/js/site-app-r48.js");
+    const app = projectFile("client/public/assets/js/site-app-r49.js");
     expect(vite).toContain('{ source: "assets/css/site-contact-blog-faq-r7.css", destination: "assets/css/site-contact-blog-faq-r7.css" }');
     expect(vite).toContain('{ source: "assets/js/site-app-r45.js", destination: "assets/js/site-app-r45.js" }');
     expect(vite).toContain('{ source: "assets/js/site-app-r46.js", destination: "assets/js/site-app-r46.js" }');
     expect(vite).toContain('{ source: "assets/js/site-app-r47.js", destination: "assets/js/site-app-r47.js" }');
     expect(vite).toContain('{ source: "assets/js/site-app-r48.js", destination: "assets/js/site-app-r48.js" }');
+    expect(vite).toContain('{ source: "assets/js/site-app-r49.js", destination: "assets/js/site-app-r49.js" }');
     expect(styles).toContain(".contact-galleria");
     expect(styles).toContain(".galleria-letter");
     expect(app).toContain('class="contact-galleria"');

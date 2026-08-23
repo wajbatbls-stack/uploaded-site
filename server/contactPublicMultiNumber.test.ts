@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync(resolve(process.cwd(), "client/public/assets/js/site-app-r48.js"), "utf8");
+const source = readFileSync(resolve(process.cwd(), "client/public/assets/js/site-app-r49.js"), "utf8");
 
 describe("عرض قنوات الاتصال العامة", () => {
   it("يعرض كل قنوات الاتصال ولا يختار الرقم الأول فقط", () => {

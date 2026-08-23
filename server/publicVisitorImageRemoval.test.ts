@@ -11,9 +11,9 @@ const vite = fs.readFileSync(path.join(root, "vite.config.ts"), "utf8");
 
 describe("public visitor image removal", () => {
   it("loads the image-free public application release from both visitor entries", () => {
-    expect(publicEntry).toContain("site-app-r43.js?v=sv56-inline-reader");
-    expect(devEntry).toContain("site-app-r43.js?v=sv56-inline-reader");
-    expect(extension).toContain('import "./site-app-r48.js"');
+    expect(publicEntry).toContain("site-app-r43.js?v=sv57-raster-reader");
+    expect(devEntry).toContain("site-app-r43.js?v=sv57-raster-reader");
+    expect(extension).toContain('import "./site-app-r49.js"');
   });
 
   it("does not restore the former personal image as a default logo", () => {
@@ -30,6 +30,7 @@ describe("public visitor image removal", () => {
     expect(vite).toContain('source: "assets/js/site-app-r46.js"');
     expect(vite).toContain('source: "assets/js/site-app-r47.js"');
     expect(vite).toContain('source: "assets/js/site-app-r48.js"');
+    expect(vite).toContain('source: "assets/js/site-app-r49.js"');
     expect(vite).toContain('source: "js/site-app-r43.js"');
   });
 });

@@ -6,7 +6,7 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8"
 
 describe("هيكل معرض التواصل", () => {
   it("يعرض جميع القنوات في الدليل الجديد ويحافظ على نموذج الرسالة", () => {
-    const app = read("client/public/assets/js/site-app-r48.js");
+    const app = read("client/public/assets/js/site-app-r49.js");
     expect(app).toContain('class="contact-galleria"');
     expect(app).toContain('class="galleria-channel-rail"');
     expect(app).toContain('class="galleria-contact-form"');

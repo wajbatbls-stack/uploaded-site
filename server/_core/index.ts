@@ -14,6 +14,7 @@ declare module "formidable";
 import { storagePut } from "../storage";
 import { registerMedia, recordAdminAudit } from "../db";
 import { getVerifiedAdminSession } from "../adminSession";
+import { registerPdfReaderRoutes } from "../pdfReader";
 
 function guessExt(mimeType?: string): string {
   const map: Record<string, string> = { "application/pdf": ".pdf", "application/zip": ".zip", "audio/mpeg": ".mp3", "video/mp4": ".mp4", "image/png": ".png", "image/jpeg": ".jpg" };
@@ -89,6 +90,7 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
+  registerPdfReaderRoutes(app);
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerDownloadsUpload(app);
@@ -132,4 +134,3 @@ async function startServer() {
 }
 
 startServer().catch(console.error);
-

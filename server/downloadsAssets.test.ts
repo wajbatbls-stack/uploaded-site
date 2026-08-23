@@ -51,13 +51,14 @@ describe("أصول قسم إدارة التحميلات الحديث (r20 — ك
     expect(editor).toContain("إخراج «downloads» من القائمة");
   });
 
-  it("يصحح روابط الملفات القديمة إلى CDN ويحفظ روابط المرفوعات الجديدة", () => {
+  it("يحفظ روابط المرفوعات للإدارة ولا يمرر الرابط الخام إلى واجهة الزوار", () => {
     const routers = projectFile("server/downloads.ts");
-    expect(routers).toContain("files.manuscdn.com/user_upload_by_module/session_file/310519663231231378/");
-    expect(routers).toContain("raw.startsWith(\"http\") || raw.startsWith(\"/manus-storage\")");
     expect(projectFile("server/storage.ts")).toContain("storagePut(relKey");
     expect(routers).toContain("trackDownload");
     expect(routers).toContain("incrementDownloadCount");
+    expect(routers).toContain("readerSupported");
+    expect(routers).toContain("return { success: true } as const");
+    expect(routers).not.toContain("directUrl");
   });
 
   it("يقيّد الرفع على 50 ميجابايت ويتوافق بين الخادم ومدير الإدارة", () => {

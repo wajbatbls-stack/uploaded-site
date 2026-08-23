@@ -10,6 +10,7 @@ describe("قارئ Word وPowerPoint للزوار", () => {
     expect(isReadOnlySupported({ originalName: "نموذج.pdf", mimeType: "application/pdf" })).toBe(true);
     expect(isReadOnlySupported({ originalName: "نموذج.docx", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" })).toBe(true);
     expect(isReadOnlySupported({ originalName: "عرض.pptx", mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation" })).toBe(true);
+    expect(isReadOnlySupported({ originalName: "ملف بلا امتداد", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" })).toBe(true);
     expect(isReadOnlySupported({ originalName: "ملف.zip", mimeType: "application/zip" })).toBe(false);
   });
 

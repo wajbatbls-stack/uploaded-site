@@ -14,14 +14,24 @@ const READER_CACHE_TTL_MS = 10 * 60 * 1000;
 const pdfCache = new Map<number, { bytes: Uint8Array; pageCount: number; expiresAt: number }>();
 const pageCache = new Map<string, { png: Buffer; expiresAt: number }>();
 const OFFICE_EXTENSIONS = new Set([".doc", ".docx", ".ppt", ".pptx"]);
+const OFFICE_MIME_EXTENSIONS: Array<[string, string]> = [
+  ["wordprocessingml", ".docx"],
+  ["msword", ".doc"],
+  ["presentationml", ".pptx"],
+  ["ms-powerpoint", ".ppt"],
+];
 
-function extensionFor(file: { originalName?: string | null; fileName?: string | null; fileKey?: string | null }) {
+function extensionFor(file: { mimeType?: string | null; originalName?: string | null; fileName?: string | null; fileKey?: string | null }) {
   const name = String(file.originalName || file.fileName || file.fileKey || "").toLowerCase();
-  return path.extname(name);
+  const extension = path.extname(name);
+  if (extension) return extension;
+  const mimeType = String(file.mimeType || "").toLowerCase();
+  return OFFICE_MIME_EXTENSIONS.find(([marker]) => mimeType.includes(marker))?.[1] || "";
 }
 
 export function isReadOnlySupported(file: { mimeType?: string | null; originalName?: string | null; fileName?: string | null; fileKey?: string | null }) {
-  return String(file.mimeType || "").toLowerCase().includes("pdf") || extensionFor(file) === ".pdf" || OFFICE_EXTENSIONS.has(extensionFor(file));
+  const mimeType = String(file.mimeType || "").toLowerCase();
+  return mimeType.includes("pdf") || extensionFor(file) === ".pdf" || OFFICE_EXTENSIONS.has(extensionFor(file)) || OFFICE_MIME_EXTENSIONS.some(([marker]) => mimeType.includes(marker));
 }
 
 function storageKeyFromUrl(url: string) {

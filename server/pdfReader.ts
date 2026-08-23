@@ -1,5 +1,5 @@
 import type { Express, Request, Response } from "express";
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { spawn } from "node:child_process";
 import { promises as fs } from "node:fs";
@@ -11,9 +11,11 @@ import { storageGetSignedUrl } from "./storage";
 
 const MAX_READER_PAGES = 24;
 const READER_CACHE_TTL_MS = 10 * 60 * 1000;
-const pdfCache = new Map<number, { bytes: Uint8Array; pageCount: number; expiresAt: number }>();
+const pdfCache = new Map<number, { bytes: Uint8Array; pageCount: number; expiresAt: number; kind: "pdf" | "image" }>();
 const pageCache = new Map<string, { png: Buffer; expiresAt: number }>();
 const OFFICE_EXTENSIONS = new Set([".doc", ".docx", ".ppt", ".pptx"]);
+const RASTER_IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp"]);
+const RASTER_IMAGE_MIME_TYPES = new Set(["image/png", "image/jpeg", "image/webp"]);
 const OFFICE_MIME_EXTENSIONS: Array<[string, string]> = [
   ["wordprocessingml", ".docx"],
   ["msword", ".doc"],
@@ -31,7 +33,12 @@ function extensionFor(file: { mimeType?: string | null; originalName?: string | 
 
 export function isReadOnlySupported(file: { mimeType?: string | null; originalName?: string | null; fileName?: string | null; fileKey?: string | null }) {
   const mimeType = String(file.mimeType || "").toLowerCase();
-  return mimeType.includes("pdf") || extensionFor(file) === ".pdf" || OFFICE_EXTENSIONS.has(extensionFor(file)) || OFFICE_MIME_EXTENSIONS.some(([marker]) => mimeType.includes(marker));
+  const extension = extensionFor(file);
+  return mimeType.includes("pdf") || extension === ".pdf" || OFFICE_EXTENSIONS.has(extension) || OFFICE_MIME_EXTENSIONS.some(([marker]) => mimeType.includes(marker)) || RASTER_IMAGE_MIME_TYPES.has(mimeType) || RASTER_IMAGE_EXTENSIONS.has(extension);
+}
+
+function isRasterImage(file: { mimeType?: string | null; originalName?: string | null; fileName?: string | null; fileKey?: string | null }) {
+  return RASTER_IMAGE_MIME_TYPES.has(String(file.mimeType || "").toLowerCase()) || RASTER_IMAGE_EXTENSIONS.has(extensionFor(file));
 }
 
 function storageKeyFromUrl(url: string) {
@@ -92,13 +99,18 @@ async function getReaderPdf(fileId: number) {
     throw error;
   }
   const sourceBytes = new Uint8Array(await response.arrayBuffer());
+  if (isRasterImage(file)) {
+    const cached = { bytes: sourceBytes, pageCount: 1, expiresAt: Date.now() + READER_CACHE_TTL_MS, kind: "image" as const };
+    pdfCache.set(fileId, cached);
+    return cached;
+  }
   const extension = extensionFor(file);
   const bytes = extension === ".pdf" || String(file.mimeType || "").toLowerCase().includes("pdf")
     ? sourceBytes
     : await officeToPdf(sourceBytes, extension);
   const loadingTask = getDocument({ data: new Uint8Array(bytes), verbosity: 0 });
   const document = await loadingTask.promise;
-  const cached = { bytes, pageCount: Math.min(document.numPages, MAX_READER_PAGES), expiresAt: Date.now() + READER_CACHE_TTL_MS };
+  const cached = { bytes, pageCount: Math.min(document.numPages, MAX_READER_PAGES), expiresAt: Date.now() + READER_CACHE_TTL_MS, kind: "pdf" as const };
   pdfCache.set(fileId, cached);
   return cached;
 }
@@ -131,14 +143,25 @@ export function registerPdfReaderRoutes(app: Express) {
       const key = `${fileId}:${pageNumber}`;
       const cached = pageCache.get(key);
       if (cached && cached.expiresAt > Date.now()) return res.set({ "Content-Type": "image/png", "Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff" }).send(cached.png);
-      const loadingTask = getDocument({ data: new Uint8Array(pdf.bytes), verbosity: 0 });
-      const document = await loadingTask.promise;
-      const page = await document.getPage(pageNumber);
-      const viewport = page.getViewport({ scale: 1.45 });
-      const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-      const context = canvas.getContext("2d");
-      await page.render({ canvasContext: context as any, viewport } as any).promise;
-      const png = Buffer.from(await canvas.encode("png"));
+      let png: Buffer;
+      if (pdf.kind === "image") {
+        const image = await loadImage(Buffer.from(pdf.bytes));
+        const maxDimension = 2200;
+        const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+        const canvas = createCanvas(Math.max(1, Math.round(image.width * scale)), Math.max(1, Math.round(image.height * scale)));
+        const context = canvas.getContext("2d");
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        png = Buffer.from(await canvas.encode("png"));
+      } else {
+        const loadingTask = getDocument({ data: new Uint8Array(pdf.bytes), verbosity: 0 });
+        const document = await loadingTask.promise;
+        const page = await document.getPage(pageNumber);
+        const viewport = page.getViewport({ scale: 1.45 });
+        const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
+        const context = canvas.getContext("2d");
+        await page.render({ canvasContext: context as any, viewport } as any).promise;
+        png = Buffer.from(await canvas.encode("png"));
+      }
       pageCache.set(key, { png, expiresAt: Date.now() + READER_CACHE_TTL_MS });
       return res.set({ "Content-Type": "image/png", "Cache-Control": "private, max-age=300", "X-Content-Type-Options": "nosniff", "Content-Disposition": `inline; filename="read-page-${pageNumber}.png"` }).send(png);
     } catch (error) {

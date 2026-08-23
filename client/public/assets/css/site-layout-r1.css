@@ -1,0 +1,5 @@
+/* sv54 — الترويسة في الصفحة الرئيسية ضمن تدفق المستند، لذا لا يلزم التعويض العلوي القديم. */
+.main-shell:has(.hero),body:has(.home-managed-stack) .main-shell{padding-top:0!important}
+.main-shell:has(.hero) .page-content,body:has(.home-managed-stack) .page-content{padding-top:0!important}
+body:has(.home-managed-stack) .page-content>.home-managed-stack{margin-top:0!important}
+@media(max-width:600px){.main-shell:has(.hero) .page-content,body:has(.home-managed-stack) .page-content{padding-top:0!important}}

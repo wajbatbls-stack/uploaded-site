@@ -11,8 +11,8 @@ const vite = fs.readFileSync(path.join(root, "vite.config.ts"), "utf8");
 
 describe("public visitor image removal", () => {
   it("loads the image-free public application release from both visitor entries", () => {
-    expect(publicEntry).toContain("site-app-r43.js?v=sv53-motion-strip");
-    expect(devEntry).toContain("site-app-r43.js?v=sv53-motion-strip");
+    expect(publicEntry).toContain("site-app-r43.js?v=sv54-home-offset");
+    expect(devEntry).toContain("site-app-r43.js?v=sv54-home-offset");
     expect(extension).toContain('import "./site-app-r46.js"');
   });
 

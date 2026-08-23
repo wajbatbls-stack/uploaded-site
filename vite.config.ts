@@ -253,6 +253,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/css/site-contact-blog-faq-r6.css", destination: "assets/css/site-contact-blog-faq-r6.css" },
         { source: "assets/css/site-contact-blog-faq-r7.css", destination: "assets/css/site-contact-blog-faq-r7.css" },
         { source: "assets/css/site-ticker-r1.css", destination: "assets/css/site-ticker-r1.css" },
+        { source: "assets/css/site-layout-r1.css", destination: "assets/css/site-layout-r1.css" },
         { source: "assets/css/site-about-r1.css", destination: "assets/css/site-about-r1.css" },
         { source: "assets/css/site-partners-r1.css", destination: "assets/css/site-partners-r1.css" },
         { source: "assets/css/site-partners-r2.css", destination: "assets/css/site-partners-r2.css" },

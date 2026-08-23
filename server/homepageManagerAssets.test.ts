@@ -50,7 +50,7 @@ describe("إدارة الصفحة الرئيسية", () => {
     expect(app).toContain('section.classList.contains("home-stat-section")');
     expect(app).not.toContain('readPublicData("site.downloads.publicList")');
     expect(app).not.toContain("★★★★★");
-    expect(entry).toContain("site-app-r43.js?v=sv54-home-offset");
+    expect(entry).toContain("site-app-r43.js?v=sv55-read-only-library");
     expect(entry).toContain("site-pages-r1.css?v=sv32-separate-pages");
     expect(style).toContain(".svc24-wrap");
     expect(style).toContain(".dl10-hero");

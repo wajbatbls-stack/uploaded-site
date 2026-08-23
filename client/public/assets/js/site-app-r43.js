@@ -1,4 +1,4 @@
-import "./site-app-r46.js";
+import "./site-app-r47.js";
 
 /* sv33 — الصفحة الرئيسية ترحيبية فقط، والقائمة تبدأ بالرئيسية ثم الخدمات. */
 let scheduled = false;

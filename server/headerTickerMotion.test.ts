@@ -6,7 +6,7 @@ const read = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8"
 
 describe("شريط التواصل المتحرك", () => {
   it("يفصل النص عن شرائح الأرقام ولا يعيد استخدام مسار الحركة القديم", () => {
-    const app = read("client/public/assets/js/site-app-r46.js");
+    const app = read("client/public/assets/js/site-app-r47.js");
     expect(app).toContain('class="ticker ticker-motion"');
     expect(app).toContain('class="ticker-message-track"');
     expect(app).toContain('class="ticker-number-chip"');

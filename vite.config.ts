@@ -217,6 +217,7 @@ function copyAdminAssets(): Plugin {
         { source: "assets/js/site-app-r44.js", destination: "assets/js/site-app-r44.js" },
         { source: "assets/js/site-app-r45.js", destination: "assets/js/site-app-r45.js" },
         { source: "assets/js/site-app-r46.js", destination: "assets/js/site-app-r46.js" },
+        { source: "assets/js/site-app-r47.js", destination: "assets/js/site-app-r47.js" },
         { source: "assets/js/admin-app-r28.js", destination: "assets/js/admin-app-r28.js" },
         { source: "assets/js/admin-app-r29.js", destination: "assets/js/admin-app-r29.js" },
         { source: "assets/js/admin-app-r30.js", destination: "assets/js/admin-app-r30.js" },
